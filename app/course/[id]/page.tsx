@@ -1,5 +1,7 @@
 "use client"
 
+import type React from "react"
+
 import { Label } from "@/components/ui/label"
 
 import { useState, useEffect } from "react"
@@ -10,56 +12,70 @@ import { Badge } from "@/components/ui/badge"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Switch } from "@/components/ui/switch"
-import { ArrowLeft, BookOpen, Users, Calendar, DollarSign } from "lucide-react"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
+import { ArrowLeft, BookOpen, Users, Calendar, DollarSign, Plus } from "lucide-react"
 
 // Mock data for course detail
-const mockCourseInstances = [
+const mockCourses = [
   {
     id: 1,
-    templateId: 1,
-    month: "2024-01",
-    studentIds: [1],
+    teacherId: 1,
+    teacherName: "Prof. Salim Benali",
+    subject: "Mathematics",
+    schoolYear: "3AS",
+    schedule: "Monday 9:00-11:00",
+    monthlyPrice: 500,
+    enrolledStudents: [1],
     studentNames: ["Ahmed Ben Ali"],
     status: "active",
-    payments: { studentPaid: true, profPaid: false },
+    payments: {
+      students: { 1: true },
+      teacherPaid: false,
+    },
+    teacherCut: 65,
     attendance: { 1: true }, // studentId: present
+    courseType: "Group",
+    duration: 2,
+    price: 500,
+    percentageCut: 65,
   },
   {
     id: 2,
-    templateId: 3,
-    month: "2024-01",
-    studentIds: [2],
+    teacherId: 2,
+    teacherName: "Prof. Amina Khelifi",
+    subject: "Chemistry",
+    schoolYear: "2AS",
+    schedule: "Tuesday 16:00-18:00",
+    monthlyPrice: 450,
+    enrolledStudents: [2],
     studentNames: ["Fatima Zahra"],
     status: "active",
-    payments: { studentPaid: false, profPaid: false },
+    payments: {
+      students: { 2: false },
+      teacherPaid: false,
+    },
+    teacherCut: 60,
     attendance: { 2: false },
+    courseType: "Individual",
+    duration: 2,
+    price: 450,
+    percentageCut: 60,
   },
 ]
 
-const mockCourseTemplates = [
+const mockStudents = [
   {
     id: 1,
-    professorId: 1,
-    professorName: "Prof. Salim Benali",
-    subject: "Mathematics",
-    type: "Group",
-    percentageCut: 65,
-    price: 500,
-    durationHours: 2,
-    schedule: "Monday 9:00-11:00",
+    name: "Ahmed Ben Ali",
     schoolYear: "3AS",
+    specialty: "Math",
   },
   {
-    id: 3,
-    professorId: 2,
-    professorName: "Prof. Amina Khelifi",
-    subject: "Chemistry",
-    type: "Group",
-    percentageCut: 60,
-    price: 450,
-    durationHours: 2,
-    schedule: "Tuesday 16:00-18:00",
-    schoolYear: "2AS",
+    id: 2,
+    name: "Fatima Zahra",
+    schoolYear: "BAC",
+    specialty: "Sciences",
   },
 ]
 
@@ -67,9 +83,10 @@ export default function CourseDetail() {
   const router = useRouter()
   const params = useParams()
   const courseId = params.id as string
-  const [courseInstance, setCourseInstance] = useState<any>(null)
-  const [courseTemplate, setCourseTemplate] = useState<any>(null)
+  const [course, setCourse] = useState<any>(null)
   const [user, setUser] = useState<any>(null)
+  const [showAddStudentDialog, setShowAddStudentDialog] = useState(false)
+  const [selectedStudent, setSelectedStudent] = useState("")
 
   useEffect(() => {
     // Check if user is logged in
@@ -80,19 +97,17 @@ export default function CourseDetail() {
     }
     setUser(JSON.parse(userData))
 
-    // Get course instance data
-    const instance = mockCourseInstances.find((c) => c.id.toString() === courseId)
-    if (instance) {
-      setCourseInstance(instance)
-      const template = mockCourseTemplates.find((t) => t.id === instance.templateId)
-      setCourseTemplate(template)
+    // Get course data
+    const courseData = mockCourses.find((c) => c.id.toString() === courseId)
+    if (courseData) {
+      setCourse(courseData)
     } else {
       router.push("/receptionist")
     }
   }, [courseId, router])
 
   const toggleAttendance = (studentId: number) => {
-    setCourseInstance((prev: any) => ({
+    setCourse((prev: any) => ({
       ...prev,
       attendance: {
         ...prev.attendance,
@@ -101,22 +116,58 @@ export default function CourseDetail() {
     }))
   }
 
-  const togglePayment = (paymentType: "studentPaid" | "profPaid") => {
-    setCourseInstance((prev: any) => {
-      const newPayments = {
+  const toggleStudentPayment = (studentId: number) => {
+    setCourse((prev: any) => ({
+      ...prev,
+      payments: {
         ...prev.payments,
-        [paymentType]: !prev.payments[paymentType],
-      }
-      const newStatus = newPayments.studentPaid && newPayments.profPaid ? "completed" : "active"
-      return {
-        ...prev,
-        payments: newPayments,
-        status: newStatus,
-      }
-    })
+        students: {
+          ...prev.payments.students,
+          [studentId]: !prev.payments.students[studentId],
+        },
+      },
+    }))
   }
 
-  if (!courseInstance || !courseTemplate || !user) {
+  const toggleTeacherPayment = () => {
+    setCourse((prev: any) => ({
+      ...prev,
+      payments: {
+        ...prev.payments,
+        teacherPaid: !prev.payments.teacherPaid,
+      },
+    }))
+  }
+
+  const handleAddStudent = (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!selectedStudent) return
+
+    const student = mockStudents.find((s) => s.id.toString() === selectedStudent)
+    if (!student) return
+
+    setCourse((prev: any) => ({
+      ...prev,
+      enrolledStudents: [...prev.enrolledStudents, student.id],
+      studentNames: [...prev.studentNames, student.name],
+      payments: {
+        ...prev.payments,
+        students: {
+          ...prev.payments.students,
+          [student.id]: false,
+        },
+      },
+      attendance: {
+        ...prev.attendance,
+        [student.id]: false,
+      },
+    }))
+
+    setSelectedStudent("")
+    setShowAddStudentDialog(false)
+  }
+
+  if (!course || !user) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="text-center">
@@ -125,6 +176,10 @@ export default function CourseDetail() {
       </div>
     )
   }
+
+  const availableStudents = mockStudents.filter((student) => !course.enrolledStudents.includes(student.id))
+
+  const teacherEarnings = Math.round((course.price * course.enrolledStudents.length * course.percentageCut) / 100)
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -154,40 +209,43 @@ export default function CourseDetail() {
               </CardHeader>
               <CardContent className="space-y-4">
                 <div>
-                  <h3 className="font-semibold text-lg">{courseTemplate.subject}</h3>
-                  <p className="text-gray-600">{courseTemplate.schoolYear}</p>
+                  <h3 className="font-semibold text-lg">{course.subject}</h3>
+                  <p className="text-gray-600">{course.schoolYear}</p>
                 </div>
                 <div className="space-y-2">
                   <p>
-                    <span className="font-medium">Professor:</span> {courseTemplate.professorName}
+                    <span className="font-medium">Teacher:</span> {course.teacherName}
                   </p>
                   <p>
                     <span className="font-medium">Type:</span>
-                    <Badge variant={courseTemplate.type === "Group" ? "default" : "secondary"} className="ml-2">
-                      {courseTemplate.type}
+                    <Badge variant={course.courseType === "Group" ? "default" : "secondary"} className="ml-2">
+                      {course.courseType}
                     </Badge>
                   </p>
                   <p>
-                    <span className="font-medium">Schedule:</span> {courseTemplate.schedule}
+                    <span className="font-medium">Schedule:</span> {course.schedule}
                   </p>
                   <p>
-                    <span className="font-medium">Duration:</span> {courseTemplate.durationHours}h
+                    <span className="font-medium">Duration:</span> {course.duration}h
                   </p>
                   <p>
-                    <span className="font-medium">Price:</span> {courseTemplate.price} DA
+                    <span className="font-medium">
+                      {course.courseType === "Group" ? "Monthly Price" : "Session Price"}:
+                    </span>{" "}
+                    {course.price} DA
                   </p>
                   <p>
-                    <span className="font-medium">Professor Cut:</span> {courseTemplate.percentageCut}%
+                    <span className="font-medium">Teacher Cut:</span> {course.percentageCut}%
+                  </p>
+                  <p>
+                    <span className="font-medium">Enrolled Students:</span> {course.enrolledStudents.length}
                   </p>
                 </div>
                 <div className="pt-4 border-t">
                   <p>
-                    <span className="font-medium">Period:</span> {courseInstance.month || courseInstance.sessionDate}
-                  </p>
-                  <p>
                     <span className="font-medium">Status:</span>
-                    <Badge variant={courseInstance.status === "active" ? "default" : "secondary"} className="ml-2">
-                      {courseInstance.status}
+                    <Badge variant={course.status === "active" ? "default" : "secondary"} className="ml-2">
+                      {course.status}
                     </Badge>
                   </p>
                 </div>
@@ -204,31 +262,23 @@ export default function CourseDetail() {
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="flex items-center justify-between">
-                  <Label htmlFor="studentPaid">Student Payment</Label>
+                  <Label htmlFor="teacherPaid">Teacher Payment</Label>
                   <Switch
-                    id="studentPaid"
-                    checked={courseInstance.payments.studentPaid}
-                    onCheckedChange={() => togglePayment("studentPaid")}
-                  />
-                </div>
-                <div className="flex items-center justify-between">
-                  <Label htmlFor="profPaid">Professor Payment</Label>
-                  <Switch
-                    id="profPaid"
-                    checked={courseInstance.payments.profPaid}
-                    onCheckedChange={() => togglePayment("profPaid")}
+                    id="teacherPaid"
+                    checked={course.payments.teacherPaid}
+                    onCheckedChange={toggleTeacherPayment}
                   />
                 </div>
                 <div className="pt-4 border-t">
                   <div className="flex justify-between items-center">
-                    <span className="font-medium">Total Amount:</span>
-                    <span className="text-lg font-bold">{courseTemplate.price} DA</span>
+                    <span className="font-medium">
+                      Total {course.courseType === "Group" ? "Monthly" : "Session"} Revenue:
+                    </span>
+                    <span className="text-lg font-bold">{course.price * course.enrolledStudents.length} DA</span>
                   </div>
                   <div className="flex justify-between items-center">
-                    <span className="font-medium">Professor Share:</span>
-                    <span className="text-lg font-bold text-green-600">
-                      {Math.round((courseTemplate.price * courseTemplate.percentageCut) / 100)} DA
-                    </span>
+                    <span className="font-medium">Teacher Earnings:</span>
+                    <span className="text-lg font-bold text-green-600">{teacherEarnings} DA</span>
                   </div>
                 </div>
               </CardContent>
@@ -239,10 +289,48 @@ export default function CourseDetail() {
           <div className="lg:col-span-2">
             <Card>
               <CardHeader>
-                <CardTitle className="flex items-center">
-                  <Users className="h-5 w-5 mr-2" />
-                  Enrolled Students & Attendance
-                </CardTitle>
+                <div className="flex justify-between items-center">
+                  <CardTitle className="flex items-center">
+                    <Users className="h-5 w-5 mr-2" />
+                    Enrolled Students & Management
+                  </CardTitle>
+                  <Dialog open={showAddStudentDialog} onOpenChange={setShowAddStudentDialog}>
+                    <DialogTrigger asChild>
+                      <Button disabled={availableStudents.length === 0}>
+                        <Plus className="h-4 w-4 mr-2" />
+                        Add Student
+                      </Button>
+                    </DialogTrigger>
+                    <DialogContent>
+                      <DialogHeader>
+                        <DialogTitle>Add Student to Course</DialogTitle>
+                      </DialogHeader>
+                      <form onSubmit={handleAddStudent} className="space-y-4">
+                        <div className="space-y-2">
+                          <Label htmlFor="student">Available Students</Label>
+                          <Select value={selectedStudent} onValueChange={setSelectedStudent} required>
+                            <SelectTrigger>
+                              <SelectValue placeholder="Select a student" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {availableStudents.map((student) => (
+                                <SelectItem key={student.id} value={student.id.toString()}>
+                                  {student.name} - {student.schoolYear} ({student.specialty})
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
+                        <div className="flex justify-end space-x-2">
+                          <Button type="button" variant="outline" onClick={() => setShowAddStudentDialog(false)}>
+                            Cancel
+                          </Button>
+                          <Button type="submit">Add Student</Button>
+                        </div>
+                      </form>
+                    </DialogContent>
+                  </Dialog>
+                </div>
               </CardHeader>
               <CardContent>
                 <Table>
@@ -255,7 +343,7 @@ export default function CourseDetail() {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {courseInstance.studentIds.map((studentId: number, idx: number) => (
+                    {course.enrolledStudents.map((studentId: number, idx: number) => (
                       <TableRow key={studentId}>
                         <TableCell className="font-medium">
                           <Button
@@ -263,19 +351,20 @@ export default function CourseDetail() {
                             className="p-0 h-auto font-medium text-left"
                             onClick={() => router.push(`/student/${studentId}`)}
                           >
-                            {courseInstance.studentNames[idx]}
+                            {course.studentNames[idx]}
                           </Button>
                         </TableCell>
                         <TableCell>
                           <Checkbox
-                            checked={courseInstance.attendance[studentId] || false}
+                            checked={course.attendance[studentId] || false}
                             onCheckedChange={() => toggleAttendance(studentId)}
                           />
                         </TableCell>
                         <TableCell>
-                          <Badge variant={courseInstance.payments.studentPaid ? "default" : "destructive"}>
-                            {courseInstance.payments.studentPaid ? "Paid" : "Pending"}
-                          </Badge>
+                          <Switch
+                            checked={course.payments.students[studentId] || false}
+                            onCheckedChange={() => toggleStudentPayment(studentId)}
+                          />
                         </TableCell>
                         <TableCell>
                           <Button variant="outline" size="sm" onClick={() => router.push(`/student/${studentId}`)}>
@@ -287,8 +376,8 @@ export default function CourseDetail() {
                   </TableBody>
                 </Table>
 
-                {courseInstance.studentIds.length === 0 && (
-                  <div className="text-center py-8 text-gray-500">No students enrolled in this course instance.</div>
+                {course.enrolledStudents.length === 0 && (
+                  <div className="text-center py-8 text-gray-500">No students enrolled in this course.</div>
                 )}
               </CardContent>
             </Card>
@@ -305,39 +394,37 @@ export default function CourseDetail() {
                 <div className="space-y-4">
                   <div className="flex justify-between items-center p-3 bg-gray-50 rounded-lg">
                     <div>
-                      <p className="font-medium">Course Instance Created</p>
-                      <p className="text-sm text-gray-600">{courseInstance.month || courseInstance.sessionDate}</p>
+                      <p className="font-medium">Course Created</p>
+                      <p className="text-sm text-gray-600">Course was set up and activated</p>
                     </div>
                     <Badge variant="outline">Created</Badge>
                   </div>
 
-                  {courseInstance.payments.studentPaid && (
+                  {Object.entries(course.payments.students).some(([_, paid]) => paid) && (
                     <div className="flex justify-between items-center p-3 bg-green-50 rounded-lg">
                       <div>
-                        <p className="font-medium">Student Payment Received</p>
-                        <p className="text-sm text-gray-600">Payment confirmed</p>
+                        <p className="font-medium">Student Payments Received</p>
+                        <p className="text-sm text-gray-600">Some students have paid their fees</p>
                       </div>
-                      <Badge variant="default">Paid</Badge>
+                      <Badge variant="default">Payments</Badge>
                     </div>
                   )}
 
-                  {courseInstance.payments.profPaid && (
+                  {course.payments.teacherPaid && (
                     <div className="flex justify-between items-center p-3 bg-blue-50 rounded-lg">
                       <div>
-                        <p className="font-medium">Professor Payment Made</p>
-                        <p className="text-sm text-gray-600">
-                          {Math.round((courseTemplate.price * courseTemplate.percentageCut) / 100)} DA paid
-                        </p>
+                        <p className="font-medium">Teacher Payment Made</p>
+                        <p className="text-sm text-gray-600">{teacherEarnings} DA paid to teacher</p>
                       </div>
                       <Badge variant="default">Paid</Badge>
                     </div>
                   )}
 
-                  {courseInstance.status === "completed" && (
+                  {course.status === "completed" && (
                     <div className="flex justify-between items-center p-3 bg-purple-50 rounded-lg">
                       <div>
                         <p className="font-medium">Course Completed</p>
-                        <p className="text-sm text-gray-600">All payments processed</p>
+                        <p className="text-sm text-gray-600">All sessions finished</p>
                       </div>
                       <Badge variant="default">Completed</Badge>
                     </div>

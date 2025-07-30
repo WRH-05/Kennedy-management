@@ -13,9 +13,10 @@ import { Checkbox } from "@/components/ui/checkbox"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Badge } from "@/components/ui/badge"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { LogOut, UserPlus, Users, Search, GraduationCap, BookOpen } from "lucide-react"
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
+import { LogOut, Users, Search, GraduationCap, BookOpen, Plus } from "lucide-react"
 
-// Mock data with new structure
+// Mock data with updated structure
 const mockStudents = [
   {
     id: 1,
@@ -43,14 +44,15 @@ const mockStudents = [
   },
 ]
 
-const mockProfessors = [
+const mockTeachers = [
   {
     id: 1,
     name: "Prof. Salim Benali",
     address: "789 Rue des Professeurs, Alger",
     phone: "+213 555 111 222",
     email: "salim.benali@school.dz",
-    schools: ["Lycée Mohamed Boudiaf", "Lycée Ibn Sina"],
+    school: "Lycée Mohamed Boudiaf",
+    schoolYears: ["3AS", "BAC"],
     subjects: ["Mathematics", "Physics"],
   },
   {
@@ -59,65 +61,57 @@ const mockProfessors = [
     address: "321 Avenue de l'Université, Oran",
     phone: "+213 555 333 444",
     email: "amina.khelifi@school.dz",
-    schools: ["Lycée Ibn Khaldoun"],
+    school: "Lycée Ibn Khaldoun",
+    schoolYears: ["2AS"],
     subjects: ["Physics", "Chemistry"],
   },
 ]
 
-// Course Templates
-const mockCourseTemplates = [
+// Course data (only group courses)
+const mockCourses = [
   {
     id: 1,
-    professorId: 1,
+    teacherId: 1,
+    teacherName: "Prof. Salim Benali",
     subject: "Mathematics",
-    type: "Group",
-    percentageCut: 65,
-    price: 500,
-    durationHours: 2,
-    schedule: "Monday 9:00-11:00",
     schoolYear: "3AS",
+    schedule: "Monday 9:00-11:00",
+    monthlyPrice: 500,
+    enrolledStudents: [1],
+    status: "active",
+    payments: {
+      students: { 1: true }, // studentId: paid
+      teacherPaid: false,
+    },
+    percentageCut: 50,
+    courseType: "Group",
+    duration: 2,
+    dayOfWeek: "Monday",
+    startHour: "09:00",
+    endHour: "11:00",
+    price: 500,
   },
   {
     id: 2,
-    professorId: 1,
-    subject: "Physics",
-    type: "Individual",
-    percentageCut: 70,
-    price: 800,
-    durationHours: 1.5,
-    schedule: "Flexible",
-    schoolYear: "BAC",
-  },
-  {
-    id: 3,
-    professorId: 2,
+    teacherId: 2,
+    teacherName: "Prof. Amina Khelifi",
     subject: "Chemistry",
-    type: "Group",
-    percentageCut: 60,
-    price: 450,
-    durationHours: 2,
-    schedule: "Tuesday 16:00-18:00",
     schoolYear: "2AS",
-  },
-]
-
-// Course Instances
-const mockCourseInstances = [
-  {
-    id: 1,
-    templateId: 1,
-    month: "2024-01",
-    studentIds: [1],
+    schedule: "Tuesday 16:00-18:00",
+    monthlyPrice: 450,
+    enrolledStudents: [2],
     status: "active",
-    payments: { studentPaid: true, profPaid: false },
-  },
-  {
-    id: 2,
-    templateId: 3,
-    month: "2024-01",
-    studentIds: [2],
-    status: "active",
-    payments: { studentPaid: false, profPaid: false },
+    payments: {
+      students: { 2: false },
+      teacherPaid: false,
+    },
+    percentageCut: 50,
+    courseType: "Group",
+    duration: 2,
+    dayOfWeek: "Tuesday",
+    startHour: "16:00",
+    endHour: "18:00",
+    price: 450,
   },
 ]
 
@@ -125,15 +119,18 @@ export default function ReceptionistDashboard() {
   const router = useRouter()
   const [user, setUser] = useState<any>(null)
   const [students, setStudents] = useState(mockStudents)
-  const [professors, setProfessors] = useState(mockProfessors)
-  const [courseTemplates, setCourseTemplates] = useState(mockCourseTemplates)
-  const [courseInstances, setCourseInstances] = useState(mockCourseInstances)
+  const [teachers, setTeachers] = useState(mockTeachers)
+  const [courses, setCourses] = useState(mockCourses)
   const [searchQuery, setSearchQuery] = useState("")
   const [searchResults, setSearchResults] = useState<any[]>([])
   const [showSearchResults, setShowSearchResults] = useState(false)
-  const [registrationType, setRegistrationType] = useState("student")
 
-  // New student form state
+  // Dialog states
+  const [showAddStudentDialog, setShowAddStudentDialog] = useState(false)
+  const [showAddTeacherDialog, setShowAddTeacherDialog] = useState(false)
+  const [showAddCourseDialog, setShowAddCourseDialog] = useState(false)
+
+  // Form states
   const [newStudent, setNewStudent] = useState({
     name: "",
     schoolYear: "",
@@ -149,15 +146,35 @@ export default function ReceptionistDashboard() {
     registrationFeePaid: false,
   })
 
-  // New professor form state
-  const [newProfessor, setNewProfessor] = useState({
+  // New teacher form state
+  const [newTeacher, setNewTeacher] = useState({
     name: "",
     address: "",
     phone: "",
     email: "",
-    schools: "",
-    subjects: "",
+    school: "",
+    schoolYears: [] as string[],
+    subjects: [] as string[],
   })
+
+  // Update the course form state
+  const [newCourse, setNewCourse] = useState({
+    teacherId: "",
+    teacherName: "",
+    subject: "",
+    schoolYear: "",
+    percentageCut: 50,
+    courseType: "Group",
+    duration: 2,
+    dayOfWeek: "",
+    startHour: "09:00",
+    price: 500,
+  })
+
+  // Add teacher search state
+  const [teacherSearchQuery, setTeacherSearchQuery] = useState("")
+  const [showTeacherResults, setShowTeacherResults] = useState(false)
+  const [filteredTeachers, setFilteredTeachers] = useState<any[]>([])
 
   useEffect(() => {
     const userData = localStorage.getItem("user")
@@ -180,36 +197,47 @@ export default function ReceptionistDashboard() {
         .filter((student) => student.name.toLowerCase().includes(searchQuery.toLowerCase()))
         .map((student) => ({ ...student, type: "student" }))
 
-      const professorResults = professors
-        .filter((professor) => professor.name.toLowerCase().includes(searchQuery.toLowerCase()))
-        .map((professor) => ({ ...professor, type: "professor" }))
+      const teacherResults = teachers
+        .filter((teacher) => teacher.name.toLowerCase().includes(searchQuery.toLowerCase()))
+        .map((teacher) => ({ ...teacher, type: "teacher" }))
 
-      const courseResults = courseTemplates
+      const courseResults = courses
         .filter(
           (course) =>
             course.subject.toLowerCase().includes(searchQuery.toLowerCase()) ||
-            course.schoolYear.toLowerCase().includes(searchQuery.toLowerCase()),
+            course.schoolYear.toLowerCase().includes(searchQuery.toLowerCase()) ||
+            course.teacherName.toLowerCase().includes(searchQuery.toLowerCase()),
         )
-        .map((course) => ({
-          ...course,
-          type: "course",
-          professorName: professors.find((p) => p.id === course.professorId)?.name,
-        }))
+        .map((course) => ({ ...course, type: "course" }))
 
-      setSearchResults([...studentResults, ...professorResults, ...courseResults])
+      setSearchResults([...studentResults, ...teacherResults, ...courseResults])
       setShowSearchResults(true)
     } else {
       setSearchResults([])
       setShowSearchResults(false)
     }
-  }, [searchQuery, students, professors, courseTemplates])
+  }, [searchQuery, students, teachers, courses])
+
+  // Add useEffect for teacher search
+  useEffect(() => {
+    if (teacherSearchQuery.trim()) {
+      const filtered = teachers.filter((teacher) =>
+        teacher.name.toLowerCase().includes(teacherSearchQuery.toLowerCase()),
+      )
+      setFilteredTeachers(filtered)
+      setShowTeacherResults(true)
+    } else {
+      setFilteredTeachers([])
+      setShowTeacherResults(false)
+    }
+  }, [teacherSearchQuery, teachers])
 
   const handleLogout = () => {
     localStorage.removeItem("user")
     router.push("/")
   }
 
-  const handleRegisterStudent = (e: React.FormEvent) => {
+  const handleAddStudent = (e: React.FormEvent) => {
     e.preventDefault()
     const student = {
       id: students.length + 1,
@@ -238,35 +266,106 @@ export default function ReceptionistDashboard() {
       registrationForm: false,
       registrationFeePaid: false,
     })
+    setShowAddStudentDialog(false)
   }
 
-  const handleRegisterProfessor = (e: React.FormEvent) => {
+  // Update handleAddTeacher function
+  const handleAddTeacher = (e: React.FormEvent) => {
     e.preventDefault()
-    const professor = {
-      id: professors.length + 1,
-      name: newProfessor.name,
-      address: newProfessor.address,
-      phone: newProfessor.phone,
-      email: newProfessor.email,
-      schools: newProfessor.schools.split(",").map((s) => s.trim()),
-      subjects: newProfessor.subjects.split(",").map((s) => s.trim()),
+    const teacher = {
+      id: teachers.length + 1,
+      name: newTeacher.name,
+      address: newTeacher.address,
+      phone: newTeacher.phone,
+      email: newTeacher.email,
+      school: newTeacher.school,
+      schoolYears: newTeacher.schoolYears,
+      subjects: newTeacher.subjects,
     }
-    setProfessors([...professors, professor])
-    setNewProfessor({
+    setTeachers([...teachers, teacher])
+    setNewTeacher({
       name: "",
       address: "",
       phone: "",
       email: "",
-      schools: "",
-      subjects: "",
+      school: "",
+      schoolYears: [],
+      subjects: [],
     })
+    setShowAddTeacherDialog(false)
+  }
+
+  // Update handleAddCourse function
+  const handleAddCourse = (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!newCourse.teacherId) return
+
+    const teacher = teachers.find((t) => t.id.toString() === newCourse.teacherId)
+    if (!teacher) return
+
+    const endHour = calculateEndHour(newCourse.startHour, newCourse.duration)
+
+    const course = {
+      id: courses.length + 1,
+      teacherId: teacher.id,
+      teacherName: teacher.name,
+      subject: newCourse.subject,
+      schoolYear: newCourse.schoolYear,
+      percentageCut: newCourse.percentageCut,
+      courseType: newCourse.courseType,
+      duration: newCourse.duration,
+      dayOfWeek: newCourse.dayOfWeek,
+      startHour: newCourse.startHour,
+      endHour: endHour,
+      schedule: `${newCourse.dayOfWeek} ${newCourse.startHour}-${endHour}`,
+      price: newCourse.price,
+      enrolledStudents: [],
+      status: "active",
+      payments: {
+        students: {},
+        teacherPaid: false,
+      },
+    }
+    setCourses([...courses, course])
+    setNewCourse({
+      teacherId: "",
+      teacherName: "",
+      subject: "",
+      schoolYear: "",
+      percentageCut: 50,
+      courseType: "Group",
+      duration: 2,
+      dayOfWeek: "",
+      startHour: "09:00",
+      price: 500,
+    })
+    setShowAddCourseDialog(false)
+  }
+
+  // Add helper function for calculating end hour
+  const calculateEndHour = (startHour: string, duration: number) => {
+    const [hours, minutes] = startHour.split(":").map(Number)
+    const startMinutes = hours * 60 + minutes
+    const endMinutes = startMinutes + duration * 60
+    const endHours = Math.floor(endMinutes / 60)
+    const endMins = endMinutes % 60
+    return `${endHours.toString().padStart(2, "0")}:${endMins.toString().padStart(2, "0")}`
+  }
+
+  // Add helper function for handling multiple selections
+  const handleMultiSelect = (value: string, currentArray: string[], setter: (arr: string[]) => void) => {
+    if (currentArray.includes(value)) {
+      setter(currentArray.filter((item) => item !== value))
+    } else {
+      setter([...currentArray, value])
+    }
   }
 
   const handleSearchResultClick = (result: any) => {
     if (result.type === "student") {
       router.push(`/student/${result.id}`)
-    } else if (result.type === "professor") {
-      router.push(`/professor/${result.id}`)
+    } else if (result.type === "teacher") {
+      router.push(`/teacher/${result.id}`)
     } else if (result.type === "course") {
       router.push(`/course/${result.id}`)
     }
@@ -274,8 +373,8 @@ export default function ReceptionistDashboard() {
     setShowSearchResults(false)
   }
 
-  const getStudentCourseInstances = (studentId: number) => {
-    return courseInstances.filter((instance) => instance.studentIds.includes(studentId))
+  const getStudentCourses = (studentId: number) => {
+    return courses.filter((course) => course.enrolledStudents.includes(studentId))
   }
 
   if (!user) return null
@@ -293,7 +392,7 @@ export default function ReceptionistDashboard() {
               <div className="relative">
                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
                 <Input
-                  placeholder="Search students, professors, courses..."
+                  placeholder="Search students, teachers, courses..."
                   className="pl-10"
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
@@ -313,14 +412,10 @@ export default function ReceptionistDashboard() {
                         <span className="font-medium">{result.name || result.subject}</span>
                         <Badge
                           variant={
-                            result.type === "student"
-                              ? "default"
-                              : result.type === "professor"
-                                ? "secondary"
-                                : "outline"
+                            result.type === "student" ? "default" : result.type === "teacher" ? "secondary" : "outline"
                           }
                         >
-                          {result.type === "student" ? "Student" : result.type === "professor" ? "Professor" : "Course"}
+                          {result.type === "student" ? "Student" : result.type === "teacher" ? "Teacher" : "Course"}
                         </Badge>
                       </div>
                       {result.type === "student" && (
@@ -328,12 +423,12 @@ export default function ReceptionistDashboard() {
                           {result.schoolYear} - {result.school}
                         </p>
                       )}
-                      {result.type === "professor" && (
+                      {result.type === "teacher" && (
                         <p className="text-sm text-gray-600">{result.subjects?.join(", ")}</p>
                       )}
                       {result.type === "course" && (
                         <p className="text-sm text-gray-600">
-                          {result.professorName} - {result.schoolYear} - {result.type}
+                          {result.teacherName} - {result.schoolYear} - {result.schedule}
                         </p>
                       )}
                     </div>
@@ -355,21 +450,183 @@ export default function ReceptionistDashboard() {
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <Tabs defaultValue="students" className="space-y-6">
-          <TabsList className="grid w-full grid-cols-4">
+          <TabsList className="grid w-full grid-cols-3">
             <TabsTrigger value="students">Students</TabsTrigger>
             <TabsTrigger value="courses">Courses</TabsTrigger>
-            <TabsTrigger value="register">Registration</TabsTrigger>
-            <TabsTrigger value="professors">Professors</TabsTrigger>
+            <TabsTrigger value="teachers">Teachers</TabsTrigger>
           </TabsList>
 
           {/* Students Tab */}
           <TabsContent value="students">
             <Card>
               <CardHeader>
-                <CardTitle className="flex items-center">
-                  <Users className="h-5 w-5 mr-2" />
-                  Student List
-                </CardTitle>
+                <div className="flex justify-between items-center">
+                  <CardTitle className="flex items-center">
+                    <Users className="h-5 w-5 mr-2" />
+                    Student List
+                  </CardTitle>
+                  <Dialog open={showAddStudentDialog} onOpenChange={setShowAddStudentDialog}>
+                    <DialogTrigger asChild>
+                      <Button>
+                        <Plus className="h-4 w-4 mr-2" />
+                        Add Student
+                      </Button>
+                    </DialogTrigger>
+                    <DialogContent className="max-w-2xl">
+                      <DialogHeader>
+                        <DialogTitle>Add New Student</DialogTitle>
+                      </DialogHeader>
+                      <form onSubmit={handleAddStudent} className="space-y-4">
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                          <div className="space-y-2">
+                            <Label htmlFor="name">Student Name</Label>
+                            <Input
+                              id="name"
+                              value={newStudent.name}
+                              onChange={(e) => setNewStudent({ ...newStudent, name: e.target.value })}
+                              required
+                            />
+                          </div>
+                          <div className="space-y-2">
+                            <Label htmlFor="schoolYear">School Year</Label>
+                            <Select
+                              value={newStudent.schoolYear}
+                              onValueChange={(value) => setNewStudent({ ...newStudent, schoolYear: value })}
+                            >
+                              <SelectTrigger>
+                                <SelectValue placeholder="Select school year" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="1AS">1AS</SelectItem>
+                                <SelectItem value="2AS">2AS</SelectItem>
+                                <SelectItem value="3AS">3AS</SelectItem>
+                                <SelectItem value="BEM">BEM</SelectItem>
+                                <SelectItem value="BAC">BAC</SelectItem>
+                              </SelectContent>
+                            </Select>
+                          </div>
+                          <div className="space-y-2">
+                            <Label htmlFor="specialty">Specialty</Label>
+                            <Select
+                              value={newStudent.specialty}
+                              onValueChange={(value) => setNewStudent({ ...newStudent, specialty: value })}
+                            >
+                              <SelectTrigger>
+                                <SelectValue placeholder="Select specialty" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="Math">Mathematics</SelectItem>
+                                <SelectItem value="Sciences">Sciences</SelectItem>
+                                <SelectItem value="Literature">Literature</SelectItem>
+                                <SelectItem value="Languages">Languages</SelectItem>
+                              </SelectContent>
+                            </Select>
+                          </div>
+                          <div className="space-y-2">
+                            <Label htmlFor="address">Address</Label>
+                            <Input
+                              id="address"
+                              value={newStudent.address}
+                              onChange={(e) => setNewStudent({ ...newStudent, address: e.target.value })}
+                              required
+                            />
+                          </div>
+                          <div className="space-y-2">
+                            <Label htmlFor="birthDate">Birth Date</Label>
+                            <Input
+                              id="birthDate"
+                              type="date"
+                              value={newStudent.birthDate}
+                              onChange={(e) => setNewStudent({ ...newStudent, birthDate: e.target.value })}
+                              required
+                            />
+                          </div>
+                          <div className="space-y-2">
+                            <Label htmlFor="phone">Phone Number</Label>
+                            <Input
+                              id="phone"
+                              value={newStudent.phone}
+                              onChange={(e) => setNewStudent({ ...newStudent, phone: e.target.value })}
+                              required
+                            />
+                          </div>
+                          <div className="space-y-2">
+                            <Label htmlFor="email">Email (Optional)</Label>
+                            <Input
+                              id="email"
+                              type="email"
+                              value={newStudent.email}
+                              onChange={(e) => setNewStudent({ ...newStudent, email: e.target.value })}
+                            />
+                          </div>
+                          <div className="space-y-2">
+                            <Label htmlFor="school">School They Attend</Label>
+                            <Input
+                              id="school"
+                              value={newStudent.school}
+                              onChange={(e) => setNewStudent({ ...newStudent, school: e.target.value })}
+                              required
+                            />
+                          </div>
+                        </div>
+
+                        <div className="space-y-4">
+                          <Label>Document Checklist</Label>
+                          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                            <div className="flex items-center space-x-2">
+                              <Checkbox
+                                id="photos"
+                                checked={newStudent.photos}
+                                onCheckedChange={(checked) =>
+                                  setNewStudent({ ...newStudent, photos: checked as boolean })
+                                }
+                              />
+                              <Label htmlFor="photos">Photos</Label>
+                            </div>
+                            <div className="flex items-center space-x-2">
+                              <Checkbox
+                                id="copyOfId"
+                                checked={newStudent.copyOfId}
+                                onCheckedChange={(checked) =>
+                                  setNewStudent({ ...newStudent, copyOfId: checked as boolean })
+                                }
+                              />
+                              <Label htmlFor="copyOfId">Copy of ID</Label>
+                            </div>
+                            <div className="flex items-center space-x-2">
+                              <Checkbox
+                                id="registrationForm"
+                                checked={newStudent.registrationForm}
+                                onCheckedChange={(checked) =>
+                                  setNewStudent({ ...newStudent, registrationForm: checked as boolean })
+                                }
+                              />
+                              <Label htmlFor="registrationForm">Registration Form</Label>
+                            </div>
+                          </div>
+                        </div>
+
+                        <div className="flex items-center space-x-2">
+                          <Checkbox
+                            id="registrationFee"
+                            checked={newStudent.registrationFeePaid}
+                            onCheckedChange={(checked) =>
+                              setNewStudent({ ...newStudent, registrationFeePaid: checked as boolean })
+                            }
+                          />
+                          <Label htmlFor="registrationFee">Registration Fee Paid</Label>
+                        </div>
+
+                        <div className="flex justify-end space-x-2">
+                          <Button type="button" variant="outline" onClick={() => setShowAddStudentDialog(false)}>
+                            Cancel
+                          </Button>
+                          <Button type="submit">Add Student</Button>
+                        </div>
+                      </form>
+                    </DialogContent>
+                  </Dialog>
+                </div>
               </CardHeader>
               <CardContent>
                 <Table>
@@ -378,14 +635,14 @@ export default function ReceptionistDashboard() {
                       <TableHead>Name</TableHead>
                       <TableHead>School Year</TableHead>
                       <TableHead>School</TableHead>
-                      <TableHead>Active Courses</TableHead>
+                      <TableHead>Enrolled Courses</TableHead>
                       <TableHead>Payment Status</TableHead>
                       <TableHead>Actions</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     {students.map((student) => {
-                      const studentInstances = getStudentCourseInstances(student.id)
+                      const studentCourses = getStudentCourses(student.id)
                       return (
                         <TableRow key={student.id}>
                           <TableCell className="font-medium">
@@ -400,23 +657,20 @@ export default function ReceptionistDashboard() {
                           <TableCell>{student.schoolYear}</TableCell>
                           <TableCell>{student.school}</TableCell>
                           <TableCell>
-                            {studentInstances.map((instance, idx) => {
-                              const template = courseTemplates.find((t) => t.id === instance.templateId)
-                              return template ? (
-                                <Badge key={idx} variant="secondary" className="mr-1">
-                                  {template.subject}
-                                </Badge>
-                              ) : null
-                            })}
+                            {studentCourses.map((course, idx) => (
+                              <Badge key={idx} variant="secondary" className="mr-1">
+                                {course.subject}
+                              </Badge>
+                            ))}
                           </TableCell>
                           <TableCell>
-                            {studentInstances.map((instance, idx) => (
+                            {studentCourses.map((course, idx) => (
                               <Badge
                                 key={idx}
-                                variant={instance.payments.studentPaid ? "default" : "destructive"}
+                                variant={course.payments.students[student.id] ? "default" : "destructive"}
                                 className="mr-1"
                               >
-                                {instance.payments.studentPaid ? "Paid" : "Pending"}
+                                {course.payments.students[student.id] ? "Paid" : "Pending"}
                               </Badge>
                             ))}
                           </TableCell>
@@ -438,10 +692,211 @@ export default function ReceptionistDashboard() {
           <TabsContent value="courses">
             <Card>
               <CardHeader>
-                <CardTitle className="flex items-center">
-                  <BookOpen className="h-5 w-5 mr-2" />
-                  All Course Instances
-                </CardTitle>
+                <div className="flex justify-between items-center">
+                  <CardTitle className="flex items-center">
+                    <BookOpen className="h-5 w-5 mr-2" />
+                    All Courses
+                  </CardTitle>
+                  <Dialog open={showAddCourseDialog} onOpenChange={setShowAddCourseDialog}>
+                    <DialogTrigger asChild>
+                      <Button>
+                        <Plus className="h-4 w-4 mr-2" />
+                        Add Course
+                      </Button>
+                    </DialogTrigger>
+                    <DialogContent className="max-w-2xl">
+                      <DialogHeader>
+                        <DialogTitle>Add New Course</DialogTitle>
+                      </DialogHeader>
+                      <form onSubmit={handleAddCourse} className="space-y-4">
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                          <div className="space-y-2 md:col-span-2">
+                            <Label htmlFor="teacherSearch">Teacher</Label>
+                            <div className="relative">
+                              <Input
+                                id="teacherSearch"
+                                placeholder="Search for a teacher..."
+                                value={teacherSearchQuery}
+                                onChange={(e) => setTeacherSearchQuery(e.target.value)}
+                                required
+                              />
+                              {showTeacherResults && filteredTeachers.length > 0 && (
+                                <div className="absolute top-full left-0 right-0 mt-1 bg-white border rounded-md shadow-lg z-50 max-h-40 overflow-y-auto">
+                                  {filteredTeachers.map((teacher) => (
+                                    <div
+                                      key={teacher.id}
+                                      className="px-4 py-2 hover:bg-gray-50 cursor-pointer border-b last:border-b-0"
+                                      onClick={() => {
+                                        setNewCourse({
+                                          ...newCourse,
+                                          teacherId: teacher.id.toString(),
+                                          teacherName: teacher.name,
+                                        })
+                                        setTeacherSearchQuery(teacher.name)
+                                        setShowTeacherResults(false)
+                                      }}
+                                    >
+                                      <div className="font-medium">{teacher.name}</div>
+                                      <div className="text-sm text-gray-600">{teacher.subjects.join(", ")}</div>
+                                    </div>
+                                  ))}
+                                </div>
+                              )}
+                            </div>
+                            {newCourse.teacherName && (
+                              <div className="text-sm text-green-600">Selected: {newCourse.teacherName}</div>
+                            )}
+                          </div>
+                          <div className="space-y-2">
+                            <Label htmlFor="subject">Subject</Label>
+                            <Select
+                              value={newCourse.subject}
+                              onValueChange={(value) => setNewCourse({ ...newCourse, subject: value })}
+                              required
+                            >
+                              <SelectTrigger>
+                                <SelectValue placeholder="Select subject" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="Mathematics">Mathematics</SelectItem>
+                                <SelectItem value="Physics">Physics</SelectItem>
+                                <SelectItem value="Chemistry">Chemistry</SelectItem>
+                                <SelectItem value="Biology">Biology</SelectItem>
+                                <SelectItem value="Arabic">Arabic</SelectItem>
+                                <SelectItem value="French">French</SelectItem>
+                                <SelectItem value="English">English</SelectItem>
+                                <SelectItem value="History">History</SelectItem>
+                                <SelectItem value="Geography">Geography</SelectItem>
+                                <SelectItem value="Philosophy">Philosophy</SelectItem>
+                              </SelectContent>
+                            </Select>
+                          </div>
+                          <div className="space-y-2">
+                            <Label htmlFor="schoolYear">School Year</Label>
+                            <Select
+                              value={newCourse.schoolYear}
+                              onValueChange={(value) => setNewCourse({ ...newCourse, schoolYear: value })}
+                              required
+                            >
+                              <SelectTrigger>
+                                <SelectValue placeholder="Select school year" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="1AS">1AS</SelectItem>
+                                <SelectItem value="2AS">2AS</SelectItem>
+                                <SelectItem value="3AS">3AS</SelectItem>
+                                <SelectItem value="BEM">BEM</SelectItem>
+                                <SelectItem value="BAC">BAC</SelectItem>
+                              </SelectContent>
+                            </Select>
+                          </div>
+                          <div className="space-y-2">
+                            <Label htmlFor="percentageCut">Percentage Cut (40-70%)</Label>
+                            <Input
+                              id="percentageCut"
+                              type="number"
+                              min="40"
+                              max="70"
+                              value={newCourse.percentageCut}
+                              onChange={(e) =>
+                                setNewCourse({ ...newCourse, percentageCut: Number.parseInt(e.target.value) })
+                              }
+                              required
+                            />
+                          </div>
+                          <div className="space-y-2">
+                            <Label htmlFor="courseType">Course Type</Label>
+                            <Select
+                              value={newCourse.courseType}
+                              onValueChange={(value) => setNewCourse({ ...newCourse, courseType: value })}
+                              required
+                            >
+                              <SelectTrigger>
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="Group">Group</SelectItem>
+                                <SelectItem value="Individual">Individual</SelectItem>
+                              </SelectContent>
+                            </Select>
+                          </div>
+                          <div className="space-y-2">
+                            <Label htmlFor="duration">Duration (hours)</Label>
+                            <Input
+                              id="duration"
+                              type="number"
+                              step="0.5"
+                              min="0.5"
+                              max="4"
+                              value={newCourse.duration}
+                              onChange={(e) =>
+                                setNewCourse({ ...newCourse, duration: Number.parseFloat(e.target.value) })
+                              }
+                              required
+                            />
+                          </div>
+                          <div className="space-y-2">
+                            <Label htmlFor="dayOfWeek">Day of the Week</Label>
+                            <Select
+                              value={newCourse.dayOfWeek}
+                              onValueChange={(value) => setNewCourse({ ...newCourse, dayOfWeek: value })}
+                              required
+                            >
+                              <SelectTrigger>
+                                <SelectValue placeholder="Select day" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="Monday">Monday</SelectItem>
+                                <SelectItem value="Tuesday">Tuesday</SelectItem>
+                                <SelectItem value="Wednesday">Wednesday</SelectItem>
+                                <SelectItem value="Thursday">Thursday</SelectItem>
+                                <SelectItem value="Friday">Friday</SelectItem>
+                                <SelectItem value="Saturday">Saturday</SelectItem>
+                                <SelectItem value="Sunday">Sunday</SelectItem>
+                              </SelectContent>
+                            </Select>
+                          </div>
+                          <div className="space-y-2">
+                            <Label htmlFor="startHour">Start Hour</Label>
+                            <Input
+                              id="startHour"
+                              type="time"
+                              value={newCourse.startHour}
+                              onChange={(e) => setNewCourse({ ...newCourse, startHour: e.target.value })}
+                              required
+                            />
+                          </div>
+                          <div className="space-y-2">
+                            <Label htmlFor="price">
+                              {newCourse.courseType === "Group" ? "Monthly Price" : "Session Price"} (DA)
+                            </Label>
+                            <Input
+                              id="price"
+                              type="number"
+                              value={newCourse.price}
+                              onChange={(e) => setNewCourse({ ...newCourse, price: Number.parseInt(e.target.value) })}
+                              required
+                            />
+                          </div>
+                          <div className="space-y-2">
+                            <Label>End Hour (Calculated)</Label>
+                            <div className="p-2 bg-gray-50 rounded border text-sm">
+                              {newCourse.startHour && newCourse.duration
+                                ? calculateEndHour(newCourse.startHour, newCourse.duration)
+                                : "--:--"}
+                            </div>
+                          </div>
+                        </div>
+                        <div className="flex justify-end space-x-2">
+                          <Button type="button" variant="outline" onClick={() => setShowAddCourseDialog(false)}>
+                            Cancel
+                          </Button>
+                          <Button type="submit">Add Course</Button>
+                        </div>
+                      </form>
+                    </DialogContent>
+                  </Dialog>
+                </div>
               </CardHeader>
               <CardContent>
                 <Table>
@@ -449,52 +904,42 @@ export default function ReceptionistDashboard() {
                     <TableRow>
                       <TableHead>Status</TableHead>
                       <TableHead>Course</TableHead>
-                      <TableHead>Professor</TableHead>
+                      <TableHead>Teacher</TableHead>
                       <TableHead>Type</TableHead>
-                      <TableHead>Month/Date</TableHead>
+                      <TableHead>Schedule</TableHead>
                       <TableHead>Students</TableHead>
-                      <TableHead>Payments</TableHead>
+                      <TableHead>Price</TableHead>
                       <TableHead>Actions</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {courseInstances.map((instance) => {
-                      const template = courseTemplates.find((t) => t.id === instance.templateId)
-                      const professor = professors.find((p) => p.id === template?.professorId)
-                      const enrolledStudents = students.filter((s) => instance.studentIds.includes(s.id))
-
+                    {courses.map((course) => {
+                      const enrolledStudents = students.filter((s) => course.enrolledStudents.includes(s.id))
                       return (
-                        <TableRow key={instance.id}>
+                        <TableRow key={course.id}>
                           <TableCell>
                             <div
                               className={`w-3 h-3 rounded-full ${
-                                instance.status === "active" ? "bg-green-500" : "bg-red-500"
+                                course.status === "active" ? "bg-green-500" : "bg-red-500"
                               }`}
                             />
                           </TableCell>
                           <TableCell className="font-medium">
-                            {template?.subject} - {template?.schoolYear}
+                            {course.subject} - {course.schoolYear}
                           </TableCell>
-                          <TableCell>{professor?.name}</TableCell>
+                          <TableCell>{course.teacherName}</TableCell>
                           <TableCell>
-                            <Badge variant={template?.type === "Group" ? "default" : "secondary"}>
-                              {template?.type}
+                            <Badge variant={course.courseType === "Group" ? "default" : "secondary"}>
+                              {course.courseType}
                             </Badge>
                           </TableCell>
-                          <TableCell>{instance.month || instance.sessionDate}</TableCell>
-                          <TableCell>{enrolledStudents.map((student) => student.name).join(", ")}</TableCell>
+                          <TableCell>{course.schedule}</TableCell>
+                          <TableCell>{enrolledStudents.length} students</TableCell>
                           <TableCell>
-                            <div className="flex space-x-2">
-                              <Badge variant={instance.payments.studentPaid ? "default" : "destructive"}>
-                                Student: {instance.payments.studentPaid ? "Paid" : "Pending"}
-                              </Badge>
-                              <Badge variant={instance.payments.profPaid ? "default" : "destructive"}>
-                                Prof: {instance.payments.profPaid ? "Paid" : "Pending"}
-                              </Badge>
-                            </div>
+                            {course.price} DA {course.courseType === "Group" ? "/month" : "/session"}
                           </TableCell>
                           <TableCell>
-                            <Button variant="outline" size="sm" onClick={() => router.push(`/course/${instance.id}`)}>
+                            <Button variant="outline" size="sm" onClick={() => router.push(`/course/${course.id}`)}>
                               View Details
                             </Button>
                           </TableCell>
@@ -507,258 +952,168 @@ export default function ReceptionistDashboard() {
             </Card>
           </TabsContent>
 
-          {/* Registration Tab */}
-          <TabsContent value="register">
+          {/* Teachers Tab */}
+          <TabsContent value="teachers">
             <Card>
               <CardHeader>
-                <CardTitle className="flex items-center">
-                  <UserPlus className="h-5 w-5 mr-2" />
-                  Registration
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                {/* Registration Type Toggle */}
-                <div className="mb-6">
-                  <Label className="text-base font-medium">Registration Type</Label>
-                  <Select value={registrationType} onValueChange={setRegistrationType}>
-                    <SelectTrigger className="w-full mt-2">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="student">Student Registration</SelectItem>
-                      <SelectItem value="professor">Professor Registration</SelectItem>
-                    </SelectContent>
-                  </Select>
+                <div className="flex justify-between items-center">
+                  <CardTitle className="flex items-center">
+                    <GraduationCap className="h-5 w-5 mr-2" />
+                    Teacher List
+                  </CardTitle>
+                  <Dialog open={showAddTeacherDialog} onOpenChange={setShowAddTeacherDialog}>
+                    <DialogTrigger asChild>
+                      <Button>
+                        <Plus className="h-4 w-4 mr-2" />
+                        Add Teacher
+                      </Button>
+                    </DialogTrigger>
+                    <DialogContent className="max-w-2xl">
+                      <DialogHeader>
+                        <DialogTitle>Add New Teacher</DialogTitle>
+                      </DialogHeader>
+                      <form onSubmit={handleAddTeacher} className="space-y-4">
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                          <div className="space-y-2">
+                            <Label htmlFor="profName">Full Name</Label>
+                            <Input
+                              id="profName"
+                              value={newTeacher.name}
+                              onChange={(e) => setNewTeacher({ ...newTeacher, name: e.target.value })}
+                              required
+                            />
+                          </div>
+                          <div className="space-y-2">
+                            <Label htmlFor="profAddress">Address</Label>
+                            <Input
+                              id="profAddress"
+                              value={newTeacher.address}
+                              onChange={(e) => setNewTeacher({ ...newTeacher, address: e.target.value })}
+                              required
+                            />
+                          </div>
+                          <div className="space-y-2">
+                            <Label htmlFor="profPhone">Phone Number</Label>
+                            <Input
+                              id="profPhone"
+                              value={newTeacher.phone}
+                              onChange={(e) => setNewTeacher({ ...newTeacher, phone: e.target.value })}
+                              required
+                            />
+                          </div>
+                          <div className="space-y-2">
+                            <Label htmlFor="profEmail">Email</Label>
+                            <Input
+                              id="profEmail"
+                              type="email"
+                              value={newTeacher.email}
+                              onChange={(e) => setNewTeacher({ ...newTeacher, email: e.target.value })}
+                              required
+                            />
+                          </div>
+                          <div className="space-y-2">
+                            <Label htmlFor="profSchool">School They Work At</Label>
+                            <Input
+                              id="profSchool"
+                              value={newTeacher.school}
+                              onChange={(e) => setNewTeacher({ ...newTeacher, school: e.target.value })}
+                              required
+                            />
+                          </div>
+                          <div className="space-y-2">
+                            <Label htmlFor="profSchoolYears">School Years They Teach</Label>
+                            <Select
+                              onValueChange={(value) =>
+                                handleMultiSelect(value, newTeacher.schoolYears, (arr) =>
+                                  setNewTeacher({ ...newTeacher, schoolYears: arr }),
+                                )
+                              }
+                            >
+                              <SelectTrigger>
+                                <SelectValue placeholder="Select school years" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="1AS">1AS</SelectItem>
+                                <SelectItem value="2AS">2AS</SelectItem>
+                                <SelectItem value="3AS">3AS</SelectItem>
+                                <SelectItem value="BEM">BEM</SelectItem>
+                                <SelectItem value="BAC">BAC</SelectItem>
+                              </SelectContent>
+                            </Select>
+                            <div className="flex flex-wrap gap-2 mt-2">
+                              {newTeacher.schoolYears.map((year) => (
+                                <Badge
+                                  key={year}
+                                  variant="secondary"
+                                  className="cursor-pointer"
+                                  onClick={() =>
+                                    handleMultiSelect(year, newTeacher.schoolYears, (arr) =>
+                                      setNewTeacher({ ...newTeacher, schoolYears: arr }),
+                                    )
+                                  }
+                                >
+                                  {year} ×
+                                </Badge>
+                              ))}
+                            </div>
+                          </div>
+                          <div className="space-y-2 md:col-span-2">
+                            <Label htmlFor="profSubjects">Subjects They Teach</Label>
+                            <Select
+                              onValueChange={(value) =>
+                                handleMultiSelect(value, newTeacher.subjects, (arr) =>
+                                  setNewTeacher({ ...newTeacher, subjects: arr }),
+                                )
+                              }
+                            >
+                              <SelectTrigger>
+                                <SelectValue placeholder="Select subjects" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="Mathematics">Mathematics</SelectItem>
+                                <SelectItem value="Physics">Physics</SelectItem>
+                                <SelectItem value="Chemistry">Chemistry</SelectItem>
+                                <SelectItem value="Biology">Biology</SelectItem>
+                                <SelectItem value="Arabic">Arabic</SelectItem>
+                                <SelectItem value="French">French</SelectItem>
+                                <SelectItem value="English">English</SelectItem>
+                                <SelectItem value="History">History</SelectItem>
+                                <SelectItem value="Geography">Geography</SelectItem>
+                                <SelectItem value="Philosophy">Philosophy</SelectItem>
+                              </SelectContent>
+                            </Select>
+                            <div className="flex flex-wrap gap-2 mt-2">
+                              {newTeacher.subjects.map((subject) => (
+                                <Badge
+                                  key={subject}
+                                  variant="default"
+                                  className="cursor-pointer"
+                                  onClick={() =>
+                                    handleMultiSelect(subject, newTeacher.subjects, (arr) =>
+                                      setNewTeacher({ ...newTeacher, subjects: arr }),
+                                    )
+                                  }
+                                >
+                                  {subject} ×
+                                </Badge>
+                              ))}
+                            </div>
+                          </div>
+                        </div>
+
+                        <div className="flex justify-end space-x-2">
+                          <Button type="button" variant="outline" onClick={() => setShowAddTeacherDialog(false)}>
+                            Cancel
+                          </Button>
+                          <Button type="submit">
+                            <GraduationCap className="h-4 w-4 mr-2" />
+                            Add Teacher
+                          </Button>
+                        </div>
+                      </form>
+                    </DialogContent>
+                  </Dialog>
                 </div>
-
-                {/* Student Registration Form */}
-                {registrationType === "student" && (
-                  <form onSubmit={handleRegisterStudent} className="space-y-4">
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <div className="space-y-2">
-                        <Label htmlFor="name">Student Name</Label>
-                        <Input
-                          id="name"
-                          value={newStudent.name}
-                          onChange={(e) => setNewStudent({ ...newStudent, name: e.target.value })}
-                          required
-                        />
-                      </div>
-                      <div className="space-y-2">
-                        <Label htmlFor="schoolYear">School Year</Label>
-                        <Select
-                          value={newStudent.schoolYear}
-                          onValueChange={(value) => setNewStudent({ ...newStudent, schoolYear: value })}
-                        >
-                          <SelectTrigger>
-                            <SelectValue placeholder="Select school year" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="1AS">1AS</SelectItem>
-                            <SelectItem value="2AS">2AS</SelectItem>
-                            <SelectItem value="3AS">3AS</SelectItem>
-                            <SelectItem value="BEM">BEM</SelectItem>
-                            <SelectItem value="BAC">BAC</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </div>
-                      <div className="space-y-2">
-                        <Label htmlFor="specialty">Specialty</Label>
-                        <Select
-                          value={newStudent.specialty}
-                          onValueChange={(value) => setNewStudent({ ...newStudent, specialty: value })}
-                        >
-                          <SelectTrigger>
-                            <SelectValue placeholder="Select specialty" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="Math">Mathematics</SelectItem>
-                            <SelectItem value="Sciences">Sciences</SelectItem>
-                            <SelectItem value="Literature">Literature</SelectItem>
-                            <SelectItem value="Languages">Languages</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </div>
-                      <div className="space-y-2">
-                        <Label htmlFor="address">Address</Label>
-                        <Input
-                          id="address"
-                          value={newStudent.address}
-                          onChange={(e) => setNewStudent({ ...newStudent, address: e.target.value })}
-                          required
-                        />
-                      </div>
-                      <div className="space-y-2">
-                        <Label htmlFor="birthDate">Birth Date</Label>
-                        <Input
-                          id="birthDate"
-                          type="date"
-                          value={newStudent.birthDate}
-                          onChange={(e) => setNewStudent({ ...newStudent, birthDate: e.target.value })}
-                          required
-                        />
-                      </div>
-                      <div className="space-y-2">
-                        <Label htmlFor="phone">Phone Number</Label>
-                        <Input
-                          id="phone"
-                          value={newStudent.phone}
-                          onChange={(e) => setNewStudent({ ...newStudent, phone: e.target.value })}
-                          required
-                        />
-                      </div>
-                      <div className="space-y-2">
-                        <Label htmlFor="email">Email (Optional)</Label>
-                        <Input
-                          id="email"
-                          type="email"
-                          value={newStudent.email}
-                          onChange={(e) => setNewStudent({ ...newStudent, email: e.target.value })}
-                        />
-                      </div>
-                      <div className="space-y-2">
-                        <Label htmlFor="school">School They Attend</Label>
-                        <Input
-                          id="school"
-                          value={newStudent.school}
-                          onChange={(e) => setNewStudent({ ...newStudent, school: e.target.value })}
-                          required
-                        />
-                      </div>
-                    </div>
-
-                    <div className="space-y-4">
-                      <Label>Document Checklist</Label>
-                      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                        <div className="flex items-center space-x-2">
-                          <Checkbox
-                            id="photos"
-                            checked={newStudent.photos}
-                            onCheckedChange={(checked) => setNewStudent({ ...newStudent, photos: checked as boolean })}
-                          />
-                          <Label htmlFor="photos">Photos</Label>
-                        </div>
-                        <div className="flex items-center space-x-2">
-                          <Checkbox
-                            id="copyOfId"
-                            checked={newStudent.copyOfId}
-                            onCheckedChange={(checked) =>
-                              setNewStudent({ ...newStudent, copyOfId: checked as boolean })
-                            }
-                          />
-                          <Label htmlFor="copyOfId">Copy of ID</Label>
-                        </div>
-                        <div className="flex items-center space-x-2">
-                          <Checkbox
-                            id="registrationForm"
-                            checked={newStudent.registrationForm}
-                            onCheckedChange={(checked) =>
-                              setNewStudent({ ...newStudent, registrationForm: checked as boolean })
-                            }
-                          />
-                          <Label htmlFor="registrationForm">Registration Form</Label>
-                        </div>
-                      </div>
-                    </div>
-
-                    <div className="flex items-center space-x-2">
-                      <Checkbox
-                        id="registrationFee"
-                        checked={newStudent.registrationFeePaid}
-                        onCheckedChange={(checked) =>
-                          setNewStudent({ ...newStudent, registrationFeePaid: checked as boolean })
-                        }
-                      />
-                      <Label htmlFor="registrationFee">Registration Fee Paid</Label>
-                    </div>
-
-                    <Button type="submit" className="w-full">
-                      Register Student
-                    </Button>
-                  </form>
-                )}
-
-                {/* Professor Registration Form */}
-                {registrationType === "professor" && (
-                  <form onSubmit={handleRegisterProfessor} className="space-y-4">
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <div className="space-y-2">
-                        <Label htmlFor="profName">Full Name</Label>
-                        <Input
-                          id="profName"
-                          value={newProfessor.name}
-                          onChange={(e) => setNewProfessor({ ...newProfessor, name: e.target.value })}
-                          required
-                        />
-                      </div>
-                      <div className="space-y-2">
-                        <Label htmlFor="profAddress">Address</Label>
-                        <Input
-                          id="profAddress"
-                          value={newProfessor.address}
-                          onChange={(e) => setNewProfessor({ ...newProfessor, address: e.target.value })}
-                          required
-                        />
-                      </div>
-                      <div className="space-y-2">
-                        <Label htmlFor="profPhone">Phone Number</Label>
-                        <Input
-                          id="profPhone"
-                          value={newProfessor.phone}
-                          onChange={(e) => setNewProfessor({ ...newProfessor, phone: e.target.value })}
-                          required
-                        />
-                      </div>
-                      <div className="space-y-2">
-                        <Label htmlFor="profEmail">Email</Label>
-                        <Input
-                          id="profEmail"
-                          type="email"
-                          value={newProfessor.email}
-                          onChange={(e) => setNewProfessor({ ...newProfessor, email: e.target.value })}
-                          required
-                        />
-                      </div>
-                      <div className="space-y-2">
-                        <Label htmlFor="profSchools">Schools They Work At</Label>
-                        <Input
-                          id="profSchools"
-                          value={newProfessor.schools}
-                          onChange={(e) => setNewProfessor({ ...newProfessor, schools: e.target.value })}
-                          placeholder="Separate multiple schools with commas"
-                          required
-                        />
-                      </div>
-                      <div className="space-y-2">
-                        <Label htmlFor="profSubjects">Courses/Subjects They Teach</Label>
-                        <Input
-                          id="profSubjects"
-                          value={newProfessor.subjects}
-                          onChange={(e) => setNewProfessor({ ...newProfessor, subjects: e.target.value })}
-                          placeholder="Separate multiple subjects with commas"
-                          required
-                        />
-                      </div>
-                    </div>
-
-                    <Button type="submit" className="w-full">
-                      <GraduationCap className="h-4 w-4 mr-2" />
-                      Register Professor
-                    </Button>
-                  </form>
-                )}
-              </CardContent>
-            </Card>
-          </TabsContent>
-
-          {/* Professors Tab */}
-          <TabsContent value="professors">
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center">
-                  <GraduationCap className="h-5 w-5 mr-2" />
-                  Professor List
-                </CardTitle>
               </CardHeader>
               <CardContent>
                 <Table>
@@ -766,48 +1121,46 @@ export default function ReceptionistDashboard() {
                     <TableRow>
                       <TableHead>Name</TableHead>
                       <TableHead>Subjects</TableHead>
-                      <TableHead>Schools</TableHead>
-                      <TableHead>Course Templates</TableHead>
+                      <TableHead>School</TableHead>
+                      <TableHead>School Years</TableHead>
+                      <TableHead>Active Courses</TableHead>
                       <TableHead>Actions</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {professors.map((professor) => {
-                      const professorTemplates = courseTemplates.filter((t) => t.professorId === professor.id)
+                    {teachers.map((teacher) => {
+                      const teacherCourses = courses.filter((c) => c.teacherId === teacher.id)
                       return (
-                        <TableRow key={professor.id}>
+                        <TableRow key={teacher.id}>
                           <TableCell className="font-medium">
                             <Button
                               variant="link"
                               className="p-0 h-auto font-medium text-left"
-                              onClick={() => router.push(`/professor/${professor.id}`)}
+                              onClick={() => router.push(`/teacher/${teacher.id}`)}
                             >
-                              {professor.name}
+                              {teacher.name}
                             </Button>
                           </TableCell>
                           <TableCell>
-                            {professor.subjects.map((subject, idx) => (
+                            {teacher.subjects.map((subject, idx) => (
                               <Badge key={idx} variant="secondary" className="mr-1">
                                 {subject}
                               </Badge>
                             ))}
                           </TableCell>
+                          <TableCell>{teacher.school}</TableCell>
                           <TableCell>
-                            {professor.schools.map((school, idx) => (
+                            {teacher.schoolYears.map((year, idx) => (
                               <Badge key={idx} variant="outline" className="mr-1">
-                                {school}
+                                {year}
                               </Badge>
                             ))}
                           </TableCell>
                           <TableCell>
-                            <span className="text-sm text-gray-600">{professorTemplates.length} template(s)</span>
+                            <span className="text-sm text-gray-600">{teacherCourses.length} course(s)</span>
                           </TableCell>
                           <TableCell>
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() => router.push(`/professor/${professor.id}`)}
-                            >
+                            <Button variant="outline" size="sm" onClick={() => router.push(`/teacher/${teacher.id}`)}>
                               View Profile
                             </Button>
                           </TableCell>
