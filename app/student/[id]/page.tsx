@@ -13,9 +13,21 @@ import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 import { Alert, AlertDescription } from "@/components/ui/alert"
-import { ArrowLeft, Download, CreditCard, User, BookOpen, Plus, Upload, AlertTriangle, CheckCircle } from "lucide-react"
+import { Switch } from "@/components/ui/switch"
+import {
+  ArrowLeft,
+  Download,
+  User,
+  BookOpen,
+  Plus,
+  Upload,
+  AlertTriangle,
+  CheckCircle,
+  Calendar,
+  Trash2,
+} from "lucide-react"
 
-// Mock student data with updated fields
+// Mock data (same structure as receptionist page)
 const mockStudentDetails = {
   1: {
     id: 1,
@@ -33,21 +45,6 @@ const mockStudentDetails = {
       copyOfId: { uploaded: false, filename: null },
       registrationForm: { uploaded: true, filename: "20240115_Ben_Ahmed_Registration.pdf" },
     },
-    courses: [
-      {
-        id: 1,
-        subject: "Mathematics",
-        teacher: "Prof. Salim",
-        timeSlot: "9:00-11:00",
-        schoolYear: "3AS",
-        courseType: "Group",
-        pricePerSession: 500,
-        payments: [
-          { month: "January", paid: true, date: "2024-01-15" },
-          { month: "February", paid: false, date: null },
-        ],
-      },
-    ],
   },
   2: {
     id: 2,
@@ -65,65 +62,64 @@ const mockStudentDetails = {
       copyOfId: { uploaded: true, filename: "20240110_Zahra_Fatima_ID.pdf" },
       registrationForm: { uploaded: false, filename: null },
     },
-    courses: [
-      {
-        id: 1,
-        subject: "Physics",
-        teacher: "Prof. Amina",
-        timeSlot: "14:00-16:00",
-        schoolYear: "BAC",
-        courseType: "Group",
-        pricePerSession: 600,
-        payments: [
-          { month: "January", paid: false, date: null },
-          { month: "February", paid: false, date: null },
-        ],
-      },
-      {
-        id: 2,
-        subject: "Chemistry",
-        teacher: "Prof. Omar",
-        timeSlot: "16:00-18:00",
-        schoolYear: "2AS",
-        courseType: "Group",
-        pricePerSession: 450,
-        payments: [
-          { month: "January", paid: true, date: "2024-01-10" },
-          { month: "February", paid: false, date: null },
-        ],
-      },
-    ],
   },
 }
 
-// Available courses from professors
-const availableCourses = [
+const mockCourseTemplates = [
   {
     id: 1,
+    professorId: 1,
+    professorName: "Prof. Salim",
     subject: "Mathematics",
-    teacher: "Prof. Salim",
+    type: "Group",
+    percentageCut: 65,
+    price: 500,
+    durationHours: 2,
+    schedule: "Monday 9:00-11:00",
     schoolYear: "3AS",
-    timeSlot: "9:00-11:00",
-    courseType: "Group",
-    pricePerSession: 500,
   },
   {
     id: 2,
+    professorId: 1,
+    professorName: "Prof. Salim",
     subject: "Physics",
-    teacher: "Prof. Amina",
+    type: "Individual",
+    percentageCut: 70,
+    price: 800,
+    durationHours: 1.5,
+    schedule: "Flexible",
     schoolYear: "BAC",
-    timeSlot: "14:00-15:30",
-    courseType: "Individual",
-    pricePerSession: 800,
   },
   {
     id: 3,
+    professorId: 2,
+    professorName: "Prof. Amina",
     subject: "Chemistry",
-    teacher: "Prof. Omar",
+    type: "Group",
+    percentageCut: 60,
+    price: 450,
+    durationHours: 2,
+    schedule: "Tuesday 16:00-18:00",
     schoolYear: "2AS",
-    timeSlot: "16:00-18:00",
-    courseType: "Group",
-    pricePerSession: 450,
+  },
+]
+
+const mockCourseInstances = [
+  {
+    id: 1,
+    templateId: 1,
+    month: "2024-01",
+    studentIds: [1],
+    status: "active",
+    payments: { studentPaid: true, profPaid: false },
+  },
+  {
+    id: 2,
+    templateId: 3,
+    month: "2024-01",
+    studentIds: [2],
+    status: "active",
+    payments: { studentPaid: false, profPaid: false },
   },
 ]
 
@@ -132,8 +128,12 @@ export default function StudentDashboard() {
   const params = useParams()
   const studentId = params.id as string
   const [student, setStudent] = useState<any>(null)
+  const [courseInstances, setCourseInstances] = useState(mockCourseInstances)
   const [showAddCourseDialog, setShowAddCourseDialog] = useState(false)
+  const [showBookSessionDialog, setShowBookSessionDialog] = useState(false)
   const [selectedCourse, setSelectedCourse] = useState("")
+  const [selectedSessionTemplate, setSelectedSessionTemplate] = useState("")
+  const [sessionDate, setSessionDate] = useState("")
   const [uploadingDoc, setUploadingDoc] = useState("")
 
   useEffect(() => {
@@ -153,57 +153,83 @@ export default function StudentDashboard() {
     }
   }, [studentId, router])
 
-  const markPaymentPaid = (courseId: number, month: string) => {
-    if (!student) return
-
-    const updatedStudent = {
-      ...student,
-      courses: student.courses.map((course: any) => {
-        if (course.id === courseId) {
+  const togglePayment = (instanceId: number, paymentType: "studentPaid" | "profPaid") => {
+    setCourseInstances((instances) =>
+      instances.map((instance) => {
+        if (instance.id === instanceId) {
+          const newPayments = {
+            ...instance.payments,
+            [paymentType]: !instance.payments[paymentType],
+          }
+          const newStatus = newPayments.studentPaid && newPayments.profPaid ? "completed" : "active"
           return {
-            ...course,
-            payments: course.payments.map((payment: any) =>
-              payment.month === month
-                ? { ...payment, paid: true, date: new Date().toISOString().split("T")[0] }
-                : payment,
-            ),
+            ...instance,
+            payments: newPayments,
+            status: newStatus,
           }
         }
-        return course
+        return instance
       }),
-    }
-    setStudent(updatedStudent)
+    )
+  }
+
+  const removeStudentFromCourse = (instanceId: number) => {
+    setCourseInstances((instances) =>
+      instances
+        .map((instance) => {
+          if (instance.id === instanceId) {
+            return {
+              ...instance,
+              studentIds: instance.studentIds.filter((id) => id !== Number.parseInt(studentId)),
+            }
+          }
+          return instance
+        })
+        .filter((instance) => instance.studentIds.length > 0),
+    )
   }
 
   const handleAddCourse = (e: React.FormEvent) => {
     e.preventDefault()
     if (!student || !selectedCourse) return
 
-    const courseToAdd = availableCourses.find((c) => c.id.toString() === selectedCourse)
-    if (!courseToAdd) return
+    const template = mockCourseTemplates.find((t) => t.id.toString() === selectedCourse)
+    if (!template || template.type !== "Group") return
 
-    const newCourse = {
-      id: student.courses.length + 1,
-      subject: courseToAdd.subject,
-      teacher: courseToAdd.teacher,
-      timeSlot: courseToAdd.timeSlot,
-      schoolYear: courseToAdd.schoolYear,
-      courseType: courseToAdd.courseType,
-      pricePerSession: courseToAdd.pricePerSession,
-      payments: [
-        { month: "January", paid: false, date: null },
-        { month: "February", paid: false, date: null },
-      ],
+    const newInstance = {
+      id: courseInstances.length + 1,
+      templateId: template.id,
+      month: "2024-01",
+      studentIds: [Number.parseInt(studentId)],
+      status: "active",
+      payments: { studentPaid: false, profPaid: false },
     }
 
-    const updatedStudent = {
-      ...student,
-      courses: [...student.courses, newCourse],
-    }
-
-    setStudent(updatedStudent)
+    setCourseInstances([...courseInstances, newInstance])
     setSelectedCourse("")
     setShowAddCourseDialog(false)
+  }
+
+  const handleBookSession = (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!student || !selectedSessionTemplate || !sessionDate) return
+
+    const template = mockCourseTemplates.find((t) => t.id.toString() === selectedSessionTemplate)
+    if (!template || template.type !== "Individual") return
+
+    const newInstance = {
+      id: courseInstances.length + 1,
+      templateId: template.id,
+      sessionDate: sessionDate,
+      studentIds: [Number.parseInt(studentId)],
+      status: "active",
+      payments: { studentPaid: false, profPaid: false },
+    }
+
+    setCourseInstances([...courseInstances, newInstance])
+    setSelectedSessionTemplate("")
+    setSessionDate("")
+    setShowBookSessionDialog(false)
   }
 
   const handleFileUpload = (docType: string, event: React.ChangeEvent<HTMLInputElement>) => {
@@ -242,7 +268,6 @@ export default function StudentDashboard() {
   }
 
   const downloadStudentCard = () => {
-    // In a real app, this would generate and download a PDF
     alert("Student card download would be implemented here")
   }
 
@@ -256,26 +281,35 @@ export default function StudentDashboard() {
     )
   }
 
-  const totalMonthlyFees = student.courses.reduce((sum: number, course: any) => sum + course.pricePerSession, 0)
-  const paidThisMonth = student.courses.reduce((sum: number, course: any) => {
-    const currentMonthPayment = course.payments.find((p: any) => p.month === "January")
-    return sum + (currentMonthPayment?.paid ? course.pricePerSession : 0)
+  const studentInstances = courseInstances.filter((instance) =>
+    instance.studentIds.includes(Number.parseInt(studentId)),
+  )
+  const activeInstances = studentInstances.filter((instance) => instance.status === "active")
+  const completedInstances = studentInstances.filter((instance) => instance.status === "completed")
+
+  const totalMonthlyFees = activeInstances.reduce((sum, instance) => {
+    const template = mockCourseTemplates.find((t) => t.id === instance.templateId)
+    return sum + (template?.price || 0)
+  }, 0)
+
+  const paidThisMonth = activeInstances.reduce((sum, instance) => {
+    const template = mockCourseTemplates.find((t) => t.id === instance.templateId)
+    return sum + (instance.payments.studentPaid ? template?.price || 0 : 0)
   }, 0)
 
   // Calculate alerts
-  const missedPayments = student.courses.filter((course: any) =>
-    course.payments.some((payment: any) => !payment.paid),
-  ).length
-
+  const missedPayments = activeInstances.filter((instance) => !instance.payments.studentPaid).length
   const missingDocuments = Object.entries(student.documents)
     .filter(([_, doc]: [string, any]) => !doc.uploaded)
     .map(([docType, _]) => docType)
 
-  // Filter available courses (exclude already enrolled)
-  const enrolledCourseIds = student.courses.map((c: any) => `${c.subject}-${c.teacher}-${c.schoolYear}`)
-  const filteredAvailableCourses = availableCourses.filter(
-    (course) => !enrolledCourseIds.includes(`${course.subject}-${course.teacher}-${course.schoolYear}`),
+  // Filter available group courses
+  const enrolledTemplateIds = studentInstances.map((instance) => instance.templateId)
+  const availableGroupCourses = mockCourseTemplates.filter(
+    (template) => template.type === "Group" && !enrolledTemplateIds.includes(template.id),
   )
+
+  const availableIndividualCourses = mockCourseTemplates.filter((template) => template.type === "Individual")
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -425,132 +459,228 @@ export default function StudentDashboard() {
                 <div className="flex justify-between items-center">
                   <CardTitle className="flex items-center">
                     <BookOpen className="h-5 w-5 mr-2" />
-                    Enrolled Courses
+                    Course Enrollments
                   </CardTitle>
-                  <Dialog open={showAddCourseDialog} onOpenChange={setShowAddCourseDialog}>
-                    <DialogTrigger asChild>
-                      <Button disabled={filteredAvailableCourses.length === 0}>
-                        <Plus className="h-4 w-4 mr-2" />
-                        Add Course
-                      </Button>
-                    </DialogTrigger>
-                    <DialogContent>
-                      <DialogHeader>
-                        <DialogTitle>Add New Course</DialogTitle>
-                      </DialogHeader>
-                      <form onSubmit={handleAddCourse} className="space-y-4">
-                        <div className="space-y-2">
-                          <Label htmlFor="course">Available Courses</Label>
-                          <Select value={selectedCourse} onValueChange={setSelectedCourse} required>
-                            <SelectTrigger>
-                              <SelectValue placeholder="Select a course" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              {filteredAvailableCourses.map((course) => (
-                                <SelectItem key={course.id} value={course.id.toString()}>
-                                  {course.subject} - {course.teacher} ({course.schoolYear}) - {course.timeSlot}
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                        </div>
-                        {selectedCourse && (
-                          <div className="p-4 bg-gray-50 rounded-lg">
-                            {(() => {
-                              const course = filteredAvailableCourses.find((c) => c.id.toString() === selectedCourse)
-                              return course ? (
-                                <div className="space-y-2">
-                                  <p>
-                                    <span className="font-medium">Subject:</span> {course.subject}
-                                  </p>
-                                  <p>
-                                    <span className="font-medium">Teacher:</span> {course.teacher}
-                                  </p>
-                                  <p>
-                                    <span className="font-medium">School Year:</span> {course.schoolYear}
-                                  </p>
-                                  <p>
-                                    <span className="font-medium">Time:</span> {course.timeSlot}
-                                  </p>
-                                  <p>
-                                    <span className="font-medium">Type:</span> {course.courseType}
-                                  </p>
-                                  <p>
-                                    <span className="font-medium">Price per Session:</span> {course.pricePerSession} DA
-                                  </p>
-                                </div>
-                              ) : null
-                            })()}
+                  <div className="flex space-x-2">
+                    <Dialog open={showAddCourseDialog} onOpenChange={setShowAddCourseDialog}>
+                      <DialogTrigger asChild>
+                        <Button disabled={availableGroupCourses.length === 0}>
+                          <Plus className="h-4 w-4 mr-2" />
+                          Add Course
+                        </Button>
+                      </DialogTrigger>
+                      <DialogContent>
+                        <DialogHeader>
+                          <DialogTitle>Add Group Course</DialogTitle>
+                        </DialogHeader>
+                        <form onSubmit={handleAddCourse} className="space-y-4">
+                          <div className="space-y-2">
+                            <Label htmlFor="course">Available Group Courses</Label>
+                            <Select value={selectedCourse} onValueChange={setSelectedCourse} required>
+                              <SelectTrigger>
+                                <SelectValue placeholder="Select a course" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {availableGroupCourses.map((template) => (
+                                  <SelectItem key={template.id} value={template.id.toString()}>
+                                    {template.subject} - {template.professorName} ({template.schoolYear}) -{" "}
+                                    {template.schedule}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
                           </div>
-                        )}
-                        <div className="flex justify-end space-x-2">
-                          <Button type="button" variant="outline" onClick={() => setShowAddCourseDialog(false)}>
-                            Cancel
-                          </Button>
-                          <Button type="submit">Add Course</Button>
-                        </div>
-                      </form>
-                    </DialogContent>
-                  </Dialog>
+                          {selectedCourse && (
+                            <div className="p-4 bg-gray-50 rounded-lg">
+                              {(() => {
+                                const template = availableGroupCourses.find((t) => t.id.toString() === selectedCourse)
+                                return template ? (
+                                  <div className="space-y-2">
+                                    <p>
+                                      <span className="font-medium">Subject:</span> {template.subject}
+                                    </p>
+                                    <p>
+                                      <span className="font-medium">Professor:</span> {template.professorName}
+                                    </p>
+                                    <p>
+                                      <span className="font-medium">School Year:</span> {template.schoolYear}
+                                    </p>
+                                    <p>
+                                      <span className="font-medium">Schedule:</span> {template.schedule}
+                                    </p>
+                                    <p>
+                                      <span className="font-medium">Price:</span> {template.price} DA
+                                    </p>
+                                    <p>
+                                      <span className="font-medium">Duration:</span> {template.durationHours}h
+                                    </p>
+                                  </div>
+                                ) : null
+                              })()}
+                            </div>
+                          )}
+                          <div className="flex justify-end space-x-2">
+                            <Button type="button" variant="outline" onClick={() => setShowAddCourseDialog(false)}>
+                              Cancel
+                            </Button>
+                            <Button type="submit">Add Course</Button>
+                          </div>
+                        </form>
+                      </DialogContent>
+                    </Dialog>
+
+                    <Dialog open={showBookSessionDialog} onOpenChange={setShowBookSessionDialog}>
+                      <DialogTrigger asChild>
+                        <Button variant="outline" disabled={availableIndividualCourses.length === 0}>
+                          <Calendar className="h-4 w-4 mr-2" />
+                          Book Individual Session
+                        </Button>
+                      </DialogTrigger>
+                      <DialogContent>
+                        <DialogHeader>
+                          <DialogTitle>Book Individual Session</DialogTitle>
+                        </DialogHeader>
+                        <form onSubmit={handleBookSession} className="space-y-4">
+                          <div className="space-y-2">
+                            <Label htmlFor="sessionTemplate">Available Individual Sessions</Label>
+                            <Select value={selectedSessionTemplate} onValueChange={setSelectedSessionTemplate} required>
+                              <SelectTrigger>
+                                <SelectValue placeholder="Select a session type" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {availableIndividualCourses.map((template) => (
+                                  <SelectItem key={template.id} value={template.id.toString()}>
+                                    {template.subject} - {template.professorName} ({template.price} DA)
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          </div>
+                          <div className="space-y-2">
+                            <Label htmlFor="sessionDate">Session Date</Label>
+                            <Input
+                              id="sessionDate"
+                              type="date"
+                              value={sessionDate}
+                              onChange={(e) => setSessionDate(e.target.value)}
+                              required
+                            />
+                          </div>
+                          <div className="flex justify-end space-x-2">
+                            <Button type="button" variant="outline" onClick={() => setShowBookSessionDialog(false)}>
+                              Cancel
+                            </Button>
+                            <Button type="submit">Book Session</Button>
+                          </div>
+                        </form>
+                      </DialogContent>
+                    </Dialog>
+                  </div>
                 </div>
               </CardHeader>
               <CardContent>
                 <div className="space-y-6">
-                  {student.courses.map((course: any) => (
-                    <div key={course.id} className="border rounded-lg p-4">
-                      <div className="flex justify-between items-start mb-4">
-                        <div>
-                          <h4 className="font-semibold text-lg">{course.subject}</h4>
-                          <p className="text-gray-600">Teacher: {course.teacher}</p>
-                          <p className="text-gray-600">Time: {course.timeSlot}</p>
-                          <p className="text-gray-600">School Year: {course.schoolYear}</p>
-                          <p className="text-gray-600">Type: {course.courseType}</p>
-                          <p className="text-gray-600">
-                            Price per Session: {course.pricePerSession.toLocaleString()} DA
-                          </p>
-                        </div>
-                      </div>
-
-                      <div className="mt-4">
-                        <h5 className="font-medium mb-2">Payment History</h5>
-                        <Table>
-                          <TableHeader>
-                            <TableRow>
-                              <TableHead>Month</TableHead>
-                              <TableHead>Status</TableHead>
-                              <TableHead>Date Paid</TableHead>
-                              <TableHead>Actions</TableHead>
+                  {/* Active Courses */}
+                  <div>
+                    <h3 className="font-medium text-lg mb-4">Active Courses</h3>
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>Course</TableHead>
+                          <TableHead>Professor</TableHead>
+                          <TableHead>Type</TableHead>
+                          <TableHead>Schedule/Date</TableHead>
+                          <TableHead>Price</TableHead>
+                          <TableHead>Student Paid</TableHead>
+                          <TableHead>Prof Paid</TableHead>
+                          <TableHead>Actions</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {activeInstances.map((instance) => {
+                          const template = mockCourseTemplates.find((t) => t.id === instance.templateId)
+                          return (
+                            <TableRow key={instance.id}>
+                              <TableCell className="font-medium">
+                                {template?.subject} - {template?.schoolYear}
+                              </TableCell>
+                              <TableCell>{template?.professorName}</TableCell>
+                              <TableCell>
+                                <Badge variant={template?.type === "Group" ? "default" : "secondary"}>
+                                  {template?.type}
+                                </Badge>
+                              </TableCell>
+                              <TableCell>{instance.month || instance.sessionDate}</TableCell>
+                              <TableCell>{template?.price} DA</TableCell>
+                              <TableCell>
+                                <Switch
+                                  checked={instance.payments.studentPaid}
+                                  onCheckedChange={() => togglePayment(instance.id, "studentPaid")}
+                                />
+                              </TableCell>
+                              <TableCell>
+                                <Switch
+                                  checked={instance.payments.profPaid}
+                                  onCheckedChange={() => togglePayment(instance.id, "profPaid")}
+                                />
+                              </TableCell>
+                              <TableCell>
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={() => removeStudentFromCourse(instance.id)}
+                                >
+                                  <Trash2 className="h-4 w-4" />
+                                </Button>
+                              </TableCell>
                             </TableRow>
-                          </TableHeader>
-                          <TableBody>
-                            {course.payments.map((payment: any, idx: number) => (
-                              <TableRow key={idx}>
-                                <TableCell>{payment.month}</TableCell>
+                          )
+                        })}
+                      </TableBody>
+                    </Table>
+                  </div>
+
+                  {/* Completed Courses */}
+                  {completedInstances.length > 0 && (
+                    <div>
+                      <h3 className="font-medium text-lg mb-4">Completed Courses</h3>
+                      <Table>
+                        <TableHeader>
+                          <TableRow>
+                            <TableHead>Course</TableHead>
+                            <TableHead>Professor</TableHead>
+                            <TableHead>Type</TableHead>
+                            <TableHead>Schedule/Date</TableHead>
+                            <TableHead>Price</TableHead>
+                            <TableHead>Status</TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {completedInstances.map((instance) => {
+                            const template = mockCourseTemplates.find((t) => t.id === instance.templateId)
+                            return (
+                              <TableRow key={instance.id} className="opacity-60">
+                                <TableCell className="font-medium">
+                                  {template?.subject} - {template?.schoolYear}
+                                </TableCell>
+                                <TableCell>{template?.professorName}</TableCell>
                                 <TableCell>
-                                  <Badge variant={payment.paid ? "default" : "destructive"}>
-                                    {payment.paid ? "Paid" : "Pending"}
+                                  <Badge variant={template?.type === "Group" ? "default" : "secondary"}>
+                                    {template?.type}
                                   </Badge>
                                 </TableCell>
-                                <TableCell>{payment.date || "-"}</TableCell>
+                                <TableCell>{instance.month || instance.sessionDate}</TableCell>
+                                <TableCell>{template?.price} DA</TableCell>
                                 <TableCell>
-                                  {!payment.paid && (
-                                    <Button
-                                      variant="outline"
-                                      size="sm"
-                                      onClick={() => markPaymentPaid(course.id, payment.month)}
-                                    >
-                                      <CreditCard className="h-4 w-4 mr-2" />
-                                      Mark as Paid
-                                    </Button>
-                                  )}
+                                  <Badge variant="default">Completed</Badge>
                                 </TableCell>
                               </TableRow>
-                            ))}
-                          </TableBody>
-                        </Table>
-                      </div>
+                            )
+                          })}
+                        </TableBody>
+                      </Table>
                     </div>
-                  ))}
+                  )}
                 </div>
               </CardContent>
             </Card>

@@ -13,9 +13,9 @@ import { Checkbox } from "@/components/ui/checkbox"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Badge } from "@/components/ui/badge"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { LogOut, UserPlus, Users, DollarSign, Search, GraduationCap } from "lucide-react"
+import { LogOut, UserPlus, Users, Search, GraduationCap, BookOpen } from "lucide-react"
 
-// Mock data
+// Mock data with new structure
 const mockStudents = [
   {
     id: 1,
@@ -27,7 +27,6 @@ const mockStudents = [
     phone: "+213 555 123 456",
     email: "ahmed.benali@email.com",
     school: "Lycée Mohamed Boudiaf",
-    courses: [{ subject: "Mathematics", teacher: "Prof. Salim", timeSlot: "9:00-11:00", paymentStatus: "Paid" }],
     registrationFeePaid: true,
   },
   {
@@ -40,18 +39,8 @@ const mockStudents = [
     phone: "+213 555 789 012",
     email: "fatima.zahra@email.com",
     school: "Lycée Ibn Khaldoun",
-    courses: [
-      { subject: "Physics", teacher: "Prof. Amina", timeSlot: "14:00-16:00", paymentStatus: "Pending" },
-      { subject: "Chemistry", teacher: "Prof. Omar", timeSlot: "16:00-18:00", paymentStatus: "Paid" },
-    ],
     registrationFeePaid: true,
   },
-]
-
-const mockTeachers = [
-  { id: 1, name: "Prof. Salim", subjects: ["Mathematics"], percentage: 70, students: 15, payout: 2100, paid: false },
-  { id: 2, name: "Prof. Amina", subjects: ["Physics"], percentage: 65, students: 12, payout: 1560, paid: true },
-  { id: 3, name: "Prof. Omar", subjects: ["Chemistry"], percentage: 68, students: 18, payout: 2448, paid: false },
 ]
 
 const mockProfessors = [
@@ -63,7 +52,6 @@ const mockProfessors = [
     email: "salim.benali@school.dz",
     schools: ["Lycée Mohamed Boudiaf", "Lycée Ibn Sina"],
     subjects: ["Mathematics", "Physics"],
-    percentageCut: 70,
   },
   {
     id: 2,
@@ -73,7 +61,63 @@ const mockProfessors = [
     email: "amina.khelifi@school.dz",
     schools: ["Lycée Ibn Khaldoun"],
     subjects: ["Physics", "Chemistry"],
+  },
+]
+
+// Course Templates
+const mockCourseTemplates = [
+  {
+    id: 1,
+    professorId: 1,
+    subject: "Mathematics",
+    type: "Group",
     percentageCut: 65,
+    price: 500,
+    durationHours: 2,
+    schedule: "Monday 9:00-11:00",
+    schoolYear: "3AS",
+  },
+  {
+    id: 2,
+    professorId: 1,
+    subject: "Physics",
+    type: "Individual",
+    percentageCut: 70,
+    price: 800,
+    durationHours: 1.5,
+    schedule: "Flexible",
+    schoolYear: "BAC",
+  },
+  {
+    id: 3,
+    professorId: 2,
+    subject: "Chemistry",
+    type: "Group",
+    percentageCut: 60,
+    price: 450,
+    durationHours: 2,
+    schedule: "Tuesday 16:00-18:00",
+    schoolYear: "2AS",
+  },
+]
+
+// Course Instances
+const mockCourseInstances = [
+  {
+    id: 1,
+    templateId: 1,
+    month: "2024-01",
+    studentIds: [1],
+    status: "active",
+    payments: { studentPaid: true, profPaid: false },
+  },
+  {
+    id: 2,
+    templateId: 3,
+    month: "2024-01",
+    studentIds: [2],
+    status: "active",
+    payments: { studentPaid: false, profPaid: false },
   },
 ]
 
@@ -81,8 +125,9 @@ export default function ReceptionistDashboard() {
   const router = useRouter()
   const [user, setUser] = useState<any>(null)
   const [students, setStudents] = useState(mockStudents)
-  const [teachers, setTeachers] = useState(mockTeachers)
   const [professors, setProfessors] = useState(mockProfessors)
+  const [courseTemplates, setCourseTemplates] = useState(mockCourseTemplates)
+  const [courseInstances, setCourseInstances] = useState(mockCourseInstances)
   const [searchQuery, setSearchQuery] = useState("")
   const [searchResults, setSearchResults] = useState<any[]>([])
   const [showSearchResults, setShowSearchResults] = useState(false)
@@ -112,7 +157,6 @@ export default function ReceptionistDashboard() {
     email: "",
     schools: "",
     subjects: "",
-    percentageCut: "",
   })
 
   useEffect(() => {
@@ -129,7 +173,7 @@ export default function ReceptionistDashboard() {
     }
   }, [router])
 
-  // Search functionality
+  // Enhanced search functionality
   useEffect(() => {
     if (searchQuery.trim()) {
       const studentResults = students
@@ -140,13 +184,25 @@ export default function ReceptionistDashboard() {
         .filter((professor) => professor.name.toLowerCase().includes(searchQuery.toLowerCase()))
         .map((professor) => ({ ...professor, type: "professor" }))
 
-      setSearchResults([...studentResults, ...professorResults])
+      const courseResults = courseTemplates
+        .filter(
+          (course) =>
+            course.subject.toLowerCase().includes(searchQuery.toLowerCase()) ||
+            course.schoolYear.toLowerCase().includes(searchQuery.toLowerCase()),
+        )
+        .map((course) => ({
+          ...course,
+          type: "course",
+          professorName: professors.find((p) => p.id === course.professorId)?.name,
+        }))
+
+      setSearchResults([...studentResults, ...professorResults, ...courseResults])
       setShowSearchResults(true)
     } else {
       setSearchResults([])
       setShowSearchResults(false)
     }
-  }, [searchQuery, students, professors])
+  }, [searchQuery, students, professors, courseTemplates])
 
   const handleLogout = () => {
     localStorage.removeItem("user")
@@ -165,7 +221,6 @@ export default function ReceptionistDashboard() {
       phone: newStudent.phone,
       email: newStudent.email,
       school: newStudent.school,
-      courses: [],
       registrationFeePaid: newStudent.registrationFeePaid,
     }
     setStudents([...students, student])
@@ -195,7 +250,6 @@ export default function ReceptionistDashboard() {
       email: newProfessor.email,
       schools: newProfessor.schools.split(",").map((s) => s.trim()),
       subjects: newProfessor.subjects.split(",").map((s) => s.trim()),
-      percentageCut: Number.parseInt(newProfessor.percentageCut),
     }
     setProfessors([...professors, professor])
     setNewProfessor({
@@ -205,12 +259,7 @@ export default function ReceptionistDashboard() {
       email: "",
       schools: "",
       subjects: "",
-      percentageCut: "",
     })
-  }
-
-  const markTeacherPaid = (teacherId: number) => {
-    setTeachers(teachers.map((teacher) => (teacher.id === teacherId ? { ...teacher, paid: true } : teacher)))
   }
 
   const handleSearchResultClick = (result: any) => {
@@ -218,9 +267,15 @@ export default function ReceptionistDashboard() {
       router.push(`/student/${result.id}`)
     } else if (result.type === "professor") {
       router.push(`/professor/${result.id}`)
+    } else if (result.type === "course") {
+      router.push(`/course/${result.id}`)
     }
     setSearchQuery("")
     setShowSearchResults(false)
+  }
+
+  const getStudentCourseInstances = (studentId: number) => {
+    return courseInstances.filter((instance) => instance.studentIds.includes(studentId))
   }
 
   if (!user) return null
@@ -233,19 +288,19 @@ export default function ReceptionistDashboard() {
           <div className="flex justify-between items-center h-16">
             <h1 className="text-xl font-semibold text-gray-900">Receptionist Dashboard</h1>
 
-            {/* Global Search */}
+            {/* Enhanced Global Search */}
             <div className="flex-1 max-w-md mx-4 relative">
               <div className="relative">
                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
                 <Input
-                  placeholder="Search students or professors..."
+                  placeholder="Search students, professors, courses..."
                   className="pl-10"
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                 />
               </div>
 
-              {/* Search Results Dropdown */}
+              {/* Enhanced Search Results Dropdown */}
               {showSearchResults && searchResults.length > 0 && (
                 <div className="absolute top-full left-0 right-0 mt-1 bg-white border rounded-md shadow-lg z-50 max-h-60 overflow-y-auto">
                   {searchResults.map((result, index) => (
@@ -255,9 +310,17 @@ export default function ReceptionistDashboard() {
                       onClick={() => handleSearchResultClick(result)}
                     >
                       <div className="flex items-center justify-between">
-                        <span className="font-medium">{result.name}</span>
-                        <Badge variant={result.type === "student" ? "default" : "secondary"}>
-                          {result.type === "student" ? "Student" : "Professor"}
+                        <span className="font-medium">{result.name || result.subject}</span>
+                        <Badge
+                          variant={
+                            result.type === "student"
+                              ? "default"
+                              : result.type === "professor"
+                                ? "secondary"
+                                : "outline"
+                          }
+                        >
+                          {result.type === "student" ? "Student" : result.type === "professor" ? "Professor" : "Course"}
                         </Badge>
                       </div>
                       {result.type === "student" && (
@@ -267,6 +330,11 @@ export default function ReceptionistDashboard() {
                       )}
                       {result.type === "professor" && (
                         <p className="text-sm text-gray-600">{result.subjects?.join(", ")}</p>
+                      )}
+                      {result.type === "course" && (
+                        <p className="text-sm text-gray-600">
+                          {result.professorName} - {result.schoolYear} - {result.type}
+                        </p>
                       )}
                     </div>
                   ))}
@@ -287,10 +355,11 @@ export default function ReceptionistDashboard() {
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <Tabs defaultValue="students" className="space-y-6">
-          <TabsList className="grid w-full grid-cols-3">
+          <TabsList className="grid w-full grid-cols-4">
             <TabsTrigger value="students">Students</TabsTrigger>
+            <TabsTrigger value="courses">Courses</TabsTrigger>
             <TabsTrigger value="register">Registration</TabsTrigger>
-            <TabsTrigger value="payments">Teacher Payments</TabsTrigger>
+            <TabsTrigger value="professors">Professors</TabsTrigger>
           </TabsList>
 
           {/* Students Tab */}
@@ -309,57 +378,136 @@ export default function ReceptionistDashboard() {
                       <TableHead>Name</TableHead>
                       <TableHead>School Year</TableHead>
                       <TableHead>School</TableHead>
-                      <TableHead>Courses</TableHead>
+                      <TableHead>Active Courses</TableHead>
                       <TableHead>Payment Status</TableHead>
                       <TableHead>Actions</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {students.map((student) => (
-                      <TableRow key={student.id}>
-                        <TableCell className="font-medium">
-                          <Button
-                            variant="link"
-                            className="p-0 h-auto font-medium text-left"
-                            onClick={() => router.push(`/student/${student.id}`)}
-                          >
-                            {student.name}
-                          </Button>
-                        </TableCell>
-                        <TableCell>{student.schoolYear}</TableCell>
-                        <TableCell>{student.school}</TableCell>
-                        <TableCell>
-                          {student.courses.map((course, idx) => (
-                            <Badge key={idx} variant="secondary" className="mr-1">
-                              {course.subject}
-                            </Badge>
-                          ))}
-                        </TableCell>
-                        <TableCell>
-                          {student.courses.map((course, idx) => (
-                            <Badge
-                              key={idx}
-                              variant={course.paymentStatus === "Paid" ? "default" : "destructive"}
-                              className="mr-1"
+                    {students.map((student) => {
+                      const studentInstances = getStudentCourseInstances(student.id)
+                      return (
+                        <TableRow key={student.id}>
+                          <TableCell className="font-medium">
+                            <Button
+                              variant="link"
+                              className="p-0 h-auto font-medium text-left"
+                              onClick={() => router.push(`/student/${student.id}`)}
                             >
-                              {course.paymentStatus}
-                            </Badge>
-                          ))}
-                        </TableCell>
-                        <TableCell>
-                          <Button variant="outline" size="sm" onClick={() => router.push(`/student/${student.id}`)}>
-                            View Details
-                          </Button>
-                        </TableCell>
-                      </TableRow>
-                    ))}
+                              {student.name}
+                            </Button>
+                          </TableCell>
+                          <TableCell>{student.schoolYear}</TableCell>
+                          <TableCell>{student.school}</TableCell>
+                          <TableCell>
+                            {studentInstances.map((instance, idx) => {
+                              const template = courseTemplates.find((t) => t.id === instance.templateId)
+                              return template ? (
+                                <Badge key={idx} variant="secondary" className="mr-1">
+                                  {template.subject}
+                                </Badge>
+                              ) : null
+                            })}
+                          </TableCell>
+                          <TableCell>
+                            {studentInstances.map((instance, idx) => (
+                              <Badge
+                                key={idx}
+                                variant={instance.payments.studentPaid ? "default" : "destructive"}
+                                className="mr-1"
+                              >
+                                {instance.payments.studentPaid ? "Paid" : "Pending"}
+                              </Badge>
+                            ))}
+                          </TableCell>
+                          <TableCell>
+                            <Button variant="outline" size="sm" onClick={() => router.push(`/student/${student.id}`)}>
+                              View Details
+                            </Button>
+                          </TableCell>
+                        </TableRow>
+                      )
+                    })}
                   </TableBody>
                 </Table>
               </CardContent>
             </Card>
           </TabsContent>
 
-          {/* Unified Registration Tab */}
+          {/* Courses Tab */}
+          <TabsContent value="courses">
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center">
+                  <BookOpen className="h-5 w-5 mr-2" />
+                  All Course Instances
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Status</TableHead>
+                      <TableHead>Course</TableHead>
+                      <TableHead>Professor</TableHead>
+                      <TableHead>Type</TableHead>
+                      <TableHead>Month/Date</TableHead>
+                      <TableHead>Students</TableHead>
+                      <TableHead>Payments</TableHead>
+                      <TableHead>Actions</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {courseInstances.map((instance) => {
+                      const template = courseTemplates.find((t) => t.id === instance.templateId)
+                      const professor = professors.find((p) => p.id === template?.professorId)
+                      const enrolledStudents = students.filter((s) => instance.studentIds.includes(s.id))
+
+                      return (
+                        <TableRow key={instance.id}>
+                          <TableCell>
+                            <div
+                              className={`w-3 h-3 rounded-full ${
+                                instance.status === "active" ? "bg-green-500" : "bg-red-500"
+                              }`}
+                            />
+                          </TableCell>
+                          <TableCell className="font-medium">
+                            {template?.subject} - {template?.schoolYear}
+                          </TableCell>
+                          <TableCell>{professor?.name}</TableCell>
+                          <TableCell>
+                            <Badge variant={template?.type === "Group" ? "default" : "secondary"}>
+                              {template?.type}
+                            </Badge>
+                          </TableCell>
+                          <TableCell>{instance.month || instance.sessionDate}</TableCell>
+                          <TableCell>{enrolledStudents.map((student) => student.name).join(", ")}</TableCell>
+                          <TableCell>
+                            <div className="flex space-x-2">
+                              <Badge variant={instance.payments.studentPaid ? "default" : "destructive"}>
+                                Student: {instance.payments.studentPaid ? "Paid" : "Pending"}
+                              </Badge>
+                              <Badge variant={instance.payments.profPaid ? "default" : "destructive"}>
+                                Prof: {instance.payments.profPaid ? "Paid" : "Pending"}
+                              </Badge>
+                            </div>
+                          </TableCell>
+                          <TableCell>
+                            <Button variant="outline" size="sm" onClick={() => router.push(`/course/${instance.id}`)}>
+                              View Details
+                            </Button>
+                          </TableCell>
+                        </TableRow>
+                      )
+                    })}
+                  </TableBody>
+                </Table>
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          {/* Registration Tab */}
           <TabsContent value="register">
             <Card>
               <CardHeader>
@@ -591,24 +739,6 @@ export default function ReceptionistDashboard() {
                           required
                         />
                       </div>
-                      <div className="space-y-2 md:col-span-2">
-                        <Label htmlFor="profPercentage">Percentage Cut Per Course (%)</Label>
-                        <Select
-                          value={newProfessor.percentageCut}
-                          onValueChange={(value) => setNewProfessor({ ...newProfessor, percentageCut: value })}
-                        >
-                          <SelectTrigger>
-                            <SelectValue placeholder="Select percentage" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="60">60%</SelectItem>
-                            <SelectItem value="65">65%</SelectItem>
-                            <SelectItem value="70">70%</SelectItem>
-                            <SelectItem value="75">75%</SelectItem>
-                            <SelectItem value="80">80%</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </div>
                     </div>
 
                     <Button type="submit" className="w-full">
@@ -621,64 +751,69 @@ export default function ReceptionistDashboard() {
             </Card>
           </TabsContent>
 
-          {/* Teacher Payments Tab */}
-          <TabsContent value="payments">
+          {/* Professors Tab */}
+          <TabsContent value="professors">
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center">
-                  <DollarSign className="h-5 w-5 mr-2" />
-                  Teacher Payment Tracking
+                  <GraduationCap className="h-5 w-5 mr-2" />
+                  Professor List
                 </CardTitle>
               </CardHeader>
               <CardContent>
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead>Teacher Name</TableHead>
+                      <TableHead>Name</TableHead>
                       <TableHead>Subjects</TableHead>
-                      <TableHead>Percentage</TableHead>
-                      <TableHead>Students</TableHead>
-                      <TableHead>Calculated Payout</TableHead>
-                      <TableHead>Payment Status</TableHead>
+                      <TableHead>Schools</TableHead>
+                      <TableHead>Course Templates</TableHead>
                       <TableHead>Actions</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {teachers.map((teacher) => (
-                      <TableRow key={teacher.id}>
-                        <TableCell className="font-medium">
-                          <Button
-                            variant="link"
-                            className="p-0 h-auto font-medium text-left"
-                            onClick={() => router.push(`/professor/${teacher.id}`)}
-                          >
-                            {teacher.name}
-                          </Button>
-                        </TableCell>
-                        <TableCell>
-                          {teacher.subjects.map((subject, idx) => (
-                            <Badge key={idx} variant="secondary" className="mr-1">
-                              {subject}
-                            </Badge>
-                          ))}
-                        </TableCell>
-                        <TableCell>{teacher.percentage}%</TableCell>
-                        <TableCell>{teacher.students}</TableCell>
-                        <TableCell>{teacher.payout} DA</TableCell>
-                        <TableCell>
-                          <Badge variant={teacher.paid ? "default" : "destructive"}>
-                            {teacher.paid ? "Paid" : "Pending"}
-                          </Badge>
-                        </TableCell>
-                        <TableCell>
-                          {!teacher.paid && (
-                            <Button variant="outline" size="sm" onClick={() => markTeacherPaid(teacher.id)}>
-                              Mark as Paid
+                    {professors.map((professor) => {
+                      const professorTemplates = courseTemplates.filter((t) => t.professorId === professor.id)
+                      return (
+                        <TableRow key={professor.id}>
+                          <TableCell className="font-medium">
+                            <Button
+                              variant="link"
+                              className="p-0 h-auto font-medium text-left"
+                              onClick={() => router.push(`/professor/${professor.id}`)}
+                            >
+                              {professor.name}
                             </Button>
-                          )}
-                        </TableCell>
-                      </TableRow>
-                    ))}
+                          </TableCell>
+                          <TableCell>
+                            {professor.subjects.map((subject, idx) => (
+                              <Badge key={idx} variant="secondary" className="mr-1">
+                                {subject}
+                              </Badge>
+                            ))}
+                          </TableCell>
+                          <TableCell>
+                            {professor.schools.map((school, idx) => (
+                              <Badge key={idx} variant="outline" className="mr-1">
+                                {school}
+                              </Badge>
+                            ))}
+                          </TableCell>
+                          <TableCell>
+                            <span className="text-sm text-gray-600">{professorTemplates.length} template(s)</span>
+                          </TableCell>
+                          <TableCell>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => router.push(`/professor/${professor.id}`)}
+                            >
+                              View Profile
+                            </Button>
+                          </TableCell>
+                        </TableRow>
+                      )
+                    })}
                   </TableBody>
                 </Table>
               </CardContent>

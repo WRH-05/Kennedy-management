@@ -7,38 +7,94 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Badge } from "@/components/ui/badge"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { LogOut, DollarSign, Users, BookOpen, TrendingUp } from "lucide-react"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { LogOut, DollarSign, Users, BookOpen, TrendingUp, Calendar } from "lucide-react"
 
-// Mock data for manager view
+// Mock data for manager view with enhanced payment histories
 const mockRevenue = [
-  { studentName: "Ahmed Ben Ali", course: "Mathematics", amount: 3000, month: "January" },
-  { studentName: "Fatima Zahra", course: "Physics", amount: 2800, month: "January" },
-  { studentName: "Fatima Zahra", course: "Chemistry", amount: 2800, month: "January" },
-  { studentName: "Omar Khaled", course: "Biology", amount: 2500, month: "January" },
+  { studentName: "Ahmed Ben Ali", course: "Mathematics", amount: 500, month: "2024-01", paid: true },
+  { studentName: "Fatima Zahra", course: "Physics", amount: 800, month: "2024-01", paid: false },
+  { studentName: "Fatima Zahra", course: "Chemistry", amount: 450, month: "2024-01", paid: true },
+  { studentName: "Omar Khaled", course: "Biology", amount: 600, month: "2024-01", paid: true },
 ]
 
 const mockPayouts = [
-  { teacherName: "Prof. Salim", percentage: 70, totalGenerated: 15000, totalPayout: 10500, approved: false },
-  { teacherName: "Prof. Amina", percentage: 65, totalGenerated: 12000, totalPayout: 7800, approved: true },
-  { teacherName: "Prof. Omar", percentage: 68, totalGenerated: 18000, totalPayout: 12240, approved: false },
+  {
+    teacherName: "Prof. Salim",
+    percentage: 65,
+    totalGenerated: 1500,
+    totalPayout: 975,
+    approved: false,
+    month: "2024-01",
+  },
+  {
+    teacherName: "Prof. Amina",
+    percentage: 70,
+    totalGenerated: 2400,
+    totalPayout: 1680,
+    approved: true,
+    month: "2024-01",
+  },
+  {
+    teacherName: "Prof. Omar",
+    percentage: 60,
+    totalGenerated: 1350,
+    totalPayout: 810,
+    approved: false,
+    month: "2024-01",
+  },
 ]
 
 const mockStudentData = [
-  { id: 1, name: "Ahmed Ben Ali", schoolYear: "3AS", totalPaid: 3000, coursesEnrolled: 1 },
-  { id: 2, name: "Fatima Zahra", schoolYear: "BAC", totalPaid: 5600, coursesEnrolled: 2 },
-  { id: 3, name: "Omar Khaled", schoolYear: "2AS", totalPaid: 2500, coursesEnrolled: 1 },
+  { id: 1, name: "Ahmed Ben Ali", schoolYear: "3AS", totalPaid: 500, coursesEnrolled: 1 },
+  { id: 2, name: "Fatima Zahra", schoolYear: "BAC", totalPaid: 450, coursesEnrolled: 2 },
+  { id: 3, name: "Omar Khaled", schoolYear: "2AS", totalPaid: 600, coursesEnrolled: 1 },
 ]
 
 const mockTeacherData = [
-  { id: 1, name: "Prof. Salim", subjects: ["Mathematics"], students: 15, totalEarnings: 10500 },
-  { id: 2, name: "Prof. Amina", subjects: ["Physics"], students: 12, totalEarnings: 7800 },
-  { id: 3, name: "Prof. Omar", subjects: ["Chemistry"], students: 18, totalEarnings: 12240 },
+  { id: 1, name: "Prof. Salim", subjects: ["Mathematics"], students: 15, totalEarnings: 975 },
+  { id: 2, name: "Prof. Amina", subjects: ["Physics"], students: 12, totalEarnings: 1680 },
+  { id: 3, name: "Prof. Omar", subjects: ["Chemistry"], students: 18, totalEarnings: 810 },
+]
+
+const mockStudentPaymentHistory = [
+  {
+    studentId: 1,
+    studentName: "Ahmed Ben Ali",
+    month: "2024-01",
+    courses: [{ course: "Mathematics", amount: 500, paid: true }],
+  },
+  {
+    studentId: 2,
+    studentName: "Fatima Zahra",
+    month: "2024-01",
+    courses: [
+      { course: "Physics", amount: 800, paid: false },
+      { course: "Chemistry", amount: 450, paid: true },
+    ],
+  },
+]
+
+const mockProfessorPaymentHistory = [
+  {
+    professorId: 1,
+    professorName: "Prof. Salim",
+    month: "2024-01",
+    sessions: [{ course: "Mathematics", students: 1, amount: 975, paid: false }],
+  },
+  {
+    professorId: 2,
+    professorName: "Prof. Amina",
+    month: "2024-01",
+    sessions: [{ course: "Physics", students: 1, amount: 1680, paid: true }],
+  },
 ]
 
 export default function ManagerDashboard() {
   const router = useRouter()
   const [user, setUser] = useState<any>(null)
   const [payouts, setPayouts] = useState(mockPayouts)
+  const [selectedMonth, setSelectedMonth] = useState("2024-01")
 
   useEffect(() => {
     const userData = localStorage.getItem("user")
@@ -63,8 +119,13 @@ export default function ManagerDashboard() {
     setPayouts(payouts.map((payout) => (payout.teacherName === teacherName ? { ...payout, approved: true } : payout)))
   }
 
-  const totalRevenue = mockRevenue.reduce((sum, item) => sum + item.amount, 0)
-  const totalPayouts = payouts.reduce((sum, payout) => sum + payout.totalPayout, 0)
+  const handleMonthlyRollover = () => {
+    // Simulate monthly rollover - copy active group courses to new month
+    alert("Monthly rollover completed! Active group courses have been copied to the new month.")
+  }
+
+  const totalRevenue = mockRevenue.reduce((sum, item) => sum + (item.paid ? item.amount : 0), 0)
+  const totalPayouts = payouts.reduce((sum, payout) => sum + (payout.approved ? payout.totalPayout : 0), 0)
   const netProfit = totalRevenue - totalPayouts
 
   if (!user) return null
@@ -77,6 +138,10 @@ export default function ManagerDashboard() {
           <div className="flex justify-between items-center h-16">
             <h1 className="text-xl font-semibold text-gray-900">Manager Dashboard</h1>
             <div className="flex items-center space-x-4">
+              <Button onClick={handleMonthlyRollover} variant="outline">
+                <Calendar className="h-4 w-4 mr-2" />
+                Monthly Rollover
+              </Button>
               <span className="text-sm text-gray-600">Welcome, {user.username}</span>
               <Button variant="outline" size="sm" onClick={handleLogout}>
                 <LogOut className="h-4 w-4 mr-2" />
@@ -133,11 +198,13 @@ export default function ManagerDashboard() {
         </div>
 
         <Tabs defaultValue="revenue" className="space-y-6">
-          <TabsList className="grid w-full grid-cols-4">
+          <TabsList className="grid w-full grid-cols-6">
             <TabsTrigger value="revenue">Revenue</TabsTrigger>
             <TabsTrigger value="payouts">Payouts</TabsTrigger>
             <TabsTrigger value="students">Students</TabsTrigger>
             <TabsTrigger value="teachers">Teachers</TabsTrigger>
+            <TabsTrigger value="student-payments">Student Payments</TabsTrigger>
+            <TabsTrigger value="professor-payments">Professor Payments</TabsTrigger>
           </TabsList>
 
           {/* Revenue Tab */}
@@ -168,7 +235,9 @@ export default function ManagerDashboard() {
                         <TableCell>{item.amount.toLocaleString()} DA</TableCell>
                         <TableCell>{item.month}</TableCell>
                         <TableCell>
-                          <Badge variant="default">Paid</Badge>
+                          <Badge variant={item.paid ? "default" : "destructive"}>
+                            {item.paid ? "Paid" : "Pending"}
+                          </Badge>
                         </TableCell>
                       </TableRow>
                     ))}
@@ -195,6 +264,7 @@ export default function ManagerDashboard() {
                       <TableHead>Percentage</TableHead>
                       <TableHead>Total Generated</TableHead>
                       <TableHead>Total Payout</TableHead>
+                      <TableHead>Month</TableHead>
                       <TableHead>Status</TableHead>
                       <TableHead>Actions</TableHead>
                     </TableRow>
@@ -206,6 +276,7 @@ export default function ManagerDashboard() {
                         <TableCell>{payout.percentage}%</TableCell>
                         <TableCell>{payout.totalGenerated.toLocaleString()} DA</TableCell>
                         <TableCell>{payout.totalPayout.toLocaleString()} DA</TableCell>
+                        <TableCell>{payout.month}</TableCell>
                         <TableCell>
                           <Badge variant={payout.approved ? "default" : "destructive"}>
                             {payout.approved ? "Approved" : "Pending"}
@@ -249,7 +320,15 @@ export default function ManagerDashboard() {
                   <TableBody>
                     {mockStudentData.map((student) => (
                       <TableRow key={student.id}>
-                        <TableCell className="font-medium">{student.name}</TableCell>
+                        <TableCell className="font-medium">
+                          <Button
+                            variant="link"
+                            className="p-0 h-auto font-medium text-left"
+                            onClick={() => router.push(`/student/${student.id}`)}
+                          >
+                            {student.name}
+                          </Button>
+                        </TableCell>
                         <TableCell>{student.schoolYear}</TableCell>
                         <TableCell>{student.coursesEnrolled}</TableCell>
                         <TableCell>{student.totalPaid.toLocaleString()} DA</TableCell>
@@ -284,12 +363,21 @@ export default function ManagerDashboard() {
                       <TableHead>Students</TableHead>
                       <TableHead>Total Earnings</TableHead>
                       <TableHead>Performance</TableHead>
+                      <TableHead>Actions</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     {mockTeacherData.map((teacher) => (
                       <TableRow key={teacher.id}>
-                        <TableCell className="font-medium">{teacher.name}</TableCell>
+                        <TableCell className="font-medium">
+                          <Button
+                            variant="link"
+                            className="p-0 h-auto font-medium text-left"
+                            onClick={() => router.push(`/professor/${teacher.id}`)}
+                          >
+                            {teacher.name}
+                          </Button>
+                        </TableCell>
                         <TableCell>
                           {teacher.subjects.map((subject, idx) => (
                             <Badge key={idx} variant="secondary" className="mr-1">
@@ -302,10 +390,127 @@ export default function ManagerDashboard() {
                         <TableCell>
                           <Badge variant="default">Excellent</Badge>
                         </TableCell>
+                        <TableCell>
+                          <Button variant="outline" size="sm" onClick={() => router.push(`/professor/${teacher.id}`)}>
+                            View Profile
+                          </Button>
+                        </TableCell>
                       </TableRow>
                     ))}
                   </TableBody>
                 </Table>
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          {/* Student Payment History Tab */}
+          <TabsContent value="student-payments">
+            <Card>
+              <CardHeader>
+                <div className="flex justify-between items-center">
+                  <CardTitle className="flex items-center">
+                    <Users className="h-5 w-5 mr-2" />
+                    Student Payment History
+                  </CardTitle>
+                  <Select value={selectedMonth} onValueChange={setSelectedMonth}>
+                    <SelectTrigger className="w-40">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="2024-01">January 2024</SelectItem>
+                      <SelectItem value="2023-12">December 2023</SelectItem>
+                      <SelectItem value="2023-11">November 2023</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-6">
+                  {mockStudentPaymentHistory.map((student) => (
+                    <div key={student.studentId} className="border rounded-lg p-4">
+                      <h3 className="font-semibold text-lg mb-3">{student.studentName}</h3>
+                      <Table>
+                        <TableHeader>
+                          <TableRow>
+                            <TableHead>Course</TableHead>
+                            <TableHead>Amount</TableHead>
+                            <TableHead>Status</TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {student.courses.map((course, idx) => (
+                            <TableRow key={idx}>
+                              <TableCell>{course.course}</TableCell>
+                              <TableCell>{course.amount} DA</TableCell>
+                              <TableCell>
+                                <Badge variant={course.paid ? "default" : "destructive"}>
+                                  {course.paid ? "Paid" : "Unpaid"}
+                                </Badge>
+                              </TableCell>
+                            </TableRow>
+                          ))}
+                        </TableBody>
+                      </Table>
+                    </div>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          {/* Professor Payment History Tab */}
+          <TabsContent value="professor-payments">
+            <Card>
+              <CardHeader>
+                <div className="flex justify-between items-center">
+                  <CardTitle className="flex items-center">
+                    <BookOpen className="h-5 w-5 mr-2" />
+                    Professor Payment History
+                  </CardTitle>
+                  <Select value={selectedMonth} onValueChange={setSelectedMonth}>
+                    <SelectTrigger className="w-40">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="2024-01">January 2024</SelectItem>
+                      <SelectItem value="2023-12">December 2023</SelectItem>
+                      <SelectItem value="2023-11">November 2023</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-6">
+                  {mockProfessorPaymentHistory.map((professor) => (
+                    <div key={professor.professorId} className="border rounded-lg p-4">
+                      <h3 className="font-semibold text-lg mb-3">{professor.professorName}</h3>
+                      <Table>
+                        <TableHeader>
+                          <TableRow>
+                            <TableHead>Course</TableHead>
+                            <TableHead>Students</TableHead>
+                            <TableHead>Amount</TableHead>
+                            <TableHead>Status</TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {professor.sessions.map((session, idx) => (
+                            <TableRow key={idx}>
+                              <TableCell>{session.course}</TableCell>
+                              <TableCell>{session.students}</TableCell>
+                              <TableCell>{session.amount} DA</TableCell>
+                              <TableCell>
+                                <Badge variant={session.paid ? "default" : "destructive"}>
+                                  {session.paid ? "Paid" : "Unpaid"}
+                                </Badge>
+                              </TableCell>
+                            </TableRow>
+                          ))}
+                        </TableBody>
+                      </Table>
+                    </div>
+                  ))}
+                </div>
               </CardContent>
             </Card>
           </TabsContent>

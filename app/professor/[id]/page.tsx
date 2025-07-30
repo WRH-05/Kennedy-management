@@ -12,9 +12,10 @@ import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
+import { Switch } from "@/components/ui/switch"
 import { ArrowLeft, Edit, Save, X, GraduationCap, MapPin, Phone, Mail, School, Plus, BookOpen } from "lucide-react"
 
-// Mock professor data with courses
+// Mock professor data with course templates and instances
 const mockProfessorDetails = {
   1: {
     id: 1,
@@ -27,30 +28,6 @@ const mockProfessorDetails = {
     totalStudents: 15,
     monthlyEarnings: 10500,
     joinDate: "2023-09-01",
-    courses: [
-      {
-        id: 1,
-        subject: "Mathematics",
-        schoolYear: "3AS",
-        percentageCut: 65,
-        courseType: "Group",
-        pricePerSession: 500,
-        duration: 2,
-        dayOfWeek: "Monday",
-        timeSlot: "9:00-11:00",
-      },
-      {
-        id: 2,
-        subject: "Physics",
-        schoolYear: "BAC",
-        percentageCut: 70,
-        courseType: "Individual",
-        pricePerSession: 800,
-        duration: 1.5,
-        dayOfWeek: "Wednesday",
-        timeSlot: "14:00-15:30",
-      },
-    ],
   },
   2: {
     id: 2,
@@ -63,21 +40,65 @@ const mockProfessorDetails = {
     totalStudents: 12,
     monthlyEarnings: 7800,
     joinDate: "2023-10-15",
-    courses: [
-      {
-        id: 3,
-        subject: "Chemistry",
-        schoolYear: "2AS",
-        percentageCut: 60,
-        courseType: "Group",
-        pricePerSession: 450,
-        duration: 2,
-        dayOfWeek: "Tuesday",
-        timeSlot: "16:00-18:00",
-      },
-    ],
   },
 }
+
+const mockCourseTemplates = [
+  {
+    id: 1,
+    professorId: 1,
+    subject: "Mathematics",
+    type: "Group",
+    percentageCut: 65,
+    price: 500,
+    durationHours: 2,
+    schedule: "Monday 9:00-11:00",
+    schoolYear: "3AS",
+  },
+  {
+    id: 2,
+    professorId: 1,
+    subject: "Physics",
+    type: "Individual",
+    percentageCut: 70,
+    price: 800,
+    durationHours: 1.5,
+    schedule: "Flexible",
+    schoolYear: "BAC",
+  },
+  {
+    id: 3,
+    professorId: 2,
+    subject: "Chemistry",
+    type: "Group",
+    percentageCut: 60,
+    price: 450,
+    durationHours: 2,
+    schedule: "Tuesday 16:00-18:00",
+    schoolYear: "2AS",
+  },
+]
+
+const mockCourseInstances = [
+  {
+    id: 1,
+    templateId: 1,
+    month: "2024-01",
+    studentIds: [1],
+    studentNames: ["Ahmed Ben Ali"],
+    status: "active",
+    payments: { studentPaid: true, profPaid: false },
+  },
+  {
+    id: 2,
+    templateId: 3,
+    month: "2024-01",
+    studentIds: [2],
+    studentNames: ["Fatima Zahra"],
+    status: "active",
+    payments: { studentPaid: false, profPaid: false },
+  },
+]
 
 export default function ProfessorProfile() {
   const router = useRouter()
@@ -88,15 +109,16 @@ export default function ProfessorProfile() {
   const [editedProfessor, setEditedProfessor] = useState<any>(null)
   const [user, setUser] = useState<any>(null)
   const [showAddCourseDialog, setShowAddCourseDialog] = useState(false)
+  const [courseTemplates, setCourseTemplates] = useState(mockCourseTemplates)
+  const [courseInstances, setCourseInstances] = useState(mockCourseInstances)
   const [newCourse, setNewCourse] = useState({
     subject: "",
     schoolYear: "",
     percentageCut: 50,
-    courseType: "Group",
-    pricePerSession: 500,
-    duration: 2,
-    dayOfWeek: "",
-    timeSlot: "",
+    type: "Group",
+    price: 500,
+    durationHours: 2,
+    schedule: "",
   })
 
   useEffect(() => {
@@ -138,29 +160,43 @@ export default function ProfessorProfile() {
 
   const handleAddCourse = (e: React.FormEvent) => {
     e.preventDefault()
-    const course = {
-      id: professor.courses.length + 1,
+    const template = {
+      id: courseTemplates.length + 1,
+      professorId: Number.parseInt(professorId),
       ...newCourse,
     }
 
-    const updatedProfessor = {
-      ...professor,
-      courses: [...professor.courses, course],
-    }
-
-    setProfessor(updatedProfessor)
-    setEditedProfessor(updatedProfessor)
+    setCourseTemplates([...courseTemplates, template])
     setNewCourse({
       subject: "",
       schoolYear: "",
       percentageCut: 50,
-      courseType: "Group",
-      pricePerSession: 500,
-      duration: 2,
-      dayOfWeek: "",
-      timeSlot: "",
+      type: "Group",
+      price: 500,
+      durationHours: 2,
+      schedule: "",
     })
     setShowAddCourseDialog(false)
+  }
+
+  const toggleProfPaid = (instanceId: number) => {
+    setCourseInstances((instances) =>
+      instances.map((instance) => {
+        if (instance.id === instanceId) {
+          const newPayments = {
+            ...instance.payments,
+            profPaid: !instance.payments.profPaid,
+          }
+          const newStatus = newPayments.studentPaid && newPayments.profPaid ? "completed" : "active"
+          return {
+            ...instance,
+            payments: newPayments,
+            status: newStatus,
+          }
+        }
+        return instance
+      }),
+    )
   }
 
   if (!professor || !user) {
@@ -174,6 +210,13 @@ export default function ProfessorProfile() {
   }
 
   const canEdit = user.role === "receptionist" || user.role === "manager"
+  const professorTemplates = courseTemplates.filter((t) => t.professorId === Number.parseInt(professorId))
+  const professorInstances = courseInstances.filter((instance) => {
+    const template = courseTemplates.find((t) => t.id === instance.templateId)
+    return template?.professorId === Number.parseInt(professorId)
+  })
+  const activeInstances = professorInstances.filter((instance) => instance.status === "active")
+  const completedInstances = professorInstances.filter((instance) => instance.status === "completed")
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -339,25 +382,25 @@ export default function ProfessorProfile() {
               </CardContent>
             </Card>
 
-            {/* Courses Taught Section */}
+            {/* Course Templates Section */}
             <Card>
               <CardHeader>
                 <div className="flex justify-between items-center">
                   <CardTitle className="flex items-center">
                     <BookOpen className="h-5 w-5 mr-2" />
-                    Courses Taught
+                    Course Templates
                   </CardTitle>
                   {canEdit && (
                     <Dialog open={showAddCourseDialog} onOpenChange={setShowAddCourseDialog}>
                       <DialogTrigger asChild>
                         <Button>
                           <Plus className="h-4 w-4 mr-2" />
-                          Add Course
+                          Add Course Template
                         </Button>
                       </DialogTrigger>
                       <DialogContent className="max-w-2xl">
                         <DialogHeader>
-                          <DialogTitle>Add New Course</DialogTitle>
+                          <DialogTitle>Add New Course Template</DialogTitle>
                         </DialogHeader>
                         <form onSubmit={handleAddCourse} className="space-y-4">
                           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -416,10 +459,10 @@ export default function ProfessorProfile() {
                               />
                             </div>
                             <div className="space-y-2">
-                              <Label htmlFor="courseType">Course Type</Label>
+                              <Label htmlFor="type">Course Type</Label>
                               <Select
-                                value={newCourse.courseType}
-                                onValueChange={(value) => setNewCourse({ ...newCourse, courseType: value })}
+                                value={newCourse.type}
+                                onValueChange={(value) => setNewCourse({ ...newCourse, type: value })}
                                 required
                               >
                                 <SelectTrigger>
@@ -432,58 +475,35 @@ export default function ProfessorProfile() {
                               </Select>
                             </div>
                             <div className="space-y-2">
-                              <Label htmlFor="pricePerSession">Price per Session (DA)</Label>
+                              <Label htmlFor="price">Price per Session (DA)</Label>
                               <Input
-                                id="pricePerSession"
+                                id="price"
                                 type="number"
-                                value={newCourse.pricePerSession}
-                                onChange={(e) =>
-                                  setNewCourse({ ...newCourse, pricePerSession: Number.parseInt(e.target.value) })
-                                }
+                                value={newCourse.price}
+                                onChange={(e) => setNewCourse({ ...newCourse, price: Number.parseInt(e.target.value) })}
                                 required
                               />
                             </div>
                             <div className="space-y-2">
-                              <Label htmlFor="duration">Duration (hours)</Label>
+                              <Label htmlFor="durationHours">Duration (hours)</Label>
                               <Input
-                                id="duration"
+                                id="durationHours"
                                 type="number"
                                 step="0.5"
-                                value={newCourse.duration}
+                                value={newCourse.durationHours}
                                 onChange={(e) =>
-                                  setNewCourse({ ...newCourse, duration: Number.parseFloat(e.target.value) })
+                                  setNewCourse({ ...newCourse, durationHours: Number.parseFloat(e.target.value) })
                                 }
                                 required
                               />
                             </div>
-                            <div className="space-y-2">
-                              <Label htmlFor="dayOfWeek">Day of Week</Label>
-                              <Select
-                                value={newCourse.dayOfWeek}
-                                onValueChange={(value) => setNewCourse({ ...newCourse, dayOfWeek: value })}
-                                required
-                              >
-                                <SelectTrigger>
-                                  <SelectValue placeholder="Select day" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                  <SelectItem value="Monday">Monday</SelectItem>
-                                  <SelectItem value="Tuesday">Tuesday</SelectItem>
-                                  <SelectItem value="Wednesday">Wednesday</SelectItem>
-                                  <SelectItem value="Thursday">Thursday</SelectItem>
-                                  <SelectItem value="Friday">Friday</SelectItem>
-                                  <SelectItem value="Saturday">Saturday</SelectItem>
-                                  <SelectItem value="Sunday">Sunday</SelectItem>
-                                </SelectContent>
-                              </Select>
-                            </div>
-                            <div className="space-y-2">
-                              <Label htmlFor="timeSlot">Time Slot</Label>
+                            <div className="space-y-2 md:col-span-2">
+                              <Label htmlFor="schedule">Schedule</Label>
                               <Input
-                                id="timeSlot"
-                                placeholder="e.g., 9:00-11:00"
-                                value={newCourse.timeSlot}
-                                onChange={(e) => setNewCourse({ ...newCourse, timeSlot: e.target.value })}
+                                id="schedule"
+                                placeholder="e.g., Monday 9:00-11:00 or Flexible"
+                                value={newCourse.schedule}
+                                onChange={(e) => setNewCourse({ ...newCourse, schedule: e.target.value })}
                                 required
                               />
                             </div>
@@ -492,7 +512,7 @@ export default function ProfessorProfile() {
                             <Button type="button" variant="outline" onClick={() => setShowAddCourseDialog(false)}>
                               Cancel
                             </Button>
-                            <Button type="submit">Add Course</Button>
+                            <Button type="submit">Add Template</Button>
                           </div>
                         </form>
                       </DialogContent>
@@ -507,34 +527,128 @@ export default function ProfessorProfile() {
                       <TableHead>Subject</TableHead>
                       <TableHead>School Year</TableHead>
                       <TableHead>Type</TableHead>
-                      <TableHead>Price/Session</TableHead>
+                      <TableHead>Price</TableHead>
                       <TableHead>Duration</TableHead>
                       <TableHead>Schedule</TableHead>
                       <TableHead>Cut %</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {professor.courses.map((course: any) => (
-                      <TableRow key={course.id}>
-                        <TableCell className="font-medium">{course.subject}</TableCell>
-                        <TableCell>{course.schoolYear}</TableCell>
+                    {professorTemplates.map((template) => (
+                      <TableRow key={template.id}>
+                        <TableCell className="font-medium">{template.subject}</TableCell>
+                        <TableCell>{template.schoolYear}</TableCell>
                         <TableCell>
-                          <Badge variant={course.courseType === "Group" ? "default" : "secondary"}>
-                            {course.courseType}
-                          </Badge>
+                          <Badge variant={template.type === "Group" ? "default" : "secondary"}>{template.type}</Badge>
                         </TableCell>
-                        <TableCell>{course.pricePerSession} DA</TableCell>
-                        <TableCell>{course.duration}h</TableCell>
-                        <TableCell>
-                          {course.dayOfWeek}
-                          <br />
-                          <span className="text-sm text-gray-600">{course.timeSlot}</span>
-                        </TableCell>
-                        <TableCell>{course.percentageCut}%</TableCell>
+                        <TableCell>{template.price} DA</TableCell>
+                        <TableCell>{template.durationHours}h</TableCell>
+                        <TableCell>{template.schedule}</TableCell>
+                        <TableCell>{template.percentageCut}%</TableCell>
                       </TableRow>
                     ))}
                   </TableBody>
                 </Table>
+              </CardContent>
+            </Card>
+
+            {/* Course Instances Section */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center">
+                  <BookOpen className="h-5 w-5 mr-2" />
+                  Course Instances & Payments
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-6">
+                  {/* Active Instances */}
+                  <div>
+                    <h3 className="font-medium text-lg mb-4">Active Instances</h3>
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>Course</TableHead>
+                          <TableHead>Type</TableHead>
+                          <TableHead>Month/Date</TableHead>
+                          <TableHead>Students</TableHead>
+                          <TableHead>Student Paid</TableHead>
+                          <TableHead>Prof Paid</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {activeInstances.map((instance) => {
+                          const template = courseTemplates.find((t) => t.id === instance.templateId)
+                          return (
+                            <TableRow key={instance.id}>
+                              <TableCell className="font-medium">
+                                {template?.subject} - {template?.schoolYear}
+                              </TableCell>
+                              <TableCell>
+                                <Badge variant={template?.type === "Group" ? "default" : "secondary"}>
+                                  {template?.type}
+                                </Badge>
+                              </TableCell>
+                              <TableCell>{instance.month || instance.sessionDate}</TableCell>
+                              <TableCell>{instance.studentNames?.join(", ")}</TableCell>
+                              <TableCell>
+                                <Badge variant={instance.payments.studentPaid ? "default" : "destructive"}>
+                                  {instance.payments.studentPaid ? "Paid" : "Pending"}
+                                </Badge>
+                              </TableCell>
+                              <TableCell>
+                                <Switch
+                                  checked={instance.payments.profPaid}
+                                  onCheckedChange={() => toggleProfPaid(instance.id)}
+                                />
+                              </TableCell>
+                            </TableRow>
+                          )
+                        })}
+                      </TableBody>
+                    </Table>
+                  </div>
+
+                  {/* Completed Instances */}
+                  {completedInstances.length > 0 && (
+                    <div>
+                      <h3 className="font-medium text-lg mb-4">Completed Instances</h3>
+                      <Table>
+                        <TableHeader>
+                          <TableRow>
+                            <TableHead>Course</TableHead>
+                            <TableHead>Type</TableHead>
+                            <TableHead>Month/Date</TableHead>
+                            <TableHead>Students</TableHead>
+                            <TableHead>Status</TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {completedInstances.map((instance) => {
+                            const template = courseTemplates.find((t) => t.id === instance.templateId)
+                            return (
+                              <TableRow key={instance.id} className="opacity-60">
+                                <TableCell className="font-medium">
+                                  {template?.subject} - {template?.schoolYear}
+                                </TableCell>
+                                <TableCell>
+                                  <Badge variant={template?.type === "Group" ? "default" : "secondary"}>
+                                    {template?.type}
+                                  </Badge>
+                                </TableCell>
+                                <TableCell>{instance.month || instance.sessionDate}</TableCell>
+                                <TableCell>{instance.studentNames?.join(", ")}</TableCell>
+                                <TableCell>
+                                  <Badge variant="default">Completed</Badge>
+                                </TableCell>
+                              </TableRow>
+                            )
+                          })}
+                        </TableBody>
+                      </Table>
+                    </div>
+                  )}
+                </div>
               </CardContent>
             </Card>
           </div>
@@ -555,12 +669,12 @@ export default function ProfessorProfile() {
                   <p className="text-2xl font-bold text-green-600">{professor.monthlyEarnings.toLocaleString()} DA</p>
                 </div>
                 <div className="text-center p-4 bg-purple-50 rounded-lg">
-                  <p className="text-sm text-gray-600">Active Courses</p>
-                  <p className="text-2xl font-bold text-purple-600">{professor.courses.length}</p>
+                  <p className="text-sm text-gray-600">Course Templates</p>
+                  <p className="text-2xl font-bold text-purple-600">{professorTemplates.length}</p>
                 </div>
                 <div className="text-center p-4 bg-orange-50 rounded-lg">
-                  <p className="text-sm text-gray-600">Schools</p>
-                  <p className="text-2xl font-bold text-orange-600">{professor.schools.length}</p>
+                  <p className="text-sm text-gray-600">Active Instances</p>
+                  <p className="text-2xl font-bold text-orange-600">{activeInstances.length}</p>
                 </div>
               </CardContent>
             </Card>
