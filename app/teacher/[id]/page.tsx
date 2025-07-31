@@ -407,7 +407,7 @@ export default function TeacherProfile() {
                                 </Badge>
                               </TableCell>
                               <TableCell>{course.schedule}</TableCell>
-                              <TableCell>{course.enrolledStudents.length} students</TableCell>
+                              <TableCell>{course.enrolledStudents.length}</TableCell>
                               <TableCell>
                                 {course.price} DA {course.courseType === "Group" ? "/month" : "/session"}
                               </TableCell>
