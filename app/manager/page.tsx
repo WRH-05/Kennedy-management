@@ -408,7 +408,7 @@ export default function ManagerDashboard() {
               students={students}
               courses={courses}
               onStudentsUpdate={setStudents}
-              canAdd={false}
+              canAdd={true}
               showCourses={true}
               showPaymentStatus={true}
             />
@@ -420,7 +420,7 @@ export default function ManagerDashboard() {
               teachers={teachers}
               courses={courses}
               onTeachersUpdate={setTeachers}
-              canAdd={false}
+              canAdd={true}
               showCourses={true}
               showStats={true}
             />
@@ -433,7 +433,7 @@ export default function ManagerDashboard() {
               teachers={teachers}
               students={students}
               onCoursesUpdate={setCourses}
-              canAdd={false}
+              canAdd={true}
             />
           </TabsContent>
 
