@@ -13,6 +13,7 @@ import { studentService, teacherService, courseService } from "@/src/services/da
 import StudentsTab from "@/components/tabs/StudentsTab"
 import TeachersTab from "@/components/tabs/TeachersTab"
 import CoursesTab from "@/components/tabs/CoursesTab"
+import ArchiveTab from "@/components/tabs/ArchiveTab"
 
 export default function ReceptionistDashboard() {
   const router = useRouter()
@@ -49,9 +50,14 @@ export default function ReceptionistDashboard() {
           courseService.getAllCourseInstances(),
         ])
 
-        setStudents(studentsData)
-        setTeachers(teachersData)
-        setCourses(coursesData)
+        // Filter out archived items
+        const activeStudents = studentsData.filter((student: any) => !student.archived)
+        const activeTeachers = teachersData.filter((teacher: any) => !teacher.archived)
+        const activeCourses = coursesData.filter((course: any) => !course.archived)
+
+        setStudents(activeStudents)
+        setTeachers(activeTeachers)
+        setCourses(activeCourses)
       } catch (error) {
         console.error('Error loading data:', error)
       } finally {
@@ -180,10 +186,11 @@ export default function ReceptionistDashboard() {
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <Tabs defaultValue="students" className="space-y-6">
-          <TabsList className="grid w-full grid-cols-3">
+          <TabsList className="grid w-full grid-cols-4">
             <TabsTrigger value="students">Students</TabsTrigger>
             <TabsTrigger value="courses">Courses</TabsTrigger>
             <TabsTrigger value="teachers">Teachers</TabsTrigger>
+            <TabsTrigger value="archive">Archive</TabsTrigger>
           </TabsList>
 
           {/* Students Tab */}
@@ -219,6 +226,11 @@ export default function ReceptionistDashboard() {
               showCourses={true}
               showStats={false}
             />
+          </TabsContent>
+
+          {/* Archive Tab */}
+          <TabsContent value="archive">
+            <ArchiveTab isManager={false} />
           </TabsContent>
         </Tabs>
       </div>

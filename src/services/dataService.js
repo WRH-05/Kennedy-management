@@ -77,6 +77,37 @@ export const studentService = {
       }, 100);
     });
   },
+
+  // Archive student
+  async archiveStudent(id) {
+    return new Promise((resolve) => {
+      setTimeout(() => {
+        const index = students.findIndex(s => s.id === parseInt(id));
+        if (index !== -1) {
+          students[index] = { ...students[index], archived: true, archivedDate: new Date().toISOString() };
+          resolve(students[index]);
+        } else {
+          resolve(null);
+        }
+      }, 100);
+    });
+  },
+
+  // Unarchive student
+  async unarchiveStudent(id) {
+    return new Promise((resolve) => {
+      setTimeout(() => {
+        const index = students.findIndex(s => s.id === parseInt(id));
+        if (index !== -1) {
+          const { archived, archivedDate, ...studentData } = students[index];
+          students[index] = studentData;
+          resolve(students[index]);
+        } else {
+          resolve(null);
+        }
+      }, 100);
+    });
+  },
 };
 
 // Teacher Services
@@ -135,6 +166,37 @@ export const teacherService = {
         if (index !== -1) {
           const deletedTeacher = teachers.splice(index, 1)[0];
           resolve(deletedTeacher);
+        } else {
+          resolve(null);
+        }
+      }, 100);
+    });
+  },
+
+  // Archive teacher
+  async archiveTeacher(id) {
+    return new Promise((resolve) => {
+      setTimeout(() => {
+        const index = teachers.findIndex(t => t.id === parseInt(id));
+        if (index !== -1) {
+          teachers[index] = { ...teachers[index], archived: true, archivedDate: new Date().toISOString() };
+          resolve(teachers[index]);
+        } else {
+          resolve(null);
+        }
+      }, 100);
+    });
+  },
+
+  // Unarchive teacher
+  async unarchiveTeacher(id) {
+    return new Promise((resolve) => {
+      setTimeout(() => {
+        const index = teachers.findIndex(t => t.id === parseInt(id));
+        if (index !== -1) {
+          const { archived, archivedDate, ...teacherData } = teachers[index];
+          teachers[index] = teacherData;
+          resolve(teachers[index]);
         } else {
           resolve(null);
         }
@@ -257,6 +319,37 @@ export const courseService = {
             courseInstances[courseIndex].enrolledStudents.push(parseInt(studentId));
           }
           resolve(courseInstances[courseIndex]);
+        } else {
+          resolve(null);
+        }
+      }, 100);
+    });
+  },
+
+  // Archive course
+  async archiveCourse(id) {
+    return new Promise((resolve) => {
+      setTimeout(() => {
+        const index = courseInstances.findIndex(c => c.id === parseInt(id));
+        if (index !== -1) {
+          courseInstances[index] = { ...courseInstances[index], archived: true, archivedDate: new Date().toISOString() };
+          resolve(courseInstances[index]);
+        } else {
+          resolve(null);
+        }
+      }, 100);
+    });
+  },
+
+  // Unarchive course
+  async unarchiveCourse(id) {
+    return new Promise((resolve) => {
+      setTimeout(() => {
+        const index = courseInstances.findIndex(c => c.id === parseInt(id));
+        if (index !== -1) {
+          const { archived, archivedDate, ...courseData } = courseInstances[index];
+          courseInstances[index] = courseData;
+          resolve(courseInstances[index]);
         } else {
           resolve(null);
         }

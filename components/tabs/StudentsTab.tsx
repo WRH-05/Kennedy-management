@@ -11,7 +11,7 @@ import { Checkbox } from "@/components/ui/checkbox"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Badge } from "@/components/ui/badge"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
-import { Users, Plus } from "lucide-react"
+import { Users, Plus, Archive } from "lucide-react"
 import { studentService } from "@/src/services/dataService"
 
 interface StudentsTabProps {
@@ -83,6 +83,32 @@ export default function StudentsTab({
       setShowAddStudentDialog(false)
     } catch (error) {
       console.error('Error adding student:', error)
+    }
+  }
+
+  const handleArchiveStudent = async (studentId: number, studentName: string) => {
+    try {
+      const user = JSON.parse(localStorage.getItem("user") || '{}')
+      
+      // Create archive request
+      const archiveRequests = JSON.parse(localStorage.getItem('archiveRequests') || '[]')
+      const newRequest = {
+        id: Math.max(...archiveRequests.map((r: any) => r.id), 0) + 1,
+        type: 'student',
+        entityId: studentId,
+        entityName: studentName,
+        requestedBy: user.username,
+        requestedDate: new Date().toISOString(),
+        status: 'pending',
+        reason: 'Student leaving school'
+      }
+      
+      archiveRequests.push(newRequest)
+      localStorage.setItem('archiveRequests', JSON.stringify(archiveRequests))
+      
+      alert('Archive request submitted successfully!')
+    } catch (error) {
+      console.error('Error creating archive request:', error)
     }
   }
 
@@ -272,6 +298,7 @@ export default function StudentsTab({
               <TableHead>Specialty</TableHead>
               {showCourses && <TableHead>Enrolled Courses</TableHead>}
               {showPaymentStatus && <TableHead>Payment Status</TableHead>}
+              <TableHead>Actions</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -312,6 +339,17 @@ export default function StudentsTab({
                       ))}
                     </TableCell>
                   )}
+                  <TableCell>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => handleArchiveStudent(student.id, student.name)}
+                      className="text-orange-600 hover:text-orange-700"
+                    >
+                      <Archive className="h-4 w-4 mr-1" />
+                      Archive
+                    </Button>
+                  </TableCell>
                 </TableRow>
               )
             })}

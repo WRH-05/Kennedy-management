@@ -10,7 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Badge } from "@/components/ui/badge"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
-import { BookOpen, Plus } from "lucide-react"
+import { BookOpen, Plus, Archive } from "lucide-react"
 import { courseService, teacherService } from "@/src/services/dataService"
 
 interface CoursesTabProps {
@@ -119,6 +119,32 @@ export default function CoursesTab({
     const endHours = Math.floor(endMinutes / 60)
     const endMins = endMinutes % 60
     return `${endHours.toString().padStart(2, "0")}:${endMins.toString().padStart(2, "0")}`
+  }
+
+  const handleArchiveCourse = async (courseId: number, courseName: string) => {
+    try {
+      const user = JSON.parse(localStorage.getItem("user") || '{}')
+      
+      // Create archive request
+      const archiveRequests = JSON.parse(localStorage.getItem('archiveRequests') || '[]')
+      const newRequest = {
+        id: Math.max(...archiveRequests.map((r: any) => r.id), 0) + 1,
+        type: 'course',
+        entityId: courseId,
+        entityName: courseName,
+        requestedBy: user.username,
+        requestedDate: new Date().toISOString(),
+        status: 'pending',
+        reason: 'Course discontinued'
+      }
+      
+      archiveRequests.push(newRequest)
+      localStorage.setItem('archiveRequests', JSON.stringify(archiveRequests))
+      
+      alert('Archive request submitted successfully!')
+    } catch (error) {
+      console.error('Error creating archive request:', error)
+    }
   }
 
   return (
@@ -346,6 +372,7 @@ export default function CoursesTab({
               <TableHead>Schedule</TableHead>
               <TableHead>Students</TableHead>
               <TableHead>Price</TableHead>
+              <TableHead>Actions</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -387,6 +414,17 @@ export default function CoursesTab({
                   <TableCell>{enrolledStudents.length} students</TableCell>
                   <TableCell>
                     {course.price} DA {course.courseType === "Group" ? "/month" : "/session"}
+                  </TableCell>
+                  <TableCell>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => handleArchiveCourse(course.id, `${course.subject} - ${course.schoolYear}`)}
+                      className="text-orange-600 hover:text-orange-700"
+                    >
+                      <Archive className="h-4 w-4 mr-1" />
+                      Archive
+                    </Button>
                   </TableCell>
                 </TableRow>
               )

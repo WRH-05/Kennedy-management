@@ -10,7 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Badge } from "@/components/ui/badge"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
-import { GraduationCap, Plus } from "lucide-react"
+import { GraduationCap, Plus, Archive } from "lucide-react"
 import { teacherService } from "@/src/services/dataService"
 
 interface TeachersTabProps {
@@ -83,6 +83,32 @@ export default function TeachersTab({
 
   const getTeacherCourses = (teacherId: number) => {
     return courses.filter((course) => course.teacherId === teacherId)
+  }
+
+  const handleArchiveTeacher = async (teacherId: number, teacherName: string) => {
+    try {
+      const user = JSON.parse(localStorage.getItem("user") || '{}')
+      
+      // Create archive request
+      const archiveRequests = JSON.parse(localStorage.getItem('archiveRequests') || '[]')
+      const newRequest = {
+        id: Math.max(...archiveRequests.map((r: any) => r.id), 0) + 1,
+        type: 'teacher',
+        entityId: teacherId,
+        entityName: teacherName,
+        requestedBy: user.username,
+        requestedDate: new Date().toISOString(),
+        status: 'pending',
+        reason: 'Teacher leaving school'
+      }
+      
+      archiveRequests.push(newRequest)
+      localStorage.setItem('archiveRequests', JSON.stringify(archiveRequests))
+      
+      alert('Archive request submitted successfully!')
+    } catch (error) {
+      console.error('Error creating archive request:', error)
+    }
   }
 
   return (
@@ -309,8 +335,14 @@ export default function TeachersTab({
                     </>
                   )}
                   <TableCell>
-                    <Button variant="outline" size="sm" onClick={() => router.push(`/teacher/${teacher.id}`)}>
-                      View Profile
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => handleArchiveTeacher(teacher.id, teacher.name)}
+                      className="text-orange-600 hover:text-orange-700"
+                    >
+                      <Archive className="h-4 w-4 mr-1" />
+                      Archive
                     </Button>
                   </TableCell>
                 </TableRow>

@@ -14,6 +14,9 @@ import { paymentService, studentService, teacherService, courseService } from "@
 import StudentsTab from "@/components/tabs/StudentsTab"
 import TeachersTab from "@/components/tabs/TeachersTab"
 import CoursesTab from "@/components/tabs/CoursesTab"
+import ArchiveTab from "@/components/tabs/ArchiveTab"
+import RevenueTab from "@/components/tabs/RevenueTab"
+import PayoutsTab from "@/components/tabs/PayoutsTab"
 
 export default function ManagerDashboard() {
   const router = useRouter()
@@ -59,11 +62,16 @@ export default function ManagerDashboard() {
           paymentService.getAllPayments(),
         ])
 
+        // Filter out archived items
+        const activeStudents = studentsData.filter((student: any) => !student.archived)
+        const activeTeachers = teachersData.filter((teacher: any) => !teacher.archived)
+        const activeCourses = coursesData.filter((course: any) => !course.archived)
+
         setRevenue(revenueData)
         setPayouts(payoutsData)
-        setStudents(studentsData)
-        setTeachers(teachersData)
-        setCourses(coursesData)
+        setStudents(activeStudents)
+        setTeachers(activeTeachers)
+        setCourses(activeCourses)
         setAllPayments(paymentsData)
       } catch (error) {
         console.error('Error loading data:', error)
@@ -272,100 +280,20 @@ export default function ManagerDashboard() {
           <TabsList className="grid w-full grid-cols-6">
             <TabsTrigger value="revenue">Revenue</TabsTrigger>
             <TabsTrigger value="payouts">Payouts</TabsTrigger>
-            <TabsTrigger value="payments">Payments</TabsTrigger>
             <TabsTrigger value="students">Students</TabsTrigger>
             <TabsTrigger value="teachers">Teachers</TabsTrigger>
             <TabsTrigger value="courses">Courses</TabsTrigger>
+            <TabsTrigger value="archive">Archive</TabsTrigger>
           </TabsList>
 
           {/* Revenue Tab */}
           <TabsContent value="revenue">
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center">
-                  <TrendingUp className="h-5 w-5 mr-2" />
-                  Revenue Breakdown
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Student Name</TableHead>
-                      <TableHead>Course</TableHead>
-                      <TableHead>Amount</TableHead>
-                      <TableHead>Month</TableHead>
-                      <TableHead>Status</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {revenue.map((item: any, index: number) => (
-                      <TableRow key={index}>
-                        <TableCell className="font-medium">{item.studentName || 'N/A'}</TableCell>
-                        <TableCell>{item.course || 'N/A'}</TableCell>
-                        <TableCell>{(item.amount || 0).toLocaleString()} DA</TableCell>
-                        <TableCell>{item.month || 'N/A'}</TableCell>
-                        <TableCell>
-                          <Badge variant={item.paid ? "default" : "destructive"}>
-                            {item.paid ? "Paid" : "Pending"}
-                          </Badge>
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </CardContent>
-            </Card>
+            <RevenueTab revenue={revenue} />
           </TabsContent>
 
           {/* Payouts Tab */}
           <TabsContent value="payouts">
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center">
-                  <DollarSign className="h-5 w-5 mr-2" />
-                  Teacher Payouts
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Teacher Name</TableHead>
-                      <TableHead>Percentage</TableHead>
-                      <TableHead>Total Generated</TableHead>
-                      <TableHead>Total Payout</TableHead>
-                      <TableHead>Month</TableHead>
-                      <TableHead>Status</TableHead>
-                      <TableHead>Actions</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {payouts.map((payout: any, index: number) => (
-                      <TableRow key={index}>
-                        <TableCell className="font-medium">{payout.professorName || 'N/A'}</TableCell>
-                        <TableCell>{payout.percentage || 'N/A'}%</TableCell>
-                        <TableCell>{(payout.totalGenerated || 0).toLocaleString()} DA</TableCell>
-                        <TableCell>{(payout.amount || 0).toLocaleString()} DA</TableCell>
-                        <TableCell>{payout.dueDate || 'N/A'}</TableCell>
-                        <TableCell>
-                          <Badge variant={payout.status === 'approved' ? "default" : "destructive"}>
-                            {payout.status === 'approved' ? "Approved" : "Pending"}
-                          </Badge>
-                        </TableCell>
-                        <TableCell>
-                          {payout.status !== 'approved' && (
-                            <Button variant="outline" size="sm" onClick={() => approvePayout(payout.id)}>
-                              Approve
-                            </Button>
-                          )}
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </CardContent>
-            </Card>
+            <PayoutsTab payouts={payouts} onApprovePayout={approvePayout} />
           </TabsContent>
 
           {/* Students Tab */}
@@ -403,130 +331,26 @@ export default function ManagerDashboard() {
             />
           </TabsContent>
 
-          {/* Unified Payments Tab */}
-          <TabsContent value="payments">
-            <Card>
-              <CardHeader>
-                <div className="flex justify-between items-center">
-                  <CardTitle className="flex items-center">
-                    <DollarSign className="h-5 w-5 mr-2" />
-                    All Payments Management
-                  </CardTitle>
-                  <Select value={selectedMonth} onValueChange={setSelectedMonth}>
-                    <SelectTrigger className="w-40">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="2024-01">January 2024</SelectItem>
-                      <SelectItem value="2023-12">December 2023</SelectItem>
-                      <SelectItem value="2023-11">November 2023</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-6">
-                  {/* Group payments by month */}
-                  {Object.entries(
-                    allPayments.reduce((acc: Record<string, any[]>, payment: any) => {
-                      const month = payment.month || new Date(payment.timeline).toLocaleDateString('en-US', { year: 'numeric', month: 'long' })
-                      if (!acc[month]) acc[month] = []
-                      acc[month].push(payment)
-                      return acc
-                    }, {} as Record<string, any[]>)
-                  ).map(([month, monthPayments]: [string, any[]]) => (
-                    <div key={month} className="border rounded-lg p-4">
-                      <h3 className="font-semibold text-lg mb-4 text-gray-800">{month}</h3>
-                      <Table>
-                        <TableHeader>
-                          <TableRow>
-                            <TableHead>User Role</TableHead>
-                            <TableHead>Name</TableHead>
-                            <TableHead>Description</TableHead>
-                            <TableHead>Amount</TableHead>
-                            <TableHead>Date</TableHead>
-                            <TableHead>Status</TableHead>
-                            <TableHead>Approved By</TableHead>
-                            <TableHead>Actions</TableHead>
-                          </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                          {monthPayments
-                            .sort((a: any, b: any) => new Date(b.timeline).getTime() - new Date(a.timeline).getTime())
-                            .map((payment: any, idx: number) => (
-                            <TableRow key={`${payment.id}_${idx}`}>
-                              <TableCell>
-                                <Badge variant={payment.userRole === 'Student' ? "default" : "secondary"}>
-                                  {payment.userRole}
-                                </Badge>
-                              </TableCell>
-                              <TableCell className="font-medium">
-                                <Button
-                                  variant="link"
-                                  className="p-0 h-auto font-medium text-left"
-                                  onClick={() => {
-                                    if (payment.userRole === 'Student') {
-                                      router.push(`/student/${payment.userId}`)
-                                    } else if (payment.userRole === 'Professor') {
-                                      router.push(`/teacher/${payment.userId}`)
-                                    }
-                                  }}
-                                >
-                                  {payment.userName}
-                                </Button>
-                              </TableCell>
-                              <TableCell>{payment.description}</TableCell>
-                              <TableCell className="font-medium">{payment.amount?.toLocaleString()} DA</TableCell>
-                              <TableCell>
-                                {payment.date || new Date(payment.timeline).toLocaleDateString()}
-                              </TableCell>
-                              <TableCell>
-                                <Badge variant={
-                                  payment.status === 'Paid' || payment.status === 'approved' 
-                                    ? "default" 
-                                    : payment.status === 'Pending' 
-                                    ? "destructive" 
-                                    : "secondary"
-                                }>
-                                  {payment.status}
-                                </Badge>
-                              </TableCell>
-                              <TableCell>
-                                {payment.approvedBy ? (
-                                  <div className="text-sm">
-                                    <div className="font-medium">{payment.approvedBy}</div>
-                                    <div className="text-gray-500">{payment.approvedDate}</div>
-                                  </div>
-                                ) : (
-                                  <span className="text-gray-400">-</span>
-                                )}
-                              </TableCell>
-                              <TableCell>
-                                {(payment.status === 'Pending' || payment.status === 'pending') && (
-                                  <Button 
-                                    variant="outline" 
-                                    size="sm" 
-                                    onClick={() => approvePayment(payment.id, payment.paymentType)}
-                                  >
-                                    Approve
-                                  </Button>
-                                )}
-                              </TableCell>
-                            </TableRow>
-                          ))}
-                        </TableBody>
-                      </Table>
-                    </div>
-                  ))}
-                  
-                  {allPayments.length === 0 && (
-                    <div className="text-center py-8 text-gray-500">
-                      No payment records found.
-                    </div>
-                  )}
-                </div>
-              </CardContent>
-            </Card>
+          {/* Archive Tab */}
+          <TabsContent value="archive">
+            <ArchiveTab isManager={true} onArchiveUpdate={() => {
+              // Reload data when archive status changes
+              const loadData = async () => {
+                try {
+                  const [studentsData, teachersData, coursesData] = await Promise.all([
+                    studentService.getAllStudents(),
+                    teacherService.getAllTeachers(),
+                    courseService.getAllCourseInstances(),
+                  ])
+                  setStudents(studentsData)
+                  setTeachers(teachersData)
+                  setCourses(coursesData)
+                } catch (error) {
+                  console.error('Error reloading data:', error)
+                }
+              }
+              loadData()
+            }} />
           </TabsContent>
         </Tabs>
       </div>
