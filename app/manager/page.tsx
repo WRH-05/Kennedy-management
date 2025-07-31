@@ -125,8 +125,8 @@ export default function ManagerDashboard() {
     alert("Monthly rollover completed! Active group courses have been copied to the new month.")
   }
 
-  const totalRevenue = revenue.reduce((sum: number, item: any) => sum + (item.paid ? item.amount : 0), 0)
-  const totalPayouts = payouts.reduce((sum: number, payout: any) => sum + (payout.status === 'approved' ? payout.amount : 0), 0)
+  const totalRevenue = revenue.reduce((sum: number, item: any) => sum + (item.paid && item.amount ? item.amount : 0), 0)
+  const totalPayouts = payouts.reduce((sum: number, payout: any) => sum + (payout.status === 'approved' && payout.amount ? payout.amount : 0), 0)
   const netProfit = totalRevenue - totalPayouts
 
   if (!user || loading) return null
@@ -231,10 +231,10 @@ export default function ManagerDashboard() {
                   <TableBody>
                     {revenue.map((item: any, index: number) => (
                       <TableRow key={index}>
-                        <TableCell className="font-medium">{item.studentName}</TableCell>
-                        <TableCell>{item.course}</TableCell>
-                        <TableCell>{item.amount.toLocaleString()} DA</TableCell>
-                        <TableCell>{item.month}</TableCell>
+                        <TableCell className="font-medium">{item.studentName || 'N/A'}</TableCell>
+                        <TableCell>{item.course || 'N/A'}</TableCell>
+                        <TableCell>{(item.amount || 0).toLocaleString()} DA</TableCell>
+                        <TableCell>{item.month || 'N/A'}</TableCell>
                         <TableCell>
                           <Badge variant={item.paid ? "default" : "destructive"}>
                             {item.paid ? "Paid" : "Pending"}
@@ -273,11 +273,11 @@ export default function ManagerDashboard() {
                   <TableBody>
                     {payouts.map((payout: any, index: number) => (
                       <TableRow key={index}>
-                        <TableCell className="font-medium">{payout.professorName}</TableCell>
+                        <TableCell className="font-medium">{payout.professorName || 'N/A'}</TableCell>
                         <TableCell>{payout.percentage || 'N/A'}%</TableCell>
-                        <TableCell>{payout.totalGenerated?.toLocaleString() || 'N/A'} DA</TableCell>
-                        <TableCell>{payout.amount.toLocaleString()} DA</TableCell>
-                        <TableCell>{payout.dueDate}</TableCell>
+                        <TableCell>{(payout.totalGenerated || 0).toLocaleString()} DA</TableCell>
+                        <TableCell>{(payout.amount || 0).toLocaleString()} DA</TableCell>
+                        <TableCell>{payout.dueDate || 'N/A'}</TableCell>
                         <TableCell>
                           <Badge variant={payout.status === 'approved' ? "default" : "destructive"}>
                             {payout.status === 'approved' ? "Approved" : "Pending"}
