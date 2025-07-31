@@ -1,6 +1,7 @@
 "use client"
 
 import type React from "react"
+import type { studentId } from "@/components/ui/studentId" // Declare the studentId variable
 
 import { Label } from "@/components/ui/label"
 
@@ -14,6 +15,16 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 import { ArrowLeft, BookOpen, Users, Calendar, DollarSign, Plus } from "lucide-react"
 import { Input } from "@/components/ui/input"
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog"
 
 // Mock data for course detail
 const mockCourses = [
@@ -33,7 +44,7 @@ const mockCourses = [
       teacherPaid: false,
     },
     teacherCut: 65,
-    attendance: { 1: true }, // studentId: present
+    attendance: { 1: { week1: true, week2: false, week3: true, week4: false } },
     courseType: "Group",
     duration: 2,
     price: 500,
@@ -55,7 +66,7 @@ const mockCourses = [
       teacherPaid: false,
     },
     teacherCut: 60,
-    attendance: { 2: false },
+    attendance: { 2: { week1: false, week2: true, week3: false, week4: true } },
     courseType: "Individual",
     duration: 2,
     price: 450,
@@ -88,6 +99,12 @@ export default function CourseDetail() {
   const [selectedStudent, setSelectedStudent] = useState("")
   const [studentSearchQuery, setStudentSearchQuery] = useState("")
   const [showStudentResults, setShowStudentResults] = useState(false)
+  const [confirmDialog, setConfirmDialog] = useState({
+    open: false,
+    title: "",
+    description: "",
+    action: () => {},
+  })
 
   useEffect(() => {
     // Check if user is logged in
@@ -107,37 +124,58 @@ export default function CourseDetail() {
     }
   }, [courseId, router])
 
-  const toggleAttendance = (studentId: number) => {
+  const updateWeeklyAttendance = (studentId: number, week: string, present: boolean) => {
     setCourse((prev: any) => ({
       ...prev,
       attendance: {
         ...prev.attendance,
-        [studentId]: !prev.attendance[studentId],
-      },
-    }))
-  }
-
-  const toggleStudentPayment = (studentId: number) => {
-    setCourse((prev: any) => ({
-      ...prev,
-      payments: {
-        ...prev.payments,
-        students: {
-          ...prev.payments.students,
-          [studentId]: !prev.payments.students[studentId],
+        [studentId]: {
+          ...prev.attendance[studentId],
+          [week]: present,
         },
       },
     }))
   }
 
-  const toggleTeacherPayment = () => {
-    setCourse((prev: any) => ({
-      ...prev,
-      payments: {
-        ...prev.payments,
-        teacherPaid: !prev.payments.teacherPaid,
+  const toggleStudentPayment = (studentId: number) => {
+    const currentStatus = course.payments.students[studentId] || false
+    setConfirmDialog({
+      open: true,
+      title: "Confirm Payment Status",
+      description: `Mark payment as ${currentStatus ? "unpaid" : "paid"}?`,
+      action: () => {
+        setCourse((prev: any) => ({
+          ...prev,
+          payments: {
+            ...prev.payments,
+            students: {
+              ...prev.payments.students,
+              [studentId]: !currentStatus,
+            },
+          },
+        }))
+        setConfirmDialog({ open: false, title: "", description: "", action: () => {} })
       },
-    }))
+    })
+  }
+
+  const toggleTeacherPayment = () => {
+    const currentStatus = course.payments.teacherPaid
+    setConfirmDialog({
+      open: true,
+      title: "Confirm Teacher Payment",
+      description: `Mark teacher payment as ${currentStatus ? "unpaid" : "paid"}?`,
+      action: () => {
+        setCourse((prev: any) => ({
+          ...prev,
+          payments: {
+            ...prev.payments,
+            teacherPaid: !currentStatus,
+          },
+        }))
+        setConfirmDialog({ open: false, title: "", description: "", action: () => {} })
+      },
+    })
   }
 
   const handleAddStudent = (e: React.FormEvent) => {
@@ -160,7 +198,7 @@ export default function CourseDetail() {
       },
       attendance: {
         ...prev.attendance,
-        [student.id]: false,
+        [student.id]: { week1: false, week2: false, week3: false, week4: false },
       },
     }))
 
@@ -170,35 +208,43 @@ export default function CourseDetail() {
   }
 
   const removeStudentFromCourse = (studentId: number) => {
-    setCourse((prev: any) => {
-      const studentIndex = prev.enrolledStudents.findIndex((id: number) => id === studentId)
-      if (studentIndex === -1) return prev
+    const studentName = course.studentNames[course.enrolledStudents.findIndex((id: number) => id === studentId)]
+    setConfirmDialog({
+      open: true,
+      title: "Remove Student",
+      description: `Are you sure you want to remove ${studentName} from this course?`,
+      action: () => {
+        setCourse((prev: any) => {
+          const studentIndex = prev.enrolledStudents.findIndex((id: number) => id === studentId)
+          if (studentIndex === -1) return prev
 
-      const newEnrolledStudents = [...prev.enrolledStudents]
-      newEnrolledStudents.splice(studentIndex, 1)
+          const newEnrolledStudents = [...prev.enrolledStudents]
+          newEnrolledStudents.splice(studentIndex, 1)
 
-      const newStudentNames = [...prev.studentNames]
-      newStudentNames.splice(studentIndex, 1)
+          const newStudentNames = [...prev.studentNames]
+          newStudentNames.splice(studentIndex, 1)
 
-      const newPayments = { ...prev.payments }
-      delete newPayments.students[studentId]
+          const newPayments = { ...prev.payments }
+          delete newPayments.students[studentId]
 
-      const newAttendance = { ...prev.attendance }
-      delete newAttendance[studentId]
+          const newAttendance = { ...prev.attendance }
+          delete newAttendance[studentId]
 
-      return {
-        ...prev,
-        enrolledStudents: newEnrolledStudents,
-        studentNames: newStudentNames,
-        payments: {
-          ...newPayments,
-          students: { ...newPayments.students },
-        },
-        attendance: {
-          ...newAttendance,
-          [studentId]: false,
-        },
-      }
+          return {
+            ...prev,
+            enrolledStudents: newEnrolledStudents,
+            studentNames: newStudentNames,
+            payments: {
+              ...newPayments,
+              students: { ...newPayments.students },
+            },
+            attendance: {
+              ...newAttendance,
+            },
+          }
+        })
+        setConfirmDialog({ open: false, title: "", description: "", action: () => {} })
+      },
     })
   }
 
@@ -312,11 +358,7 @@ export default function CourseDetail() {
                   <Button
                     variant={course.payments.teacherPaid ? "default" : "destructive"}
                     size="sm"
-                    onClick={() => {
-                      if (confirm(`Mark teacher payment as ${course.payments.teacherPaid ? "unpaid" : "paid"}?`)) {
-                        toggleTeacherPayment()
-                      }
-                    }}
+                    onClick={toggleTeacherPayment}
                   >
                     {course.payments.teacherPaid ? "Paid" : "Pay"}
                   </Button>
@@ -358,7 +400,6 @@ export default function CourseDetail() {
                         <DialogTitle>Add Student to Course</DialogTitle>
                       </DialogHeader>
                       <form onSubmit={handleAddStudent} className="space-y-4">
-                        {/* Replace the Select with search input */}
                         <div className="space-y-2">
                           <Label htmlFor="studentSearch">Student</Label>
                           <div className="relative">
@@ -416,9 +457,12 @@ export default function CourseDetail() {
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead>Student Name</TableHead>
-                      <TableHead>Present</TableHead>
-                      <TableHead>Payment Status</TableHead>
+                      <TableHead>Students</TableHead>
+                      <TableHead>Week 1</TableHead>
+                      <TableHead>Week 2</TableHead>
+                      <TableHead>Week 3</TableHead>
+                      <TableHead>Week 4</TableHead>
+                      <TableHead>Payment</TableHead>
                       <TableHead>Actions</TableHead>
                     </TableRow>
                   </TableHeader>
@@ -434,33 +478,31 @@ export default function CourseDetail() {
                             {course.studentNames[idx]}
                           </Button>
                         </TableCell>
-                        <TableCell>
-                          <Select
-                            value={course.attendance[studentId] ? "p" : "a"}
-                            onValueChange={(value) => {
-                              toggleAttendance(studentId)
-                            }}
-                          >
-                            <SelectTrigger className="w-16">
-                              <SelectValue />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="p">P</SelectItem>
-                              <SelectItem value="a">A</SelectItem>
-                            </SelectContent>
-                          </Select>
-                        </TableCell>
+                        {["week1", "week2", "week3", "week4"].map((week) => (
+                          <TableCell key={week}>
+                            <Select
+                              value={
+                                course.attendance[studentId]?.[week as keyof (typeof course.attendance)[studentId]]
+                                  ? "p"
+                                  : "a"
+                              }
+                              onValueChange={(value) => updateWeeklyAttendance(studentId, week, value === "p")}
+                            >
+                              <SelectTrigger className="w-12 h-8">
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="p">P</SelectItem>
+                                <SelectItem value="a">A</SelectItem>
+                              </SelectContent>
+                            </Select>
+                          </TableCell>
+                        ))}
                         <TableCell>
                           <Button
                             variant={course.payments.students[studentId] ? "default" : "destructive"}
                             size="sm"
-                            onClick={() => {
-                              if (
-                                confirm(`Mark payment as ${course.payments.students[studentId] ? "unpaid" : "paid"}?`)
-                              ) {
-                                toggleStudentPayment(studentId)
-                              }
-                            }}
+                            onClick={() => toggleStudentPayment(studentId)}
                           >
                             {course.payments.students[studentId] ? "Paid" : "Pay"}
                           </Button>
@@ -469,11 +511,8 @@ export default function CourseDetail() {
                           <Button
                             variant="outline"
                             size="sm"
-                            onClick={() => {
-                              if (confirm("Remove student from course?")) {
-                                removeStudentFromCourse(studentId)
-                              }
-                            }}
+                            className="h-8 px-2 text-xs bg-transparent"
+                            onClick={() => removeStudentFromCourse(studentId)}
                           >
                             Remove
                           </Button>
@@ -542,6 +581,23 @@ export default function CourseDetail() {
           </div>
         </div>
       </div>
+
+      <AlertDialog open={confirmDialog.open} onOpenChange={(open) => setConfirmDialog({ ...confirmDialog, open })}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>{confirmDialog.title}</AlertDialogTitle>
+            <AlertDialogDescription>{confirmDialog.description}</AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel
+              onClick={() => setConfirmDialog({ open: false, title: "", description: "", action: () => {} })}
+            >
+              Cancel
+            </AlertDialogCancel>
+            <AlertDialogAction onClick={confirmDialog.action}>Confirm</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   )
 }

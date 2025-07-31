@@ -9,6 +9,16 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { ArrowLeft, Edit, Save, X, GraduationCap, MapPin, Phone, Mail, School, BookOpen } from "lucide-react"
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog"
 
 // Mock teacher data
 const mockTeacherDetails = {
@@ -88,6 +98,7 @@ export default function TeacherProfile() {
   const [editedTeacher, setEditedTeacher] = useState<any>(null)
   const [user, setUser] = useState<any>(null)
   const [courses, setCourses] = useState(mockCourses)
+  const [showSaveConfirmation, setShowSaveConfirmation] = useState(false)
 
   useEffect(() => {
     // Check if user is logged in
@@ -113,8 +124,13 @@ export default function TeacherProfile() {
   }
 
   const handleSave = () => {
+    setShowSaveConfirmation(true)
+  }
+
+  const confirmSave = () => {
     setTeacher({ ...editedTeacher })
     setIsEditing(false)
+    setShowSaveConfirmation(false)
   }
 
   const handleCancel = () => {
@@ -366,7 +382,7 @@ export default function TeacherProfile() {
                           <TableHead>Price</TableHead>
                           <TableHead>Teacher Cut</TableHead>
                           <TableHead>Teacher Earnings</TableHead>
-                          <TableHead>Payment Status</TableHead>
+                          <TableHead>Payment</TableHead>
                         </TableRow>
                       </TableHeader>
                       <TableBody>
@@ -391,7 +407,7 @@ export default function TeacherProfile() {
                                 </Badge>
                               </TableCell>
                               <TableCell>{course.schedule}</TableCell>
-                              <TableCell>{course.studentNames?.join(", ")}</TableCell>
+                              <TableCell>{course.enrolledStudents.length} students</TableCell>
                               <TableCell>
                                 {course.price} DA {course.courseType === "Group" ? "/month" : "/session"}
                               </TableCell>
@@ -442,7 +458,7 @@ export default function TeacherProfile() {
                                   </Button>
                                 </TableCell>
                                 <TableCell>{course.schedule}</TableCell>
-                                <TableCell>{course.studentNames?.join(", ")}</TableCell>
+                                <TableCell>{course.enrolledStudents.length} students</TableCell>
                                 <TableCell>{course.monthlyPrice} DA</TableCell>
                                 <TableCell>{course.teacherCut}%</TableCell>
                                 <TableCell className="font-semibold">{teacherEarnings} DA</TableCell>
@@ -462,6 +478,21 @@ export default function TeacherProfile() {
           </div>
         </div>
       </div>
+
+      <AlertDialog open={showSaveConfirmation} onOpenChange={setShowSaveConfirmation}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Confirm Changes</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to save the changes to this teacher's profile?
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={confirmSave}>Save Changes</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   )
 }

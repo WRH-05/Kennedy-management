@@ -144,7 +144,6 @@ export default function ReceptionistDashboard() {
     copyOfId: false,
     registrationForm: false,
     registrationFeePaid: false,
-    registrationFeePaid: false,
   })
 
   // New teacher form state
@@ -635,10 +634,9 @@ export default function ReceptionistDashboard() {
                     <TableRow>
                       <TableHead>Name</TableHead>
                       <TableHead>School Year</TableHead>
-                      <TableHead>School</TableHead>
+                      <TableHead>Specialty</TableHead>
                       <TableHead>Enrolled Courses</TableHead>
                       <TableHead>Payment Status</TableHead>
-                      <TableHead>Actions</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -656,7 +654,7 @@ export default function ReceptionistDashboard() {
                             </Button>
                           </TableCell>
                           <TableCell>{student.schoolYear}</TableCell>
-                          <TableCell>{student.school}</TableCell>
+                          <TableCell>{student.specialty}</TableCell>
                           <TableCell>
                             {studentCourses.map((course, idx) => (
                               <Badge key={idx} variant="secondary" className="mr-1">
@@ -674,11 +672,6 @@ export default function ReceptionistDashboard() {
                                 {course.payments.students[student.id] ? "Paid" : "Pending"}
                               </Badge>
                             ))}
-                          </TableCell>
-                          <TableCell>
-                            <Button variant="outline" size="sm" onClick={() => router.push(`/student/${student.id}`)}>
-                              View Details
-                            </Button>
                           </TableCell>
                         </TableRow>
                       )
@@ -913,7 +906,6 @@ export default function ReceptionistDashboard() {
                       <TableHead>Schedule</TableHead>
                       <TableHead>Students</TableHead>
                       <TableHead>Price</TableHead>
-                      <TableHead>Actions</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -937,7 +929,15 @@ export default function ReceptionistDashboard() {
                               {course.subject} - {course.schoolYear}
                             </Button>
                           </TableCell>
-                          <TableCell>{course.teacherName}</TableCell>
+                          <TableCell>
+                            <Button
+                              variant="link"
+                              className="p-0 h-auto font-medium text-left"
+                              onClick={() => router.push(`/teacher/${course.teacherId}`)}
+                            >
+                              {course.teacherName}
+                            </Button>
+                          </TableCell>
                           <TableCell>
                             <Badge variant={course.courseType === "Group" ? "default" : "secondary"}>
                               {course.courseType}
@@ -947,11 +947,6 @@ export default function ReceptionistDashboard() {
                           <TableCell>{enrolledStudents.length} students</TableCell>
                           <TableCell>
                             {course.price} DA {course.courseType === "Group" ? "/month" : "/session"}
-                          </TableCell>
-                          <TableCell>
-                            <Button variant="outline" size="sm" onClick={() => router.push(`/course/${course.id}`)}>
-                              View Details
-                            </Button>
                           </TableCell>
                         </TableRow>
                       )
@@ -1133,7 +1128,6 @@ export default function ReceptionistDashboard() {
                       <TableHead>School</TableHead>
                       <TableHead>School Years</TableHead>
                       <TableHead>Active Courses</TableHead>
-                      <TableHead>Actions</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -1167,11 +1161,6 @@ export default function ReceptionistDashboard() {
                           </TableCell>
                           <TableCell>
                             <span className="text-sm text-gray-600">{teacherCourses.length} course(s)</span>
-                          </TableCell>
-                          <TableCell>
-                            <Button variant="outline" size="sm" onClick={() => router.push(`/teacher/${teacher.id}`)}>
-                              View Profile
-                            </Button>
                           </TableCell>
                         </TableRow>
                       )

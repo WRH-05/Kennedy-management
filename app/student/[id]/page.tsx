@@ -350,7 +350,15 @@ export default function StudentDashboard() {
                                 {course.subject} - {course.schoolYear}
                               </Button>
                             </TableCell>
-                            <TableCell>{course.teacherName}</TableCell>
+                            <TableCell>
+                              <Button
+                                variant="link"
+                                className="p-0 h-auto font-medium text-left"
+                                onClick={() => router.push(`/teacher/${course.teacherId}`)}
+                              >
+                                {course.teacherName}
+                              </Button>
+                            </TableCell>
                             <TableCell>{course.schedule}</TableCell>
                             <TableCell>{course.monthlyPrice} DA</TableCell>
                             <TableCell>
@@ -388,7 +396,15 @@ export default function StudentDashboard() {
                               <TableCell className="font-medium">
                                 {course.subject} - {course.schoolYear}
                               </TableCell>
-                              <TableCell>{course.teacherName}</TableCell>
+                              <TableCell>
+                                <Button
+                                  variant="link"
+                                  className="p-0 h-auto font-medium text-left"
+                                  onClick={() => router.push(`/teacher/${course.teacherId}`)}
+                                >
+                                  {course.teacherName}
+                                </Button>
+                              </TableCell>
                               <TableCell>{course.schedule}</TableCell>
                               <TableCell>{course.monthlyPrice} DA</TableCell>
                               <TableCell>
