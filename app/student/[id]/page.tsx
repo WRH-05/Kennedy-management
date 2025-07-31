@@ -342,7 +342,13 @@ export default function StudentDashboard() {
                         {activeCourses.map((course) => (
                           <TableRow key={course.id}>
                             <TableCell className="font-medium">
-                              {course.subject} - {course.schoolYear}
+                              <Button
+                                variant="link"
+                                className="p-0 h-auto font-medium text-left"
+                                onClick={() => router.push(`/course/${course.id}`)}
+                              >
+                                {course.subject} - {course.schoolYear}
+                              </Button>
                             </TableCell>
                             <TableCell>{course.teacherName}</TableCell>
                             <TableCell>{course.schedule}</TableCell>

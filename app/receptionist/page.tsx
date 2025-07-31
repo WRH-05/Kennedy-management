@@ -144,6 +144,7 @@ export default function ReceptionistDashboard() {
     copyOfId: false,
     registrationForm: false,
     registrationFeePaid: false,
+    registrationFeePaid: false,
   })
 
   // New teacher form state
@@ -747,49 +748,52 @@ export default function ReceptionistDashboard() {
                               <div className="text-sm text-green-600">Selected: {newCourse.teacherName}</div>
                             )}
                           </div>
-                          <div className="space-y-2">
-                            <Label htmlFor="subject">Subject</Label>
-                            <Select
-                              value={newCourse.subject}
-                              onValueChange={(value) => setNewCourse({ ...newCourse, subject: value })}
-                              required
-                            >
-                              <SelectTrigger>
-                                <SelectValue placeholder="Select subject" />
-                              </SelectTrigger>
-                              <SelectContent>
-                                <SelectItem value="Mathematics">Mathematics</SelectItem>
-                                <SelectItem value="Physics">Physics</SelectItem>
-                                <SelectItem value="Chemistry">Chemistry</SelectItem>
-                                <SelectItem value="Biology">Biology</SelectItem>
-                                <SelectItem value="Arabic">Arabic</SelectItem>
-                                <SelectItem value="French">French</SelectItem>
-                                <SelectItem value="English">English</SelectItem>
-                                <SelectItem value="History">History</SelectItem>
-                                <SelectItem value="Geography">Geography</SelectItem>
-                                <SelectItem value="Philosophy">Philosophy</SelectItem>
-                              </SelectContent>
-                            </Select>
-                          </div>
-                          <div className="space-y-2">
-                            <Label htmlFor="schoolYear">School Year</Label>
-                            <Select
-                              value={newCourse.schoolYear}
-                              onValueChange={(value) => setNewCourse({ ...newCourse, schoolYear: value })}
-                              required
-                            >
-                              <SelectTrigger>
-                                <SelectValue placeholder="Select school year" />
-                              </SelectTrigger>
-                              <SelectContent>
-                                <SelectItem value="1AS">1AS</SelectItem>
-                                <SelectItem value="2AS">2AS</SelectItem>
-                                <SelectItem value="3AS">3AS</SelectItem>
-                                <SelectItem value="BEM">BEM</SelectItem>
-                                <SelectItem value="BAC">BAC</SelectItem>
-                              </SelectContent>
-                            </Select>
-                          </div>
+                          {newCourse.teacherId && (
+                            <>
+                              <div className="space-y-2">
+                                <Label htmlFor="subject">Subject</Label>
+                                <Select
+                                  value={newCourse.subject}
+                                  onValueChange={(value) => setNewCourse({ ...newCourse, subject: value })}
+                                  required
+                                >
+                                  <SelectTrigger>
+                                    <SelectValue placeholder="Select subject" />
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                    {teachers
+                                      .find((t) => t.id.toString() === newCourse.teacherId)
+                                      ?.subjects.map((subject) => (
+                                        <SelectItem key={subject} value={subject}>
+                                          {subject}
+                                        </SelectItem>
+                                      ))}
+                                  </SelectContent>
+                                </Select>
+                              </div>
+                              <div className="space-y-2">
+                                <Label htmlFor="schoolYear">School Year</Label>
+                                <Select
+                                  value={newCourse.schoolYear}
+                                  onValueChange={(value) => setNewCourse({ ...newCourse, schoolYear: value })}
+                                  required
+                                >
+                                  <SelectTrigger>
+                                    <SelectValue placeholder="Select school year" />
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                    {teachers
+                                      .find((t) => t.id.toString() === newCourse.teacherId)
+                                      ?.schoolYears.map((year) => (
+                                        <SelectItem key={year} value={year}>
+                                          {year}
+                                        </SelectItem>
+                                      ))}
+                                  </SelectContent>
+                                </Select>
+                              </div>
+                            </>
+                          )}
                           <div className="space-y-2">
                             <Label htmlFor="percentageCut">Percentage Cut (40-70%)</Label>
                             <Input
@@ -925,7 +929,13 @@ export default function ReceptionistDashboard() {
                             />
                           </TableCell>
                           <TableCell className="font-medium">
-                            {course.subject} - {course.schoolYear}
+                            <Button
+                              variant="link"
+                              className="p-0 h-auto font-medium text-left"
+                              onClick={() => router.push(`/course/${course.id}`)}
+                            >
+                              {course.subject} - {course.schoolYear}
+                            </Button>
                           </TableCell>
                           <TableCell>{course.teacherName}</TableCell>
                           <TableCell>
@@ -1002,13 +1012,12 @@ export default function ReceptionistDashboard() {
                             />
                           </div>
                           <div className="space-y-2">
-                            <Label htmlFor="profEmail">Email</Label>
+                            <Label htmlFor="profEmail">Email (Optional)</Label>
                             <Input
                               id="profEmail"
                               type="email"
                               value={newTeacher.email}
                               onChange={(e) => setNewTeacher({ ...newTeacher, email: e.target.value })}
-                              required
                             />
                           </div>
                           <div className="space-y-2">

@@ -10,11 +10,10 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
-import { Checkbox } from "@/components/ui/checkbox"
-import { Switch } from "@/components/ui/switch"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 import { ArrowLeft, BookOpen, Users, Calendar, DollarSign, Plus } from "lucide-react"
+import { Input } from "@/components/ui/input"
 
 // Mock data for course detail
 const mockCourses = [
@@ -87,6 +86,8 @@ export default function CourseDetail() {
   const [user, setUser] = useState<any>(null)
   const [showAddStudentDialog, setShowAddStudentDialog] = useState(false)
   const [selectedStudent, setSelectedStudent] = useState("")
+  const [studentSearchQuery, setStudentSearchQuery] = useState("")
+  const [showStudentResults, setShowStudentResults] = useState(false)
 
   useEffect(() => {
     // Check if user is logged in
@@ -164,7 +165,41 @@ export default function CourseDetail() {
     }))
 
     setSelectedStudent("")
+    setStudentSearchQuery("")
     setShowAddStudentDialog(false)
+  }
+
+  const removeStudentFromCourse = (studentId: number) => {
+    setCourse((prev: any) => {
+      const studentIndex = prev.enrolledStudents.findIndex((id: number) => id === studentId)
+      if (studentIndex === -1) return prev
+
+      const newEnrolledStudents = [...prev.enrolledStudents]
+      newEnrolledStudents.splice(studentIndex, 1)
+
+      const newStudentNames = [...prev.studentNames]
+      newStudentNames.splice(studentIndex, 1)
+
+      const newPayments = { ...prev.payments }
+      delete newPayments.students[studentId]
+
+      const newAttendance = { ...prev.attendance }
+      delete newAttendance[studentId]
+
+      return {
+        ...prev,
+        enrolledStudents: newEnrolledStudents,
+        studentNames: newStudentNames,
+        payments: {
+          ...newPayments,
+          students: { ...newPayments.students },
+        },
+        attendance: {
+          ...newAttendance,
+          [studentId]: false,
+        },
+      }
+    })
   }
 
   if (!course || !user) {
@@ -180,6 +215,10 @@ export default function CourseDetail() {
   const availableStudents = mockStudents.filter((student) => !course.enrolledStudents.includes(student.id))
 
   const teacherEarnings = Math.round((course.price * course.enrolledStudents.length * course.percentageCut) / 100)
+
+  const filteredStudents = availableStudents.filter((student) =>
+    student.name.toLowerCase().includes(studentSearchQuery.toLowerCase()),
+  )
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -214,7 +253,14 @@ export default function CourseDetail() {
                 </div>
                 <div className="space-y-2">
                   <p>
-                    <span className="font-medium">Teacher:</span> {course.teacherName}
+                    <span className="font-medium">Teacher:</span>{" "}
+                    <Button
+                      variant="link"
+                      className="p-0 h-auto font-medium"
+                      onClick={() => router.push(`/teacher/${course.teacherId}`)}
+                    >
+                      {course.teacherName}
+                    </Button>
                   </p>
                   <p>
                     <span className="font-medium">Type:</span>
@@ -262,12 +308,18 @@ export default function CourseDetail() {
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="flex items-center justify-between">
-                  <Label htmlFor="teacherPaid">Teacher Payment</Label>
-                  <Switch
-                    id="teacherPaid"
-                    checked={course.payments.teacherPaid}
-                    onCheckedChange={toggleTeacherPayment}
-                  />
+                  <Label>Teacher Payment</Label>
+                  <Button
+                    variant={course.payments.teacherPaid ? "default" : "destructive"}
+                    size="sm"
+                    onClick={() => {
+                      if (confirm(`Mark teacher payment as ${course.payments.teacherPaid ? "unpaid" : "paid"}?`)) {
+                        toggleTeacherPayment()
+                      }
+                    }}
+                  >
+                    {course.payments.teacherPaid ? "Paid" : "Pay"}
+                  </Button>
                 </div>
                 <div className="pt-4 border-t">
                   <div className="flex justify-between items-center">
@@ -306,20 +358,48 @@ export default function CourseDetail() {
                         <DialogTitle>Add Student to Course</DialogTitle>
                       </DialogHeader>
                       <form onSubmit={handleAddStudent} className="space-y-4">
+                        {/* Replace the Select with search input */}
                         <div className="space-y-2">
-                          <Label htmlFor="student">Available Students</Label>
-                          <Select value={selectedStudent} onValueChange={setSelectedStudent} required>
-                            <SelectTrigger>
-                              <SelectValue placeholder="Select a student" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              {availableStudents.map((student) => (
-                                <SelectItem key={student.id} value={student.id.toString()}>
-                                  {student.name} - {student.schoolYear} ({student.specialty})
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
+                          <Label htmlFor="studentSearch">Student</Label>
+                          <div className="relative">
+                            <Input
+                              id="studentSearch"
+                              placeholder="Search for a student..."
+                              value={studentSearchQuery}
+                              onChange={(e) => {
+                                setStudentSearchQuery(e.target.value)
+                                setShowStudentResults(e.target.value.length > 0)
+                              }}
+                              onBlur={() => setTimeout(() => setShowStudentResults(false), 100)}
+                              onFocus={() => setShowStudentResults(studentSearchQuery.length > 0)}
+                              required
+                            />
+                            {showStudentResults && filteredStudents.length > 0 && (
+                              <div className="absolute top-full left-0 right-0 mt-1 bg-white border rounded-md shadow-lg z-50 max-h-40 overflow-y-auto">
+                                {filteredStudents.map((student) => (
+                                  <div
+                                    key={student.id}
+                                    className="px-4 py-2 hover:bg-gray-50 cursor-pointer border-b last:border-b-0"
+                                    onClick={() => {
+                                      setSelectedStudent(student.id.toString())
+                                      setStudentSearchQuery(student.name)
+                                      setShowStudentResults(false)
+                                    }}
+                                  >
+                                    <div className="font-medium">{student.name}</div>
+                                    <div className="text-sm text-gray-600">
+                                      {student.schoolYear} - {student.specialty}
+                                    </div>
+                                  </div>
+                                ))}
+                              </div>
+                            )}
+                          </div>
+                          {selectedStudent && (
+                            <div className="text-sm text-green-600">
+                              Selected: {mockStudents.find((s) => s.id.toString() === selectedStudent)?.name}
+                            </div>
+                          )}
                         </div>
                         <div className="flex justify-end space-x-2">
                           <Button type="button" variant="outline" onClick={() => setShowAddStudentDialog(false)}>
@@ -355,20 +435,47 @@ export default function CourseDetail() {
                           </Button>
                         </TableCell>
                         <TableCell>
-                          <Checkbox
-                            checked={course.attendance[studentId] || false}
-                            onCheckedChange={() => toggleAttendance(studentId)}
-                          />
+                          <Select
+                            value={course.attendance[studentId] ? "p" : "a"}
+                            onValueChange={(value) => {
+                              toggleAttendance(studentId)
+                            }}
+                          >
+                            <SelectTrigger className="w-16">
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="p">P</SelectItem>
+                              <SelectItem value="a">A</SelectItem>
+                            </SelectContent>
+                          </Select>
                         </TableCell>
                         <TableCell>
-                          <Switch
-                            checked={course.payments.students[studentId] || false}
-                            onCheckedChange={() => toggleStudentPayment(studentId)}
-                          />
+                          <Button
+                            variant={course.payments.students[studentId] ? "default" : "destructive"}
+                            size="sm"
+                            onClick={() => {
+                              if (
+                                confirm(`Mark payment as ${course.payments.students[studentId] ? "unpaid" : "paid"}?`)
+                              ) {
+                                toggleStudentPayment(studentId)
+                              }
+                            }}
+                          >
+                            {course.payments.students[studentId] ? "Paid" : "Pay"}
+                          </Button>
                         </TableCell>
                         <TableCell>
-                          <Button variant="outline" size="sm" onClick={() => router.push(`/student/${studentId}`)}>
-                            View Profile
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => {
+                              if (confirm("Remove student from course?")) {
+                                removeStudentFromCourse(studentId)
+                              }
+                            }}
+                          >
+                            Remove
                           </Button>
                         </TableCell>
                       </TableRow>
