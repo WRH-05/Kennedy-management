@@ -330,9 +330,9 @@ export default function ManagerDashboard() {
                             {student.name}
                           </Button>
                         </TableCell>
-                        <TableCell>{student.schoolYear}</TableCell>
-                        <TableCell>{student.coursesEnrolled}</TableCell>
-                        <TableCell>{student.totalPaid.toLocaleString()} DA</TableCell>
+                        <TableCell>{student.schoolYear || 'N/A'}</TableCell>
+                        <TableCell>{student.coursesEnrolled || 0}</TableCell>
+                        <TableCell>{(student.totalPaid || 0).toLocaleString()} DA</TableCell>
                         <TableCell>
                           <Button variant="outline" size="sm" onClick={() => router.push(`/student/${student.id}`)}>
                             View Details
@@ -387,7 +387,7 @@ export default function ManagerDashboard() {
                           ))}
                         </TableCell>
                         <TableCell>{teacher.students}</TableCell>
-                        <TableCell>{teacher.totalEarnings.toLocaleString()} DA</TableCell>
+                        <TableCell>{(teacher.totalEarnings || 0).toLocaleString()} DA</TableCell>
                         <TableCell>
                           <Badge variant="default">Excellent</Badge>
                         </TableCell>

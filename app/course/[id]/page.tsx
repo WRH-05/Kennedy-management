@@ -265,12 +265,12 @@ export default function CourseDetail() {
                       {course.teacherName}
                     </Button>
                   </p>
-                  <p>
+                  <div>
                     <span className="font-medium">Type:</span>
                     <Badge variant={course.courseType === "Group" ? "default" : "secondary"} className="ml-2">
                       {course.courseType}
                     </Badge>
-                  </p>
+                  </div>
                   <p>
                     <span className="font-medium">Schedule:</span> {course.schedule}
                   </p>
@@ -291,12 +291,12 @@ export default function CourseDetail() {
                   </p>
                 </div>
                 <div className="pt-4 border-t">
-                  <p>
+                  <div>
                     <span className="font-medium">Status:</span>
                     <Badge variant={course.status === "active" ? "default" : "secondary"} className="ml-2">
                       {course.status}
                     </Badge>
-                  </p>
+                  </div>
                 </div>
               </CardContent>
             </Card>

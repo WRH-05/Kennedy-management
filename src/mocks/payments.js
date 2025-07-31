@@ -119,9 +119,12 @@ export const mockProfessorPaymentHistory = [
 
 export const mockStudentData = [
   {
+    id: 1,
     name: "Ahmed Ben Ali",
     course: "Mathematics",
     schoolYear: "3AS",
+    coursesEnrolled: 2,
+    totalPaid: 1000, // Calculated from payments
     payments: [
       { month: "Jan", amount: 500, paid: true },
       { month: "Feb", amount: 500, paid: true },
@@ -129,9 +132,12 @@ export const mockStudentData = [
     ],
   },
   {
+    id: 2,
     name: "Fatima Zahra",
     course: "Chemistry",
     schoolYear: "2AS",
+    coursesEnrolled: 1,
+    totalPaid: 450, // Calculated from payments
     payments: [
       { month: "Jan", amount: 450, paid: false },
       { month: "Feb", amount: 450, paid: true },
@@ -139,9 +145,12 @@ export const mockStudentData = [
     ],
   },
   {
+    id: 3,
     name: "Omar Khaled",
     course: "Biology",
     schoolYear: "1AS",
+    coursesEnrolled: 1,
+    totalPaid: 1800, // Calculated from payments
     payments: [
       { month: "Jan", amount: 600, paid: true },
       { month: "Feb", amount: 600, paid: true },
@@ -152,9 +161,12 @@ export const mockStudentData = [
 
 export const mockTeacherData = [
   {
+    id: 1,
     name: "Prof. Salim Benali",
     subject: "Mathematics",
     students: 15,
+    studentCount: 15,
+    totalEarnings: 6500, // Calculated from earnings
     earnings: [
       { month: "Jan", amount: 3250, paid: true },
       { month: "Feb", amount: 3250, paid: true },
@@ -162,9 +174,12 @@ export const mockTeacherData = [
     ],
   },
   {
+    id: 2,
     name: "Prof. Amina Khelifi",
     subject: "Chemistry",
     students: 12,
+    studentCount: 12,
+    totalEarnings: 2700, // Calculated from earnings
     earnings: [
       { month: "Jan", amount: 2700, paid: true },
       { month: "Feb", amount: 2700, paid: false },
@@ -172,9 +187,12 @@ export const mockTeacherData = [
     ],
   },
   {
+    id: 3,
     name: "Prof. Omar Bentahar",
     subject: "Biology",
     students: 18,
+    studentCount: 18,
+    totalEarnings: 7200, // Calculated from earnings
     earnings: [
       { month: "Jan", amount: 3600, paid: true },
       { month: "Feb", amount: 3600, paid: true },
