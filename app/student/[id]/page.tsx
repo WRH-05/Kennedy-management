@@ -12,85 +12,16 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { ArrowLeft, Download, User, BookOpen, Upload, AlertTriangle, CheckCircle } from "lucide-react"
-
-// Mock data (same structure as receptionist page)
-const mockStudentDetails = {
-  1: {
-    id: 1,
-    name: "Ahmed Ben Ali",
-    schoolYear: "3AS",
-    specialty: "Math",
-    address: "123 Rue de la Paix, Alger",
-    birthDate: "2005-03-15",
-    phone: "+213 555 123 456",
-    email: "ahmed.benali@email.com",
-    school: "Lycée Mohamed Boudiaf",
-    registrationDate: "2024-01-15",
-    documents: {
-      photos: { uploaded: true, filename: "20240115_Ben_Ahmed_Photos.pdf" },
-      copyOfId: { uploaded: false, filename: null },
-      registrationForm: { uploaded: true, filename: "20240115_Ben_Ahmed_Registration.pdf" },
-    },
-  },
-  2: {
-    id: 2,
-    name: "Fatima Zahra",
-    schoolYear: "BAC",
-    specialty: "Sciences",
-    address: "456 Avenue Mohamed V, Oran",
-    birthDate: "2004-07-22",
-    phone: "+213 555 789 012",
-    email: "fatima.zahra@email.com",
-    school: "Lycée Ibn Khaldoun",
-    registrationDate: "2024-01-10",
-    documents: {
-      photos: { uploaded: true, filename: "20240110_Zahra_Fatima_Photos.pdf" },
-      copyOfId: { uploaded: true, filename: "20240110_Zahra_Fatima_ID.pdf" },
-      registrationForm: { uploaded: false, filename: null },
-    },
-  },
-}
-
-const mockCourses = [
-  {
-    id: 1,
-    teacherId: 1,
-    teacherName: "Prof. Salim Benali",
-    subject: "Mathematics",
-    schoolYear: "3AS",
-    schedule: "Monday 9:00-11:00",
-    monthlyPrice: 500,
-    enrolledStudents: [1],
-    status: "active",
-    payments: {
-      students: { 1: true },
-      teacherPaid: false,
-    },
-  },
-  {
-    id: 2,
-    teacherId: 2,
-    teacherName: "Prof. Amina Khelifi",
-    subject: "Chemistry",
-    schoolYear: "2AS",
-    schedule: "Tuesday 16:00-18:00",
-    monthlyPrice: 450,
-    enrolledStudents: [2],
-    status: "active",
-    payments: {
-      students: { 2: false },
-      teacherPaid: false,
-    },
-  },
-]
+import { studentService, courseService } from "@/src/services/dataService"
 
 export default function StudentDashboard() {
   const router = useRouter()
   const params = useParams()
   const studentId = params.id as string
   const [student, setStudent] = useState<any>(null)
-  const [courses, setCourses] = useState(mockCourses)
+  const [courses, setCourses] = useState<any[]>([])
   const [uploadingDoc, setUploadingDoc] = useState("")
+  const [loading, setLoading] = useState(true)
 
   useEffect(() => {
     // Check if user is logged in
@@ -100,13 +31,29 @@ export default function StudentDashboard() {
       return
     }
 
-    // Get student data
-    const studentData = mockStudentDetails[studentId as keyof typeof mockStudentDetails]
-    if (studentData) {
-      setStudent(studentData)
-    } else {
-      router.push("/receptionist")
+    // Load student data
+    const loadStudentData = async () => {
+      setLoading(true)
+      try {
+        const studentData = await studentService.getStudentById(studentId)
+        if (!studentData) {
+          router.push("/receptionist")
+          return
+        }
+        setStudent(studentData)
+
+        // Load courses for this student
+        const studentCourses = await courseService.getCoursesByStudentId(parseInt(studentId))
+        setCourses(studentCourses)
+      } catch (error) {
+        console.error('Error loading student data:', error)
+        router.push("/receptionist")
+      } finally {
+        setLoading(false)
+      }
     }
+
+    loadStudentData()
   }, [studentId, router])
 
   const handleFileUpload = (docType: string, event: React.ChangeEvent<HTMLInputElement>) => {
@@ -148,7 +95,7 @@ export default function StudentDashboard() {
     alert("Student card download would be implemented here")
   }
 
-  if (!student) {
+  if (!student || loading) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="text-center">

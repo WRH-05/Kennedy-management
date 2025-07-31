@@ -15,115 +15,18 @@ import { Badge } from "@/components/ui/badge"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 import { LogOut, Users, Search, GraduationCap, BookOpen, Plus } from "lucide-react"
-
-// Mock data with updated structure
-const mockStudents = [
-  {
-    id: 1,
-    name: "Ahmed Ben Ali",
-    schoolYear: "3AS",
-    specialty: "Math",
-    address: "123 Rue de la Paix, Alger",
-    birthDate: "2005-03-15",
-    phone: "+213 555 123 456",
-    email: "ahmed.benali@email.com",
-    school: "Lycée Mohamed Boudiaf",
-    registrationFeePaid: true,
-  },
-  {
-    id: 2,
-    name: "Fatima Zahra",
-    schoolYear: "BAC",
-    specialty: "Sciences",
-    address: "456 Avenue Mohamed V, Oran",
-    birthDate: "2004-07-22",
-    phone: "+213 555 789 012",
-    email: "fatima.zahra@email.com",
-    school: "Lycée Ibn Khaldoun",
-    registrationFeePaid: true,
-  },
-]
-
-const mockTeachers = [
-  {
-    id: 1,
-    name: "Prof. Salim Benali",
-    address: "789 Rue des Professeurs, Alger",
-    phone: "+213 555 111 222",
-    email: "salim.benali@school.dz",
-    school: "Lycée Mohamed Boudiaf",
-    schoolYears: ["3AS", "BAC"],
-    subjects: ["Mathematics", "Physics"],
-  },
-  {
-    id: 2,
-    name: "Prof. Amina Khelifi",
-    address: "321 Avenue de l'Université, Oran",
-    phone: "+213 555 333 444",
-    email: "amina.khelifi@school.dz",
-    school: "Lycée Ibn Khaldoun",
-    schoolYears: ["2AS"],
-    subjects: ["Physics", "Chemistry"],
-  },
-]
-
-// Course data (only group courses)
-const mockCourses = [
-  {
-    id: 1,
-    teacherId: 1,
-    teacherName: "Prof. Salim Benali",
-    subject: "Mathematics",
-    schoolYear: "3AS",
-    schedule: "Monday 9:00-11:00",
-    monthlyPrice: 500,
-    enrolledStudents: [1],
-    status: "active",
-    payments: {
-      students: { 1: true }, // studentId: paid
-      teacherPaid: false,
-    },
-    percentageCut: 50,
-    courseType: "Group",
-    duration: 2,
-    dayOfWeek: "Monday",
-    startHour: "09:00",
-    endHour: "11:00",
-    price: 500,
-  },
-  {
-    id: 2,
-    teacherId: 2,
-    teacherName: "Prof. Amina Khelifi",
-    subject: "Chemistry",
-    schoolYear: "2AS",
-    schedule: "Tuesday 16:00-18:00",
-    monthlyPrice: 450,
-    enrolledStudents: [2],
-    status: "active",
-    payments: {
-      students: { 2: false },
-      teacherPaid: false,
-    },
-    percentageCut: 50,
-    courseType: "Group",
-    duration: 2,
-    dayOfWeek: "Tuesday",
-    startHour: "16:00",
-    endHour: "18:00",
-    price: 450,
-  },
-]
+import { studentService, teacherService, courseService } from "@/src/services/dataService"
 
 export default function ReceptionistDashboard() {
   const router = useRouter()
   const [user, setUser] = useState<any>(null)
-  const [students, setStudents] = useState(mockStudents)
-  const [teachers, setTeachers] = useState(mockTeachers)
-  const [courses, setCourses] = useState(mockCourses)
+  const [students, setStudents] = useState<any[]>([])
+  const [teachers, setTeachers] = useState<any[]>([])
+  const [courses, setCourses] = useState<any[]>([])
   const [searchQuery, setSearchQuery] = useState("")
   const [searchResults, setSearchResults] = useState<any[]>([])
   const [showSearchResults, setShowSearchResults] = useState(false)
+  const [loading, setLoading] = useState(true)
 
   // Dialog states
   const [showAddStudentDialog, setShowAddStudentDialog] = useState(false)
@@ -190,6 +93,29 @@ export default function ReceptionistDashboard() {
     }
   }, [router])
 
+  useEffect(() => {
+    const loadData = async () => {
+      setLoading(true)
+      try {
+        const [studentsData, teachersData, coursesData] = await Promise.all([
+          studentService.getAllStudents(),
+          teacherService.getAllTeachers(),
+          courseService.getAllCourseInstances(),
+        ])
+
+        setStudents(studentsData)
+        setTeachers(teachersData)
+        setCourses(coursesData)
+      } catch (error) {
+        console.error('Error loading data:', error)
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    loadData()
+  }, [])
+
   // Enhanced search functionality
   useEffect(() => {
     if (searchQuery.trim()) {
@@ -237,109 +163,124 @@ export default function ReceptionistDashboard() {
     router.push("/")
   }
 
-  const handleAddStudent = (e: React.FormEvent) => {
+  const handleAddStudent = async (e: React.FormEvent) => {
     e.preventDefault()
-    const student = {
-      id: students.length + 1,
-      name: newStudent.name,
-      schoolYear: newStudent.schoolYear,
-      specialty: newStudent.specialty,
-      address: newStudent.address,
-      birthDate: newStudent.birthDate,
-      phone: newStudent.phone,
-      email: newStudent.email,
-      school: newStudent.school,
-      registrationFeePaid: newStudent.registrationFeePaid,
+    try {
+      const student = {
+        name: newStudent.name,
+        schoolYear: newStudent.schoolYear,
+        specialty: newStudent.specialty,
+        address: newStudent.address,
+        birthDate: newStudent.birthDate,
+        phone: newStudent.phone,
+        email: newStudent.email,
+        school: newStudent.school,
+        registrationFeePaid: newStudent.registrationFeePaid,
+      }
+      await studentService.addStudent(student)
+      const updatedStudents = await studentService.getAllStudents()
+      setStudents(updatedStudents)
+      setNewStudent({
+        name: "",
+        schoolYear: "",
+        specialty: "",
+        address: "",
+        birthDate: "",
+        phone: "",
+        email: "",
+        school: "",
+        photos: false,
+        copyOfId: false,
+        registrationForm: false,
+        registrationFeePaid: false,
+      })
+      setShowAddStudentDialog(false)
+    } catch (error) {
+      console.error('Error adding student:', error)
     }
-    setStudents([...students, student])
-    setNewStudent({
-      name: "",
-      schoolYear: "",
-      specialty: "",
-      address: "",
-      birthDate: "",
-      phone: "",
-      email: "",
-      school: "",
-      photos: false,
-      copyOfId: false,
-      registrationForm: false,
-      registrationFeePaid: false,
-    })
-    setShowAddStudentDialog(false)
   }
 
   // Update handleAddTeacher function
-  const handleAddTeacher = (e: React.FormEvent) => {
+  const handleAddTeacher = async (e: React.FormEvent) => {
     e.preventDefault()
-    const teacher = {
-      id: teachers.length + 1,
-      name: newTeacher.name,
-      address: newTeacher.address,
-      phone: newTeacher.phone,
-      email: newTeacher.email,
-      school: newTeacher.school,
-      schoolYears: newTeacher.schoolYears,
-      subjects: newTeacher.subjects,
+    try {
+      const teacher = {
+        name: newTeacher.name,
+        address: newTeacher.address,
+        phone: newTeacher.phone,
+        email: newTeacher.email,
+        school: newTeacher.school,
+        schoolYears: newTeacher.schoolYears,
+        subjects: newTeacher.subjects,
+      }
+      await teacherService.addTeacher(teacher)
+      const updatedTeachers = await teacherService.getAllTeachers()
+      setTeachers(updatedTeachers)
+      setNewTeacher({
+        name: "",
+        address: "",
+        phone: "",
+        email: "",
+        school: "",
+        schoolYears: [],
+        subjects: [],
+      })
+      setShowAddTeacherDialog(false)
+    } catch (error) {
+      console.error('Error adding teacher:', error)
     }
-    setTeachers([...teachers, teacher])
-    setNewTeacher({
-      name: "",
-      address: "",
-      phone: "",
-      email: "",
-      school: "",
-      schoolYears: [],
-      subjects: [],
-    })
-    setShowAddTeacherDialog(false)
   }
 
   // Update handleAddCourse function
-  const handleAddCourse = (e: React.FormEvent) => {
+  const handleAddCourse = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!newCourse.teacherId) return
 
-    const teacher = teachers.find((t) => t.id.toString() === newCourse.teacherId)
-    if (!teacher) return
+    try {
+      const teacher = teachers.find((t: any) => t.id.toString() === newCourse.teacherId)
+      if (!teacher) return
 
-    const endHour = calculateEndHour(newCourse.startHour, newCourse.duration)
+      const endHour = calculateEndHour(newCourse.startHour, newCourse.duration)
 
-    const course = {
-      id: courses.length + 1,
-      teacherId: teacher.id,
-      teacherName: teacher.name,
-      subject: newCourse.subject,
-      schoolYear: newCourse.schoolYear,
-      percentageCut: newCourse.percentageCut,
-      courseType: newCourse.courseType,
-      duration: newCourse.duration,
-      dayOfWeek: newCourse.dayOfWeek,
-      startHour: newCourse.startHour,
-      endHour: endHour,
-      schedule: `${newCourse.dayOfWeek} ${newCourse.startHour}-${endHour}`,
-      price: newCourse.price,
-      enrolledStudents: [],
-      status: "active",
-      payments: {
-        students: {},
-        teacherPaid: false,
-      },
+      const course = {
+        teacherId: teacher.id,
+        teacherName: teacher.name,
+        subject: newCourse.subject,
+        schoolYear: newCourse.schoolYear,
+        percentageCut: newCourse.percentageCut,
+        courseType: newCourse.courseType,
+        duration: newCourse.duration,
+        dayOfWeek: newCourse.dayOfWeek,
+        startHour: newCourse.startHour,
+        endHour: endHour,
+        schedule: `${newCourse.dayOfWeek} ${newCourse.startHour}-${endHour}`,
+        price: newCourse.price,
+        enrolledStudents: [],
+        status: "active",
+        payments: {
+          students: {},
+          teacherPaid: false,
+        },
+      }
+      await courseService.addCourseInstance(course)
+      const updatedCourses = await courseService.getAllCourseInstances()
+      setCourses(updatedCourses)
+      setNewCourse({
+        teacherId: "",
+        teacherName: "",
+        subject: "",
+        schoolYear: "",
+        percentageCut: 50,
+        courseType: "Group",
+        duration: 2,
+        dayOfWeek: "",
+        startHour: "09:00",
+        price: 500,
+      })
+      setShowAddCourseDialog(false)
+    } catch (error) {
+      console.error('Error adding course:', error)
     }
-    setCourses([...courses, course])
-    setNewCourse({
-      teacherId: "",
-      teacherName: "",
-      subject: "",
-      schoolYear: "",
-      percentageCut: 50,
-      courseType: "Group",
-      duration: 2,
-      dayOfWeek: "",
-      startHour: "09:00",
-      price: 500,
-    })
-    setShowAddCourseDialog(false)
   }
 
   // Add helper function for calculating end hour
@@ -377,7 +318,7 @@ export default function ReceptionistDashboard() {
     return courses.filter((course) => course.enrolledStudents.includes(studentId))
   }
 
-  if (!user) return null
+  if (!user || loading) return null
 
   return (
     <div className="min-h-screen bg-gray-50">

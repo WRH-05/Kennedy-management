@@ -14,34 +14,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 import { Switch } from "@/components/ui/switch"
 import { ArrowLeft, Edit, Save, X, GraduationCap, MapPin, Phone, Mail, School, Plus, BookOpen } from "lucide-react"
-
-// Mock professor data with course templates and instances
-const mockProfessorDetails = {
-  1: {
-    id: 1,
-    name: "Prof. Salim Benali",
-    address: "789 Rue des Professeurs, Alger",
-    phone: "+213 555 111 222",
-    email: "salim.benali@school.dz",
-    schools: ["Lycée Mohamed Boudiaf", "Lycée Ibn Sina"],
-    subjects: ["Mathematics", "Physics"],
-    totalStudents: 15,
-    monthlyEarnings: 10500,
-    joinDate: "2023-09-01",
-  },
-  2: {
-    id: 2,
-    name: "Prof. Amina Khelifi",
-    address: "321 Avenue de l'Université, Oran",
-    phone: "+213 555 333 444",
-    email: "amina.khelifi@school.dz",
-    schools: ["Lycée Ibn Khaldoun"],
-    subjects: ["Physics", "Chemistry"],
-    totalStudents: 12,
-    monthlyEarnings: 7800,
-    joinDate: "2023-10-15",
-  },
-}
+import { teacherService, courseService, paymentService } from "@/src/services/dataService"
 
 const mockCourseTemplates = [
   {

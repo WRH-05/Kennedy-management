@@ -9,92 +9,19 @@ import { Badge } from "@/components/ui/badge"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { LogOut, DollarSign, Users, BookOpen, TrendingUp, Calendar } from "lucide-react"
-
-// Mock data for manager view with enhanced payment histories
-const mockRevenue = [
-  { studentName: "Ahmed Ben Ali", course: "Mathematics", amount: 500, month: "2024-01", paid: true },
-  { studentName: "Fatima Zahra", course: "Physics", amount: 800, month: "2024-01", paid: false },
-  { studentName: "Fatima Zahra", course: "Chemistry", amount: 450, month: "2024-01", paid: true },
-  { studentName: "Omar Khaled", course: "Biology", amount: 600, month: "2024-01", paid: true },
-]
-
-const mockPayouts = [
-  {
-    teacherName: "Prof. Salim",
-    percentage: 65,
-    totalGenerated: 1500,
-    totalPayout: 975,
-    approved: false,
-    month: "2024-01",
-  },
-  {
-    teacherName: "Prof. Amina",
-    percentage: 70,
-    totalGenerated: 2400,
-    totalPayout: 1680,
-    approved: true,
-    month: "2024-01",
-  },
-  {
-    teacherName: "Prof. Omar",
-    percentage: 60,
-    totalGenerated: 1350,
-    totalPayout: 810,
-    approved: false,
-    month: "2024-01",
-  },
-]
-
-const mockStudentData = [
-  { id: 1, name: "Ahmed Ben Ali", schoolYear: "3AS", totalPaid: 500, coursesEnrolled: 1 },
-  { id: 2, name: "Fatima Zahra", schoolYear: "BAC", totalPaid: 450, coursesEnrolled: 2 },
-  { id: 3, name: "Omar Khaled", schoolYear: "2AS", totalPaid: 600, coursesEnrolled: 1 },
-]
-
-const mockTeacherData = [
-  { id: 1, name: "Prof. Salim", subjects: ["Mathematics"], students: 15, totalEarnings: 975 },
-  { id: 2, name: "Prof. Amina", subjects: ["Physics"], students: 12, totalEarnings: 1680 },
-  { id: 3, name: "Prof. Omar", subjects: ["Chemistry"], students: 18, totalEarnings: 810 },
-]
-
-const mockStudentPaymentHistory = [
-  {
-    studentId: 1,
-    studentName: "Ahmed Ben Ali",
-    month: "2024-01",
-    courses: [{ course: "Mathematics", amount: 500, paid: true }],
-  },
-  {
-    studentId: 2,
-    studentName: "Fatima Zahra",
-    month: "2024-01",
-    courses: [
-      { course: "Physics", amount: 800, paid: false },
-      { course: "Chemistry", amount: 450, paid: true },
-    ],
-  },
-]
-
-const mockProfessorPaymentHistory = [
-  {
-    professorId: 1,
-    professorName: "Prof. Salim",
-    month: "2024-01",
-    sessions: [{ course: "Mathematics", students: 1, amount: 975, paid: false }],
-  },
-  {
-    professorId: 2,
-    professorName: "Prof. Amina",
-    month: "2024-01",
-    sessions: [{ course: "Physics", students: 1, amount: 1680, paid: true }],
-  },
-]
+import { paymentService } from "@/src/services/dataService"
 
 export default function ManagerDashboard() {
   const router = useRouter()
   const [user, setUser] = useState<any>(null)
-  const [payouts, setPayouts] = useState(mockPayouts)
+  const [revenue, setRevenue] = useState<any[]>([])
+  const [payouts, setPayouts] = useState<any[]>([])
+  const [studentData, setStudentData] = useState<any[]>([])
+  const [teacherData, setTeacherData] = useState<any[]>([])
+  const [studentPaymentHistory, setStudentPaymentHistory] = useState<any[]>([])
+  const [professorPaymentHistory, setProfessorPaymentHistory] = useState<any[]>([])
   const [selectedMonth, setSelectedMonth] = useState("2024-01")
+  const [loading, setLoading] = useState(true)
 
   useEffect(() => {
     const userData = localStorage.getItem("user")
@@ -110,13 +37,87 @@ export default function ManagerDashboard() {
     }
   }, [router])
 
+  useEffect(() => {
+    const loadData = async () => {
+      setLoading(true)
+      try {
+        const [revenueData, payoutsData, studentsData, teachersData] = await Promise.all([
+          paymentService.getRevenueData(),
+          paymentService.getPendingPayouts(),
+          paymentService.getStudentData(),
+          paymentService.getTeacherData(),
+        ])
+
+        setRevenue(revenueData)
+        setPayouts(payoutsData)
+        setStudentData(studentsData)
+        setTeacherData(teachersData)
+      } catch (error) {
+        console.error('Error loading data:', error)
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    loadData()
+  }, [])
+
+  useEffect(() => {
+    const loadPaymentHistories = async () => {
+      try {
+        // For demonstration, we'll load payment histories for known student/professor IDs
+        const studentPayments = await Promise.all([
+          paymentService.getStudentPaymentHistory(1),
+          paymentService.getStudentPaymentHistory(2),
+          paymentService.getStudentPaymentHistory(3),
+        ])
+        
+        const professorPayments = await Promise.all([
+          paymentService.getProfessorPaymentHistory(1),
+          paymentService.getProfessorPaymentHistory(2),
+          paymentService.getProfessorPaymentHistory(3),
+        ])
+
+        // Format the data for display
+        const formattedStudentHistory = studentData.map((student: any) => ({
+          studentId: student.id,
+          studentName: student.name,
+          month: selectedMonth,
+          courses: studentPayments[student.id - 1] || []
+        }))
+
+        const formattedProfessorHistory = teacherData.map((teacher: any) => ({
+          professorId: teacher.id,
+          professorName: teacher.name,
+          month: selectedMonth,
+          sessions: professorPayments[teacher.id - 1] || []
+        }))
+
+        setStudentPaymentHistory(formattedStudentHistory)
+        setProfessorPaymentHistory(formattedProfessorHistory)
+      } catch (error) {
+        console.error('Error loading payment histories:', error)
+      }
+    }
+
+    if (studentData.length > 0 && teacherData.length > 0) {
+      loadPaymentHistories()
+    }
+  }, [selectedMonth, studentData, teacherData])
+
   const handleLogout = () => {
     localStorage.removeItem("user")
     router.push("/")
   }
 
-  const approvePayout = (teacherName: string) => {
-    setPayouts(payouts.map((payout) => (payout.teacherName === teacherName ? { ...payout, approved: true } : payout)))
+  const approvePayout = async (payoutId: number) => {
+    try {
+      await paymentService.updatePaymentStatus(payoutId, 'approved')
+      const updatedPayouts = await paymentService.getPendingPayouts()
+      setPayouts(updatedPayouts)
+    } catch (error) {
+      console.error('Error approving payout:', error)
+    }
   }
 
   const handleMonthlyRollover = () => {
@@ -124,11 +125,11 @@ export default function ManagerDashboard() {
     alert("Monthly rollover completed! Active group courses have been copied to the new month.")
   }
 
-  const totalRevenue = mockRevenue.reduce((sum, item) => sum + (item.paid ? item.amount : 0), 0)
-  const totalPayouts = payouts.reduce((sum, payout) => sum + (payout.approved ? payout.totalPayout : 0), 0)
+  const totalRevenue = revenue.reduce((sum: number, item: any) => sum + (item.paid ? item.amount : 0), 0)
+  const totalPayouts = payouts.reduce((sum: number, payout: any) => sum + (payout.status === 'approved' ? payout.amount : 0), 0)
   const netProfit = totalRevenue - totalPayouts
 
-  if (!user) return null
+  if (!user || loading) return null
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -191,7 +192,7 @@ export default function ManagerDashboard() {
               <Users className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{mockStudentData.length}</div>
+              <div className="text-2xl font-bold">{studentData.length}</div>
               <p className="text-xs text-muted-foreground">Enrolled</p>
             </CardContent>
           </Card>
@@ -228,7 +229,7 @@ export default function ManagerDashboard() {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {mockRevenue.map((item, index) => (
+                    {revenue.map((item: any, index: number) => (
                       <TableRow key={index}>
                         <TableCell className="font-medium">{item.studentName}</TableCell>
                         <TableCell>{item.course}</TableCell>
@@ -270,21 +271,21 @@ export default function ManagerDashboard() {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {payouts.map((payout, index) => (
+                    {payouts.map((payout: any, index: number) => (
                       <TableRow key={index}>
-                        <TableCell className="font-medium">{payout.teacherName}</TableCell>
-                        <TableCell>{payout.percentage}%</TableCell>
-                        <TableCell>{payout.totalGenerated.toLocaleString()} DA</TableCell>
-                        <TableCell>{payout.totalPayout.toLocaleString()} DA</TableCell>
-                        <TableCell>{payout.month}</TableCell>
+                        <TableCell className="font-medium">{payout.professorName}</TableCell>
+                        <TableCell>{payout.percentage || 'N/A'}%</TableCell>
+                        <TableCell>{payout.totalGenerated?.toLocaleString() || 'N/A'} DA</TableCell>
+                        <TableCell>{payout.amount.toLocaleString()} DA</TableCell>
+                        <TableCell>{payout.dueDate}</TableCell>
                         <TableCell>
-                          <Badge variant={payout.approved ? "default" : "destructive"}>
-                            {payout.approved ? "Approved" : "Pending"}
+                          <Badge variant={payout.status === 'approved' ? "default" : "destructive"}>
+                            {payout.status === 'approved' ? "Approved" : "Pending"}
                           </Badge>
                         </TableCell>
                         <TableCell>
-                          {!payout.approved && (
-                            <Button variant="outline" size="sm" onClick={() => approvePayout(payout.teacherName)}>
+                          {payout.status !== 'approved' && (
+                            <Button variant="outline" size="sm" onClick={() => approvePayout(payout.id)}>
                               Approve
                             </Button>
                           )}
@@ -318,7 +319,7 @@ export default function ManagerDashboard() {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {mockStudentData.map((student) => (
+                    {studentData.map((student: any) => (
                       <TableRow key={student.id}>
                         <TableCell className="font-medium">
                           <Button
@@ -367,7 +368,7 @@ export default function ManagerDashboard() {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {mockTeacherData.map((teacher) => (
+                    {teacherData.map((teacher: any) => (
                       <TableRow key={teacher.id}>
                         <TableCell className="font-medium">
                           <Button
@@ -379,7 +380,7 @@ export default function ManagerDashboard() {
                           </Button>
                         </TableCell>
                         <TableCell>
-                          {teacher.subjects.map((subject, idx) => (
+                          {teacher.subjects?.map((subject: string, idx: number) => (
                             <Badge key={idx} variant="secondary" className="mr-1">
                               {subject}
                             </Badge>
@@ -426,7 +427,7 @@ export default function ManagerDashboard() {
               </CardHeader>
               <CardContent>
                 <div className="space-y-6">
-                  {mockStudentPaymentHistory.map((student) => (
+                  {studentPaymentHistory.map((student: any) => (
                     <div key={student.studentId} className="border rounded-lg p-4">
                       <h3 className="font-semibold text-lg mb-3">{student.studentName}</h3>
                       <Table>
@@ -438,7 +439,7 @@ export default function ManagerDashboard() {
                           </TableRow>
                         </TableHeader>
                         <TableBody>
-                          {student.courses.map((course, idx) => (
+                          {student.courses?.map((course: any, idx: number) => (
                             <TableRow key={idx}>
                               <TableCell>{course.course}</TableCell>
                               <TableCell>{course.amount} DA</TableCell>
@@ -481,7 +482,7 @@ export default function ManagerDashboard() {
               </CardHeader>
               <CardContent>
                 <div className="space-y-6">
-                  {mockProfessorPaymentHistory.map((professor) => (
+                  {professorPaymentHistory.map((professor: any) => (
                     <div key={professor.professorId} className="border rounded-lg p-4">
                       <h3 className="font-semibold text-lg mb-3">{professor.professorName}</h3>
                       <Table>
@@ -494,7 +495,7 @@ export default function ManagerDashboard() {
                           </TableRow>
                         </TableHeader>
                         <TableBody>
-                          {professor.sessions.map((session, idx) => (
+                          {professor.sessions?.map((session: any, idx: number) => (
                             <TableRow key={idx}>
                               <TableCell>{session.course}</TableCell>
                               <TableCell>{session.students}</TableCell>

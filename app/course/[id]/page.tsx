@@ -1,7 +1,6 @@
 "use client"
 
 import type React from "react"
-import type { studentId } from "@/components/ui/studentId" // Declare the studentId variable
 
 import { Label } from "@/components/ui/label"
 
@@ -25,69 +24,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
-
-// Mock data for course detail
-const mockCourses = [
-  {
-    id: 1,
-    teacherId: 1,
-    teacherName: "Prof. Salim Benali",
-    subject: "Mathematics",
-    schoolYear: "3AS",
-    schedule: "Monday 9:00-11:00",
-    monthlyPrice: 500,
-    enrolledStudents: [1],
-    studentNames: ["Ahmed Ben Ali"],
-    status: "active",
-    payments: {
-      students: { 1: true },
-      teacherPaid: false,
-    },
-    teacherCut: 65,
-    attendance: { 1: { week1: true, week2: false, week3: true, week4: false } },
-    courseType: "Group",
-    duration: 2,
-    price: 500,
-    percentageCut: 65,
-  },
-  {
-    id: 2,
-    teacherId: 2,
-    teacherName: "Prof. Amina Khelifi",
-    subject: "Chemistry",
-    schoolYear: "2AS",
-    schedule: "Tuesday 16:00-18:00",
-    monthlyPrice: 450,
-    enrolledStudents: [2],
-    studentNames: ["Fatima Zahra"],
-    status: "active",
-    payments: {
-      students: { 2: false },
-      teacherPaid: false,
-    },
-    teacherCut: 60,
-    attendance: { 2: { week1: false, week2: true, week3: false, week4: true } },
-    courseType: "Individual",
-    duration: 2,
-    price: 450,
-    percentageCut: 60,
-  },
-]
-
-const mockStudents = [
-  {
-    id: 1,
-    name: "Ahmed Ben Ali",
-    schoolYear: "3AS",
-    specialty: "Math",
-  },
-  {
-    id: 2,
-    name: "Fatima Zahra",
-    schoolYear: "BAC",
-    specialty: "Sciences",
-  },
-]
+import { courseService, studentService, teacherService, paymentService, attendanceService } from "@/src/services/dataService"
 
 export default function CourseDetail() {
   const router = useRouter()
@@ -95,10 +32,12 @@ export default function CourseDetail() {
   const courseId = params.id as string
   const [course, setCourse] = useState<any>(null)
   const [user, setUser] = useState<any>(null)
+  const [students, setStudents] = useState<any[]>([])
   const [showAddStudentDialog, setShowAddStudentDialog] = useState(false)
   const [selectedStudent, setSelectedStudent] = useState("")
   const [studentSearchQuery, setStudentSearchQuery] = useState("")
   const [showStudentResults, setShowStudentResults] = useState(false)
+  const [loading, setLoading] = useState(true)
   const [confirmDialog, setConfirmDialog] = useState({
     open: false,
     title: "",
@@ -115,13 +54,31 @@ export default function CourseDetail() {
     }
     setUser(JSON.parse(userData))
 
-    // Get course data
-    const courseData = mockCourses.find((c) => c.id.toString() === courseId)
-    if (courseData) {
-      setCourse(courseData)
-    } else {
-      router.push("/receptionist")
+    // Load course and student data
+    const loadData = async () => {
+      setLoading(true)
+      try {
+        const [courseData, studentsData] = await Promise.all([
+          courseService.getCourseInstanceById(courseId),
+          studentService.getAllStudents(),
+        ])
+
+        if (!courseData) {
+          router.push("/receptionist")
+          return
+        }
+
+        setCourse(courseData)
+        setStudents(studentsData)
+      } catch (error) {
+        console.error('Error loading course data:', error)
+        router.push("/receptionist")
+      } finally {
+        setLoading(false)
+      }
     }
+
+    loadData()
   }, [courseId, router])
 
   const updateWeeklyAttendance = (studentId: number, week: string, present: boolean) => {
@@ -182,7 +139,7 @@ export default function CourseDetail() {
     e.preventDefault()
     if (!selectedStudent) return
 
-    const student = mockStudents.find((s) => s.id.toString() === selectedStudent)
+    const student = students.find((s: any) => s.id.toString() === selectedStudent)
     if (!student) return
 
     setCourse((prev: any) => ({
@@ -248,7 +205,7 @@ export default function CourseDetail() {
     })
   }
 
-  if (!course || !user) {
+  if (!course || !user || loading) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="text-center">
@@ -258,11 +215,11 @@ export default function CourseDetail() {
     )
   }
 
-  const availableStudents = mockStudents.filter((student) => !course.enrolledStudents.includes(student.id))
+  const availableStudents = students.filter((student: any) => !course?.enrolledStudents?.includes(student.id))
 
   const teacherEarnings = Math.round((course.price * course.enrolledStudents.length * course.percentageCut) / 100)
 
-  const filteredStudents = availableStudents.filter((student) =>
+  const filteredStudents = availableStudents.filter((student: any) =>
     student.name.toLowerCase().includes(studentSearchQuery.toLowerCase()),
   )
 
@@ -438,7 +395,7 @@ export default function CourseDetail() {
                           </div>
                           {selectedStudent && (
                             <div className="text-sm text-green-600">
-                              Selected: {mockStudents.find((s) => s.id.toString() === selectedStudent)?.name}
+                              Selected: {students.find((s: any) => s.id.toString() === selectedStudent)?.name}
                             </div>
                           )}
                         </div>
