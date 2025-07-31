@@ -9,6 +9,12 @@ import { Badge } from "@/components/ui/badge"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { LogOut, DollarSign, Users, BookOpen, TrendingUp, Calendar } from "lucide-react"
+import { DataService } from "@/services/dataService"
+import type { Student } from "@/mocks/students"
+import type { Teacher } from "@/mocks/teachers"
+import type { Course } from "@/mocks/courses"
+import type { PaymentRecord } from "@/mocks/payments"
+import { SortControls, type SortConfig } from "@/components/ui/sort-controls"
 
 // Mock data for manager view with enhanced payment histories
 const mockRevenue = [
@@ -95,6 +101,11 @@ export default function ManagerDashboard() {
   const [user, setUser] = useState<any>(null)
   const [payouts, setPayouts] = useState(mockPayouts)
   const [selectedMonth, setSelectedMonth] = useState("2024-01")
+  const [students, setStudents] = useState<Student[]>([])
+  const [teachers, setTeachers] = useState<Teacher[]>([])
+  const [courses, setCourses] = useState<Course[]>([])
+  const [payments, setPayments] = useState<PaymentRecord[]>([])
+  const [sortConfig, setSortConfig] = useState<SortConfig>({ key: "", direction: null })
 
   useEffect(() => {
     const userData = localStorage.getItem("user")
@@ -105,6 +116,12 @@ export default function ManagerDashboard() {
         return
       }
       setUser(parsedUser)
+
+      // Load data from DataService
+      setStudents(DataService.getStudents())
+      setTeachers(DataService.getTeachers())
+      setCourses(DataService.getCourses())
+      setPayments(DataService.getPayments())
     } else {
       router.push("/")
     }
@@ -124,9 +141,51 @@ export default function ManagerDashboard() {
     alert("Monthly rollover completed! Active group courses have been copied to the new month.")
   }
 
-  const totalRevenue = mockRevenue.reduce((sum, item) => sum + (item.paid ? item.amount : 0), 0)
-  const totalPayouts = payouts.reduce((sum, payout) => sum + (payout.approved ? payout.totalPayout : 0), 0)
+  const totalRevenue = courses.reduce((sum, course) => {
+    return (
+      sum +
+      Object.entries(course.current.payments.students)
+        .filter(([_, paid]) => paid)
+        .reduce((courseSum, _) => courseSum + course.price, 0)
+    )
+  }, 0)
+
+  const totalPayouts = payments
+    .filter((p) => p.status === "approved" && p.type === "teacher")
+    .reduce((sum, payment) => sum + payment.amount, 0)
   const netProfit = totalRevenue - totalPayouts
+
+  const handleSort = (key: string) => {
+    let direction: "asc" | "desc" | null = "asc"
+    if (sortConfig.key === key && sortConfig.direction === "asc") {
+      direction = "desc"
+    } else if (sortConfig.key === key && sortConfig.direction === "desc") {
+      direction = null
+    }
+    setSortConfig({ key, direction })
+  }
+
+  const sortData = <T extends Record<string, any>>(data: T[], key: string, direction: "asc" | "desc" | null): T[] => {
+    if (!direction) return data
+
+    return [...data].sort((a, b) => {
+      let aVal = a[key]
+      let bVal = b[key]
+
+      // Handle special cases
+      if (key === "nextSession") {
+        aVal = new Date(aVal || "9999-12-31").getTime()
+        bVal = new Date(bVal || "9999-12-31").getTime()
+      } else if (typeof aVal === "string") {
+        aVal = aVal.toLowerCase()
+        bVal = bVal.toLowerCase()
+      }
+
+      if (aVal < bVal) return direction === "asc" ? -1 : 1
+      if (aVal > bVal) return direction === "asc" ? 1 : -1
+      return 0
+    })
+  }
 
   if (!user) return null
 
@@ -191,120 +250,162 @@ export default function ManagerDashboard() {
               <Users className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{mockStudentData.length}</div>
+              <div className="text-2xl font-bold">{students.length}</div>
               <p className="text-xs text-muted-foreground">Enrolled</p>
             </CardContent>
           </Card>
         </div>
 
-        <Tabs defaultValue="revenue" className="space-y-6">
+        <Tabs defaultValue="payments" className="space-y-6">
           <TabsList className="grid w-full grid-cols-6">
-            <TabsTrigger value="revenue">Revenue</TabsTrigger>
-            <TabsTrigger value="payouts">Payouts</TabsTrigger>
+            <TabsTrigger value="payments">Payments</TabsTrigger>
             <TabsTrigger value="students">Students</TabsTrigger>
             <TabsTrigger value="teachers">Teachers</TabsTrigger>
-            <TabsTrigger value="student-payments">Student Payments</TabsTrigger>
-            <TabsTrigger value="professor-payments">Professor Payments</TabsTrigger>
+            <TabsTrigger value="courses">Courses</TabsTrigger>
+            <TabsTrigger value="analytics">Analytics</TabsTrigger>
           </TabsList>
 
-          {/* Revenue Tab */}
-          <TabsContent value="revenue">
+          {/* Payments Tab - Merged from Student and Professor payments */}
+          <TabsContent value="payments">
             <Card>
               <CardHeader>
-                <CardTitle className="flex items-center">
-                  <TrendingUp className="h-5 w-5 mr-2" />
-                  Revenue Breakdown
-                </CardTitle>
+                <div className="flex justify-between items-center">
+                  <CardTitle className="flex items-center">
+                    <DollarSign className="h-5 w-5 mr-2" />
+                    Payment Management
+                  </CardTitle>
+                  <Select value={selectedMonth} onValueChange={setSelectedMonth}>
+                    <SelectTrigger className="w-40">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="2025-02">February 2025</SelectItem>
+                      <SelectItem value="2025-01">January 2025</SelectItem>
+                      <SelectItem value="2024-12">December 2024</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
               </CardHeader>
               <CardContent>
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Student Name</TableHead>
-                      <TableHead>Course</TableHead>
-                      <TableHead>Amount</TableHead>
-                      <TableHead>Month</TableHead>
-                      <TableHead>Status</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {mockRevenue.map((item, index) => (
-                      <TableRow key={index}>
-                        <TableCell className="font-medium">{item.studentName}</TableCell>
-                        <TableCell>{item.course}</TableCell>
-                        <TableCell>{item.amount.toLocaleString()} DA</TableCell>
-                        <TableCell>{item.month}</TableCell>
-                        <TableCell>
-                          <Badge variant={item.paid ? "default" : "destructive"}>
-                            {item.paid ? "Paid" : "Pending"}
-                          </Badge>
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
+                <div className="space-y-6">
+                  {Object.entries(
+                    payments
+                      .filter((p) => p.month === selectedMonth)
+                      .reduce(
+                        (acc, payment) => {
+                          if (!acc[payment.month]) acc[payment.month] = []
+                          acc[payment.month].push(payment)
+                          return acc
+                        },
+                        {} as Record<string, PaymentRecord[]>,
+                      ),
+                  ).map(([month, monthPayments]) => (
+                    <div key={month} className="border rounded-lg p-4">
+                      <h3 className="font-semibold text-lg mb-3">
+                        {new Date(month + "-01").toLocaleDateString("en-US", { month: "long", year: "numeric" })}
+                      </h3>
+                      <Table>
+                        <TableHeader>
+                          <TableRow>
+                            <TableHead>Type</TableHead>
+                            <TableHead>Name</TableHead>
+                            <TableHead>Course</TableHead>
+                            <TableHead>Amount</TableHead>
+                            <TableHead>Status</TableHead>
+                            <TableHead>Created By</TableHead>
+                            <TableHead>Actions</TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {monthPayments.map((payment) => {
+                            const name =
+                              payment.type === "student"
+                                ? students.find((s) => s.id === payment.studentId)?.name
+                                : teachers.find((t) => t.id === payment.teacherId)?.name
+
+                            return (
+                              <TableRow key={payment.id}>
+                                <TableCell>
+                                  <Badge variant={payment.type === "student" ? "default" : "secondary"}>
+                                    {payment.type}
+                                  </Badge>
+                                </TableCell>
+                                <TableCell className="font-medium">{name}</TableCell>
+                                <TableCell>{payment.courseName}</TableCell>
+                                <TableCell>{payment.amount} DA</TableCell>
+                                <TableCell>
+                                  <Badge
+                                    variant={
+                                      payment.status === "approved"
+                                        ? "default"
+                                        : payment.status === "rejected"
+                                          ? "destructive"
+                                          : "secondary"
+                                    }
+                                  >
+                                    {payment.status}
+                                  </Badge>
+                                </TableCell>
+                                <TableCell>{payment.createdBy}</TableCell>
+                                <TableCell>
+                                  {payment.status === "pending" && (
+                                    <div className="flex space-x-2">
+                                      <Button
+                                        size="sm"
+                                        onClick={() => {
+                                          DataService.approvePayment(payment.id, user.username)
+                                          setPayments(DataService.getPayments())
+                                        }}
+                                      >
+                                        Approve
+                                      </Button>
+                                      <Button
+                                        size="sm"
+                                        variant="outline"
+                                        onClick={() => {
+                                          DataService.updatePayment(payment.id, { status: "rejected" })
+                                          setPayments(DataService.getPayments())
+                                        }}
+                                      >
+                                        Reject
+                                      </Button>
+                                    </div>
+                                  )}
+                                  {payment.status === "approved" && (
+                                    <span className="text-sm text-gray-600">by {payment.approvedBy}</span>
+                                  )}
+                                </TableCell>
+                              </TableRow>
+                            )
+                          })}
+                        </TableBody>
+                      </Table>
+                    </div>
+                  ))}
+                </div>
               </CardContent>
             </Card>
           </TabsContent>
 
-          {/* Payouts Tab */}
-          <TabsContent value="payouts">
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center">
-                  <DollarSign className="h-5 w-5 mr-2" />
-                  Teacher Payouts
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Teacher Name</TableHead>
-                      <TableHead>Percentage</TableHead>
-                      <TableHead>Total Generated</TableHead>
-                      <TableHead>Total Payout</TableHead>
-                      <TableHead>Month</TableHead>
-                      <TableHead>Status</TableHead>
-                      <TableHead>Actions</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {payouts.map((payout, index) => (
-                      <TableRow key={index}>
-                        <TableCell className="font-medium">{payout.teacherName}</TableCell>
-                        <TableCell>{payout.percentage}%</TableCell>
-                        <TableCell>{payout.totalGenerated.toLocaleString()} DA</TableCell>
-                        <TableCell>{payout.totalPayout.toLocaleString()} DA</TableCell>
-                        <TableCell>{payout.month}</TableCell>
-                        <TableCell>
-                          <Badge variant={payout.approved ? "default" : "destructive"}>
-                            {payout.approved ? "Approved" : "Pending"}
-                          </Badge>
-                        </TableCell>
-                        <TableCell>
-                          {!payout.approved && (
-                            <Button variant="outline" size="sm" onClick={() => approvePayout(payout.teacherName)}>
-                              Approve
-                            </Button>
-                          )}
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </CardContent>
-            </Card>
-          </TabsContent>
-
-          {/* Students Tab */}
+          {/* Students Tab - Same as Receptionist */}
           <TabsContent value="students">
             <Card>
               <CardHeader>
-                <CardTitle className="flex items-center">
-                  <Users className="h-5 w-5 mr-2" />
-                  All Students Data
-                </CardTitle>
+                <div className="flex justify-between items-center">
+                  <CardTitle className="flex items-center">
+                    <Users className="h-5 w-5 mr-2" />
+                    Student Management
+                  </CardTitle>
+                  <div className="flex items-center space-x-2">
+                    <SortControls sortKey="name" currentSort={sortConfig} onSort={handleSort} label="Name" />
+                    <SortControls
+                      sortKey="schoolYear"
+                      currentSort={sortConfig}
+                      onSort={handleSort}
+                      label="School Year"
+                    />
+                  </div>
+                </div>
               </CardHeader>
               <CardContent>
                 <Table>
@@ -312,28 +413,211 @@ export default function ManagerDashboard() {
                     <TableRow>
                       <TableHead>Name</TableHead>
                       <TableHead>School Year</TableHead>
-                      <TableHead>Courses Enrolled</TableHead>
-                      <TableHead>Total Paid</TableHead>
+                      <TableHead>Specialty</TableHead>
+                      <TableHead>Enrolled Courses</TableHead>
+                      <TableHead>Payment Status</TableHead>
                       <TableHead>Actions</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {mockStudentData.map((student) => (
-                      <TableRow key={student.id}>
+                    {sortData(students, sortConfig.key, sortConfig.direction).map((student) => {
+                      const studentCourses = courses.filter((c) => c.current.enrolledStudents.includes(student.id))
+                      return (
+                        <TableRow key={student.id}>
+                          <TableCell className="font-medium">
+                            <Button
+                              variant="link"
+                              className="p-0 h-auto font-medium text-left"
+                              onClick={() => router.push(`/student/${student.id}`)}
+                            >
+                              {student.name}
+                            </Button>
+                          </TableCell>
+                          <TableCell>{student.schoolYear}</TableCell>
+                          <TableCell>{student.specialty}</TableCell>
+                          <TableCell>
+                            {studentCourses.map((course, idx) => (
+                              <Badge key={idx} variant="secondary" className="mr-1">
+                                {course.subject}
+                              </Badge>
+                            ))}
+                          </TableCell>
+                          <TableCell>
+                            {studentCourses.map((course, idx) => (
+                              <Badge
+                                key={idx}
+                                variant={course.current.payments.students[student.id] ? "default" : "destructive"}
+                                className="mr-1"
+                              >
+                                {course.current.payments.students[student.id] ? "Paid" : "Pending"}
+                              </Badge>
+                            ))}
+                          </TableCell>
+                          <TableCell>
+                            <Button variant="outline" size="sm" onClick={() => router.push(`/student/${student.id}`)}>
+                              View Details
+                            </Button>
+                          </TableCell>
+                        </TableRow>
+                      )
+                    })}
+                  </TableBody>
+                </Table>
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          {/* Teachers Tab - Same as Receptionist */}
+          <TabsContent value="teachers">
+            <Card>
+              <CardHeader>
+                <div className="flex justify-between items-center">
+                  <CardTitle className="flex items-center">
+                    <BookOpen className="h-5 w-5 mr-2" />
+                    Teacher Management
+                  </CardTitle>
+                  <div className="flex items-center space-x-2">
+                    <SortControls sortKey="name" currentSort={sortConfig} onSort={handleSort} label="Name" />
+                  </div>
+                </div>
+              </CardHeader>
+              <CardContent>
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Name</TableHead>
+                      <TableHead>Subjects</TableHead>
+                      <TableHead>School</TableHead>
+                      <TableHead>School Years</TableHead>
+                      <TableHead>Active Courses</TableHead>
+                      <TableHead>Actions</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {sortData(teachers, sortConfig.key, sortConfig.direction).map((teacher) => {
+                      const teacherCourses = courses.filter((c) => c.teacherId === teacher.id && c.status === "active")
+                      return (
+                        <TableRow key={teacher.id}>
+                          <TableCell className="font-medium">
+                            <Button
+                              variant="link"
+                              className="p-0 h-auto font-medium text-left"
+                              onClick={() => router.push(`/professor/${teacher.id}`)}
+                            >
+                              {teacher.name}
+                            </Button>
+                          </TableCell>
+                          <TableCell>
+                            {teacher.subjects.map((subject, idx) => (
+                              <Badge key={idx} variant="secondary" className="mr-1">
+                                {subject}
+                              </Badge>
+                            ))}
+                          </TableCell>
+                          <TableCell>{teacher.school}</TableCell>
+                          <TableCell>
+                            {teacher.schoolYears.map((year, idx) => (
+                              <Badge key={idx} variant="outline" className="mr-1">
+                                {year}
+                              </Badge>
+                            ))}
+                          </TableCell>
+                          <TableCell>
+                            <span className="text-sm text-gray-600">{teacherCourses.length} course(s)</span>
+                          </TableCell>
+                          <TableCell>
+                            <Button variant="outline" size="sm" onClick={() => router.push(`/professor/${teacher.id}`)}>
+                              View Profile
+                            </Button>
+                          </TableCell>
+                        </TableRow>
+                      )
+                    })}
+                  </TableBody>
+                </Table>
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          {/* Courses Tab - Same as Receptionist */}
+          <TabsContent value="courses">
+            <Card>
+              <CardHeader>
+                <div className="flex justify-between items-center">
+                  <CardTitle className="flex items-center">
+                    <BookOpen className="h-5 w-5 mr-2" />
+                    Course Management
+                  </CardTitle>
+                  <div className="flex items-center space-x-2">
+                    <SortControls sortKey="status" currentSort={sortConfig} onSort={handleSort} label="Status" />
+                    <SortControls sortKey="subject" currentSort={sortConfig} onSort={handleSort} label="Course" />
+                    <SortControls
+                      sortKey="nextSession"
+                      currentSort={sortConfig}
+                      onSort={handleSort}
+                      label="Next Session"
+                    />
+                  </div>
+                </div>
+              </CardHeader>
+              <CardContent>
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Status</TableHead>
+                      <TableHead>Course</TableHead>
+                      <TableHead>Teacher</TableHead>
+                      <TableHead>Type</TableHead>
+                      <TableHead>Schedule</TableHead>
+                      <TableHead>Students</TableHead>
+                      <TableHead>Price</TableHead>
+                      <TableHead>Next Session</TableHead>
+                      <TableHead>Actions</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {sortData(courses, sortConfig.key, sortConfig.direction).map((course) => (
+                      <TableRow key={course.id}>
+                        <TableCell>
+                          <div
+                            className={`w-3 h-3 rounded-full ${
+                              course.status === "active" ? "bg-green-500" : "bg-red-500"
+                            }`}
+                          />
+                        </TableCell>
                         <TableCell className="font-medium">
                           <Button
                             variant="link"
                             className="p-0 h-auto font-medium text-left"
-                            onClick={() => router.push(`/student/${student.id}`)}
+                            onClick={() => router.push(`/course/${course.id}`)}
                           >
-                            {student.name}
+                            {course.subject} - {course.schoolYear}
                           </Button>
                         </TableCell>
-                        <TableCell>{student.schoolYear}</TableCell>
-                        <TableCell>{student.coursesEnrolled}</TableCell>
-                        <TableCell>{student.totalPaid.toLocaleString()} DA</TableCell>
                         <TableCell>
-                          <Button variant="outline" size="sm" onClick={() => router.push(`/student/${student.id}`)}>
+                          <Button
+                            variant="link"
+                            className="p-0 h-auto font-medium text-left"
+                            onClick={() => router.push(`/professor/${course.teacherId}`)}
+                          >
+                            {course.teacherName}
+                          </Button>
+                        </TableCell>
+                        <TableCell>
+                          <Badge variant={course.courseType === "Group" ? "default" : "secondary"}>
+                            {course.courseType}
+                          </Badge>
+                        </TableCell>
+                        <TableCell>{course.schedule}</TableCell>
+                        <TableCell>{course.current.enrolledStudents.length} students</TableCell>
+                        <TableCell>
+                          {course.price} DA {course.courseType === "Group" ? "/month" : "/session"}
+                        </TableCell>
+                        <TableCell>
+                          {course.nextSession ? new Date(course.nextSession).toLocaleDateString() : "TBD"}
+                        </TableCell>
+                        <TableCell>
+                          <Button variant="outline" size="sm" onClick={() => router.push(`/course/${course.id}`)}>
                             View Details
                           </Button>
                         </TableCell>
@@ -345,174 +629,55 @@ export default function ManagerDashboard() {
             </Card>
           </TabsContent>
 
-          {/* Teachers Tab */}
-          <TabsContent value="teachers">
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center">
-                  <BookOpen className="h-5 w-5 mr-2" />
-                  All Teachers Data
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Name</TableHead>
-                      <TableHead>Subjects</TableHead>
-                      <TableHead>Students</TableHead>
-                      <TableHead>Total Earnings</TableHead>
-                      <TableHead>Performance</TableHead>
-                      <TableHead>Actions</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {mockTeacherData.map((teacher) => (
-                      <TableRow key={teacher.id}>
-                        <TableCell className="font-medium">
-                          <Button
-                            variant="link"
-                            className="p-0 h-auto font-medium text-left"
-                            onClick={() => router.push(`/professor/${teacher.id}`)}
-                          >
-                            {teacher.name}
-                          </Button>
-                        </TableCell>
-                        <TableCell>
-                          {teacher.subjects.map((subject, idx) => (
-                            <Badge key={idx} variant="secondary" className="mr-1">
-                              {subject}
-                            </Badge>
-                          ))}
-                        </TableCell>
-                        <TableCell>{teacher.students}</TableCell>
-                        <TableCell>{teacher.totalEarnings.toLocaleString()} DA</TableCell>
-                        <TableCell>
-                          <Badge variant="default">Excellent</Badge>
-                        </TableCell>
-                        <TableCell>
-                          <Button variant="outline" size="sm" onClick={() => router.push(`/professor/${teacher.id}`)}>
-                            View Profile
-                          </Button>
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </CardContent>
-            </Card>
-          </TabsContent>
-
-          {/* Student Payment History Tab */}
-          <TabsContent value="student-payments">
-            <Card>
-              <CardHeader>
-                <div className="flex justify-between items-center">
-                  <CardTitle className="flex items-center">
-                    <Users className="h-5 w-5 mr-2" />
-                    Student Payment History
-                  </CardTitle>
-                  <Select value={selectedMonth} onValueChange={setSelectedMonth}>
-                    <SelectTrigger className="w-40">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="2024-01">January 2024</SelectItem>
-                      <SelectItem value="2023-12">December 2023</SelectItem>
-                      <SelectItem value="2023-11">November 2023</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-6">
-                  {mockStudentPaymentHistory.map((student) => (
-                    <div key={student.studentId} className="border rounded-lg p-4">
-                      <h3 className="font-semibold text-lg mb-3">{student.studentName}</h3>
-                      <Table>
-                        <TableHeader>
-                          <TableRow>
-                            <TableHead>Course</TableHead>
-                            <TableHead>Amount</TableHead>
-                            <TableHead>Status</TableHead>
-                          </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                          {student.courses.map((course, idx) => (
-                            <TableRow key={idx}>
-                              <TableCell>{course.course}</TableCell>
-                              <TableCell>{course.amount} DA</TableCell>
-                              <TableCell>
-                                <Badge variant={course.paid ? "default" : "destructive"}>
-                                  {course.paid ? "Paid" : "Unpaid"}
-                                </Badge>
-                              </TableCell>
-                            </TableRow>
-                          ))}
-                        </TableBody>
-                      </Table>
+          {/* Analytics Tab - Renamed from previous tabs */}
+          <TabsContent value="analytics">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <Card>
+                <CardHeader>
+                  <CardTitle>Revenue Analytics</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-4">
+                    <div className="text-center p-4 bg-green-50 rounded-lg">
+                      <p className="text-sm text-gray-600">Total Monthly Revenue</p>
+                      <p className="text-2xl font-bold text-green-600">{totalRevenue.toLocaleString()} DA</p>
                     </div>
-                  ))}
-                </div>
-              </CardContent>
-            </Card>
-          </TabsContent>
-
-          {/* Professor Payment History Tab */}
-          <TabsContent value="professor-payments">
-            <Card>
-              <CardHeader>
-                <div className="flex justify-between items-center">
-                  <CardTitle className="flex items-center">
-                    <BookOpen className="h-5 w-5 mr-2" />
-                    Professor Payment History
-                  </CardTitle>
-                  <Select value={selectedMonth} onValueChange={setSelectedMonth}>
-                    <SelectTrigger className="w-40">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="2024-01">January 2024</SelectItem>
-                      <SelectItem value="2023-12">December 2023</SelectItem>
-                      <SelectItem value="2023-11">November 2023</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-6">
-                  {mockProfessorPaymentHistory.map((professor) => (
-                    <div key={professor.professorId} className="border rounded-lg p-4">
-                      <h3 className="font-semibold text-lg mb-3">{professor.professorName}</h3>
-                      <Table>
-                        <TableHeader>
-                          <TableRow>
-                            <TableHead>Course</TableHead>
-                            <TableHead>Students</TableHead>
-                            <TableHead>Amount</TableHead>
-                            <TableHead>Status</TableHead>
-                          </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                          {professor.sessions.map((session, idx) => (
-                            <TableRow key={idx}>
-                              <TableCell>{session.course}</TableCell>
-                              <TableCell>{session.students}</TableCell>
-                              <TableCell>{session.amount} DA</TableCell>
-                              <TableCell>
-                                <Badge variant={session.paid ? "default" : "destructive"}>
-                                  {session.paid ? "Paid" : "Unpaid"}
-                                </Badge>
-                              </TableCell>
-                            </TableRow>
-                          ))}
-                        </TableBody>
-                      </Table>
+                    <div className="text-center p-4 bg-blue-50 rounded-lg">
+                      <p className="text-sm text-gray-600">Total Payouts</p>
+                      <p className="text-2xl font-bold text-blue-600">{totalPayouts.toLocaleString()} DA</p>
                     </div>
-                  ))}
-                </div>
-              </CardContent>
-            </Card>
+                    <div className="text-center p-4 bg-purple-50 rounded-lg">
+                      <p className="text-sm text-gray-600">Net Profit</p>
+                      <p className="text-2xl font-bold text-purple-600">{netProfit.toLocaleString()} DA</p>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader>
+                  <CardTitle>System Statistics</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-4">
+                    <div className="text-center p-4 bg-orange-50 rounded-lg">
+                      <p className="text-sm text-gray-600">Active Students</p>
+                      <p className="text-2xl font-bold text-orange-600">{students.length}</p>
+                    </div>
+                    <div className="text-center p-4 bg-red-50 rounded-lg">
+                      <p className="text-sm text-gray-600">Active Teachers</p>
+                      <p className="text-2xl font-bold text-red-600">{teachers.length}</p>
+                    </div>
+                    <div className="text-center p-4 bg-indigo-50 rounded-lg">
+                      <p className="text-sm text-gray-600">Active Courses</p>
+                      <p className="text-2xl font-bold text-indigo-600">
+                        {courses.filter((c) => c.status === "active").length}
+                      </p>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
           </TabsContent>
         </Tabs>
       </div>

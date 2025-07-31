@@ -14,6 +14,9 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 import { Switch } from "@/components/ui/switch"
 import { ArrowLeft, Edit, Save, X, GraduationCap, MapPin, Phone, Mail, School, Plus, BookOpen } from "lucide-react"
+import { DataService } from "@/services/dataService"
+import type { Teacher } from "@/mocks/teachers"
+import type { Course } from "@/mocks/courses"
 
 // Mock professor data with course templates and instances
 const mockProfessorDetails = {
@@ -104,13 +107,13 @@ export default function ProfessorProfile() {
   const router = useRouter()
   const params = useParams()
   const professorId = params.id as string
-  const [professor, setProfessor] = useState<any>(null)
+  const [professor, setProfessor] = useState<Teacher | null>(null)
   const [isEditing, setIsEditing] = useState(false)
   const [editedProfessor, setEditedProfessor] = useState<any>(null)
   const [user, setUser] = useState<any>(null)
   const [showAddCourseDialog, setShowAddCourseDialog] = useState(false)
-  const [courseTemplates, setCourseTemplates] = useState(mockCourseTemplates)
-  const [courseInstances, setCourseInstances] = useState(mockCourseInstances)
+  const [courseTemplates, setCourseTemplates] = useState<Course[]>([])
+  const [courseInstances, setCourseInstances] = useState<any[]>([])
   const [newCourse, setNewCourse] = useState({
     subject: "",
     schoolYear: "",
@@ -131,13 +134,35 @@ export default function ProfessorProfile() {
     setUser(JSON.parse(userData))
 
     // Get professor data
-    const professorData = mockProfessorDetails[professorId as keyof typeof mockProfessorDetails]
-    if (professorData) {
-      setProfessor(professorData)
-      setEditedProfessor({ ...professorData })
-    } else {
-      router.push("/receptionist")
+    // const professorData = mockProfessorDetails[professorId as keyof typeof mockProfessorDetails]
+    // if (professorData) {
+    //   setProfessor(professorData)
+    //   setEditedProfessor({ ...professorData })
+    // } else {
+    //   router.push("/receptionist")
+    // }
+    const fetchData = async () => {
+      try {
+        const professorData = await DataService.getTeacherById(professorId)
+        if (professorData) {
+          setProfessor(professorData)
+          setEditedProfessor({ ...professorData })
+        } else {
+          router.push("/receptionist")
+        }
+
+        const templates = await DataService.getCourses()
+        setCourseTemplates(templates)
+
+        // const instances = await DataService.getCourseInstances()
+        // setCourseInstances(instances)
+      } catch (error) {
+        console.error("Failed to fetch data:", error)
+        router.push("/receptionist")
+      }
     }
+
+    fetchData()
   }, [professorId, router])
 
   const handleEdit = () => {
@@ -662,11 +687,11 @@ export default function ProfessorProfile() {
               <CardContent className="space-y-4">
                 <div className="text-center p-4 bg-blue-50 rounded-lg">
                   <p className="text-sm text-gray-600">Total Students</p>
-                  <p className="text-2xl font-bold text-blue-600">{professor.totalStudents}</p>
+                  <p className="text-2xl font-bold text-blue-600">{professor?.totalStudents}</p>
                 </div>
                 <div className="text-center p-4 bg-green-50 rounded-lg">
                   <p className="text-sm text-gray-600">Monthly Earnings</p>
-                  <p className="text-2xl font-bold text-green-600">{professor.monthlyEarnings.toLocaleString()} DA</p>
+                  <p className="text-2xl font-bold text-green-600">{professor?.monthlyEarnings.toLocaleString()} DA</p>
                 </div>
                 <div className="text-center p-4 bg-purple-50 rounded-lg">
                   <p className="text-sm text-gray-600">Course Templates</p>

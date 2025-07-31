@@ -12,6 +12,9 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { ArrowLeft, Download, User, BookOpen, Upload, AlertTriangle, CheckCircle } from "lucide-react"
+import { DataService } from "@/services/dataService"
+import type { Student } from "@/mocks/students"
+import type { Course } from "@/mocks/courses"
 
 // Mock data (same structure as receptionist page)
 const mockStudentDetails = {
@@ -88,8 +91,8 @@ export default function StudentDashboard() {
   const router = useRouter()
   const params = useParams()
   const studentId = params.id as string
-  const [student, setStudent] = useState<any>(null)
-  const [courses, setCourses] = useState(mockCourses)
+  const [student, setStudent] = useState<Student | null>(null)
+  const [courses, setCourses] = useState<Course[]>([])
   const [uploadingDoc, setUploadingDoc] = useState("")
 
   useEffect(() => {
@@ -101,9 +104,10 @@ export default function StudentDashboard() {
     }
 
     // Get student data
-    const studentData = mockStudentDetails[studentId as keyof typeof mockStudentDetails]
+    const studentData = DataService.getStudentById(Number.parseInt(studentId))
     if (studentData) {
       setStudent(studentData)
+      setCourses(DataService.getCourses())
     } else {
       router.push("/receptionist")
     }

@@ -15,115 +15,121 @@ import { Badge } from "@/components/ui/badge"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 import { LogOut, Users, Search, GraduationCap, BookOpen, Plus } from "lucide-react"
+import { DataService } from "@/services/dataService"
+import type { Student } from "@/mocks/students"
+import type { Teacher } from "@/mocks/teachers"
+import type { Course } from "@/mocks/courses"
+import { SortControls, type SortConfig } from "@/components/ui/sort-controls"
 
 // Mock data with updated structure
-const mockStudents = [
-  {
-    id: 1,
-    name: "Ahmed Ben Ali",
-    schoolYear: "3AS",
-    specialty: "Math",
-    address: "123 Rue de la Paix, Alger",
-    birthDate: "2005-03-15",
-    phone: "+213 555 123 456",
-    email: "ahmed.benali@email.com",
-    school: "Lycée Mohamed Boudiaf",
-    registrationFeePaid: true,
-  },
-  {
-    id: 2,
-    name: "Fatima Zahra",
-    schoolYear: "BAC",
-    specialty: "Sciences",
-    address: "456 Avenue Mohamed V, Oran",
-    birthDate: "2004-07-22",
-    phone: "+213 555 789 012",
-    email: "fatima.zahra@email.com",
-    school: "Lycée Ibn Khaldoun",
-    registrationFeePaid: true,
-  },
-]
+// const mockStudents = [
+//   {
+//     id: 1,
+//     name: "Ahmed Ben Ali",
+//     schoolYear: "3AS",
+//     specialty: "Math",
+//     address: "123 Rue de la Paix, Alger",
+//     birthDate: "2005-03-15",
+//     phone: "+213 555 123 456",
+//     email: "ahmed.benali@email.com",
+//     school: "Lycée Mohamed Boudiaf",
+//     registrationFeePaid: true,
+//   },
+//   {
+//     id: 2,
+//     name: "Fatima Zahra",
+//     schoolYear: "BAC",
+//     specialty: "Sciences",
+//     address: "456 Avenue Mohamed V, Oran",
+//     birthDate: "2004-07-22",
+//     phone: "+213 555 789 012",
+//     email: "fatima.zahra@email.com",
+//     school: "Lycée Ibn Khaldoun",
+//     registrationFeePaid: true,
+//   },
+// ]
 
-const mockTeachers = [
-  {
-    id: 1,
-    name: "Prof. Salim Benali",
-    address: "789 Rue des Professeurs, Alger",
-    phone: "+213 555 111 222",
-    email: "salim.benali@school.dz",
-    school: "Lycée Mohamed Boudiaf",
-    schoolYears: ["3AS", "BAC"],
-    subjects: ["Mathematics", "Physics"],
-  },
-  {
-    id: 2,
-    name: "Prof. Amina Khelifi",
-    address: "321 Avenue de l'Université, Oran",
-    phone: "+213 555 333 444",
-    email: "amina.khelifi@school.dz",
-    school: "Lycée Ibn Khaldoun",
-    schoolYears: ["2AS"],
-    subjects: ["Physics", "Chemistry"],
-  },
-]
+// const mockTeachers = [
+//   {
+//     id: 1,
+//     name: "Prof. Salim Benali",
+//     address: "789 Rue des Professeurs, Alger",
+//     phone: "+213 555 111 222",
+//     email: "salim.benali@school.dz",
+//     school: "Lycée Mohamed Boudiaf",
+//     schoolYears: ["3AS", "BAC"],
+//     subjects: ["Mathematics", "Physics"],
+//   },
+//   {
+//     id: 2,
+//     name: "Prof. Amina Khelifi",
+//     address: "321 Avenue de l'Université, Oran",
+//     phone: "+213 555 333 444",
+//     email: "amina.khelifi@school.dz",
+//     school: "Lycée Ibn Khaldoun",
+//     schoolYears: ["2AS"],
+//     subjects: ["Physics", "Chemistry"],
+//   },
+// ]
 
-// Course data (only group courses)
-const mockCourses = [
-  {
-    id: 1,
-    teacherId: 1,
-    teacherName: "Prof. Salim Benali",
-    subject: "Mathematics",
-    schoolYear: "3AS",
-    schedule: "Monday 9:00-11:00",
-    monthlyPrice: 500,
-    enrolledStudents: [1],
-    status: "active",
-    payments: {
-      students: { 1: true }, // studentId: paid
-      teacherPaid: false,
-    },
-    percentageCut: 50,
-    courseType: "Group",
-    duration: 2,
-    dayOfWeek: "Monday",
-    startHour: "09:00",
-    endHour: "11:00",
-    price: 500,
-  },
-  {
-    id: 2,
-    teacherId: 2,
-    teacherName: "Prof. Amina Khelifi",
-    subject: "Chemistry",
-    schoolYear: "2AS",
-    schedule: "Tuesday 16:00-18:00",
-    monthlyPrice: 450,
-    enrolledStudents: [2],
-    status: "active",
-    payments: {
-      students: { 2: false },
-      teacherPaid: false,
-    },
-    percentageCut: 50,
-    courseType: "Group",
-    duration: 2,
-    dayOfWeek: "Tuesday",
-    startHour: "16:00",
-    endHour: "18:00",
-    price: 450,
-  },
-]
+// // Course data (only group courses)
+// const mockCourses = [
+//   {
+//     id: 1,
+//     teacherId: 1,
+//     teacherName: "Prof. Salim Benali",
+//     subject: "Mathematics",
+//     schoolYear: "3AS",
+//     schedule: "Monday 9:00-11:00",
+//     monthlyPrice: 500,
+//     enrolledStudents: [1],
+//     status: "active",
+//     payments: {
+//       students: { 1: true }, // studentId: paid
+//       teacherPaid: false,
+//     },
+//     percentageCut: 50,
+//     courseType: "Group",
+//     duration: 2,
+//     dayOfWeek: "Monday",
+//     startHour: "09:00",
+//     endHour: "11:00",
+//     price: 500,
+//   },
+//   {
+//     id: 2,
+//     teacherId: 2,
+//     teacherName: "Prof. Amina Khelifi",
+//     subject: "Chemistry",
+//     schoolYear: "2AS",
+//     schedule: "Tuesday 16:00-18:00",
+//     monthlyPrice: 450,
+//     enrolledStudents: [2],
+//     status: "active",
+//     payments: {
+//       students: { 2: false },
+//       teacherPaid: false,
+//     },
+//     percentageCut: 50,
+//     courseType: "Group",
+//     duration: 2,
+//     dayOfWeek: "Tuesday",
+//     startHour: "16:00",
+//     endHour: "18:00",
+//     price: 450,
+//   },
+// ]
 
 export default function ReceptionistDashboard() {
   const router = useRouter()
   const [user, setUser] = useState<any>(null)
-  const [students, setStudents] = useState(mockStudents)
-  const [teachers, setTeachers] = useState(mockTeachers)
-  const [courses, setCourses] = useState(mockCourses)
+  const [students, setStudents] = useState<Student[]>([])
+  const [teachers, setTeachers] = useState<Teacher[]>([])
+  const [courses, setCourses] = useState<Course[]>([])
   const [searchQuery, setSearchQuery] = useState("")
   const [searchResults, setSearchResults] = useState<any[]>([])
   const [showSearchResults, setShowSearchResults] = useState(false)
+  const [sortConfig, setSortConfig] = useState<SortConfig>({ key: "", direction: null })
 
   // Dialog states
   const [showAddStudentDialog, setShowAddStudentDialog] = useState(false)
@@ -185,6 +191,11 @@ export default function ReceptionistDashboard() {
         return
       }
       setUser(parsedUser)
+
+      // Load data from DataService
+      setStudents(DataService.getStudents())
+      setTeachers(DataService.getTeachers())
+      setCourses(DataService.getCourses())
     } else {
       router.push("/")
     }
@@ -377,6 +388,30 @@ export default function ReceptionistDashboard() {
     return courses.filter((course) => course.enrolledStudents.includes(studentId))
   }
 
+  // Sorting functions
+  const sortData = (data: any[], sortConfig: SortConfig) => {
+    if (!sortConfig.key) {
+      return data
+    }
+
+    return [...data].sort((a, b) => {
+      const direction = sortConfig.direction === "ascending" ? 1 : -1
+      const key = sortConfig.key
+
+      if (a[key] < b[key]) {
+        return -1 * direction
+      }
+      if (a[key] > b[key]) {
+        return 1 * direction
+      }
+      return 0
+    })
+  }
+
+  const sortedStudents = sortData(students, sortConfig)
+  const sortedTeachers = sortData(teachers, sortConfig)
+  const sortedCourses = sortData(courses, sortConfig)
+
   if (!user) return null
 
   return (
@@ -465,6 +500,15 @@ export default function ReceptionistDashboard() {
                     <Users className="h-5 w-5 mr-2" />
                     Student List
                   </CardTitle>
+                  <SortControls
+                    sortConfig={sortConfig}
+                    setSortConfig={setSortConfig}
+                    columns={[
+                      { key: "name", label: "Name" },
+                      { key: "schoolYear", label: "School Year" },
+                      { key: "specialty", label: "Specialty" },
+                    ]}
+                  />
                   <Dialog open={showAddStudentDialog} onOpenChange={setShowAddStudentDialog}>
                     <DialogTrigger asChild>
                       <Button>
@@ -640,8 +684,8 @@ export default function ReceptionistDashboard() {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {students.map((student) => {
-                      const studentCourses = getStudentCourses(student.id)
+                    {sortedStudents.map((student) => {
+                      const studentCourses = courses.filter((course) => course.enrolledStudents.includes(student.id))
                       return (
                         <TableRow key={student.id}>
                           <TableCell className="font-medium">
@@ -691,6 +735,15 @@ export default function ReceptionistDashboard() {
                     <BookOpen className="h-5 w-5 mr-2" />
                     All Courses
                   </CardTitle>
+                  <SortControls
+                    sortConfig={sortConfig}
+                    setSortConfig={setSortConfig}
+                    columns={[
+                      { key: "subject", label: "Subject" },
+                      { key: "teacherName", label: "Teacher" },
+                      { key: "schoolYear", label: "School Year" },
+                    ]}
+                  />
                   <Dialog open={showAddCourseDialog} onOpenChange={setShowAddCourseDialog}>
                     <DialogTrigger asChild>
                       <Button>
@@ -909,7 +962,7 @@ export default function ReceptionistDashboard() {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {courses.map((course) => {
+                    {sortedCourses.map((course) => {
                       const enrolledStudents = students.filter((s) => course.enrolledStudents.includes(s.id))
                       return (
                         <TableRow key={course.id}>
@@ -966,6 +1019,14 @@ export default function ReceptionistDashboard() {
                     <GraduationCap className="h-5 w-5 mr-2" />
                     Teacher List
                   </CardTitle>
+                  <SortControls
+                    sortConfig={sortConfig}
+                    setSortConfig={setSortConfig}
+                    columns={[
+                      { key: "name", label: "Name" },
+                      { key: "school", label: "School" },
+                    ]}
+                  />
                   <Dialog open={showAddTeacherDialog} onOpenChange={setShowAddTeacherDialog}>
                     <DialogTrigger asChild>
                       <Button>
@@ -1131,7 +1192,7 @@ export default function ReceptionistDashboard() {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {teachers.map((teacher) => {
+                    {sortedTeachers.map((teacher) => {
                       const teacherCourses = courses.filter((c) => c.teacherId === teacher.id)
                       return (
                         <TableRow key={teacher.id}>

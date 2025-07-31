@@ -19,85 +19,88 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
+import { DataService } from "@/services/dataService"
+import type { Teacher } from "@/mocks/teachers"
+import type { Course } from "@/mocks/courses"
 
 // Mock teacher data
-const mockTeacherDetails = {
-  1: {
-    id: 1,
-    name: "Prof. Salim Benali",
-    address: "789 Rue des Professeurs, Alger",
-    phone: "+213 555 111 222",
-    email: "salim.benali@school.dz",
-    school: "Lycée Mohamed Boudiaf",
-    subjects: ["Mathematics", "Physics"],
-    schoolYears: ["3AS", "4AM"],
-    totalStudents: 15,
-    monthlyEarnings: 10500,
-    joinDate: "2023-09-01",
-  },
-  2: {
-    id: 2,
-    name: "Prof. Amina Khelifi",
-    address: "321 Avenue de l'Université, Oran",
-    phone: "+213 555 333 444",
-    email: "amina.khelifi@school.dz",
-    school: "Lycée Ibn Khaldoun",
-    subjects: ["Physics", "Chemistry"],
-    schoolYears: ["2AS"],
-    totalStudents: 12,
-    monthlyEarnings: 7800,
-    joinDate: "2023-10-15",
-  },
-}
+// const mockTeacherDetails = {
+//   1: {
+//     id: 1,
+//     name: "Prof. Salim Benali",
+//     address: "789 Rue des Professeurs, Alger",
+//     phone: "+213 555 111 222",
+//     email: "salim.benali@school.dz",
+//     school: "Lycée Mohamed Boudiaf",
+//     subjects: ["Mathematics", "Physics"],
+//     schoolYears: ["3AS", "4AM"],
+//     totalStudents: 15,
+//     monthlyEarnings: 10500,
+//     joinDate: "2023-09-01",
+//   },
+//   2: {
+//     id: 2,
+//     name: "Prof. Amina Khelifi",
+//     address: "321 Avenue de l'Université, Oran",
+//     phone: "+213 555 333 444",
+//     email: "amina.khelifi@school.dz",
+//     school: "Lycée Ibn Khaldoun",
+//     subjects: ["Physics", "Chemistry"],
+//     schoolYears: ["2AS"],
+//     totalStudents: 12,
+//     monthlyEarnings: 7800,
+//     joinDate: "2023-10-15",
+//   },
+// }
 
-const mockCourses = [
-  {
-    id: 1,
-    teacherId: 1,
-    teacherName: "Prof. Salim Benali",
-    subject: "Mathematics",
-    schoolYear: "3AS",
-    schedule: "Monday 9:00-11:00",
-    price: 500,
-    enrolledStudents: [1],
-    studentNames: ["Ahmed Ben Ali"],
-    status: "active",
-    payments: {
-      students: { 1: true },
-      teacherPaid: false,
-    },
-    percentageCut: 65, // percentage
-    courseType: "Group",
-  },
-  {
-    id: 2,
-    teacherId: 2,
-    teacherName: "Prof. Amina Khelifi",
-    subject: "Chemistry",
-    schoolYear: "2AS",
-    schedule: "Tuesday 16:00-18:00",
-    price: 450,
-    enrolledStudents: [2],
-    studentNames: ["Fatima Zahra"],
-    status: "active",
-    payments: {
-      students: { 2: false },
-      teacherPaid: false,
-    },
-    percentageCut: 60,
-    courseType: "Individual",
-  },
-]
+// const mockCourses = [
+//   {
+//     id: 1,
+//     teacherId: 1,
+//     teacherName: "Prof. Salim Benali",
+//     subject: "Mathematics",
+//     schoolYear: "3AS",
+//     schedule: "Monday 9:00-11:00",
+//     price: 500,
+//     enrolledStudents: [1],
+//     studentNames: ["Ahmed Ben Ali"],
+//     status: "active",
+//     payments: {
+//       students: { 1: true },
+//       teacherPaid: false,
+//     },
+//     percentageCut: 65, // percentage
+//     courseType: "Group",
+//   },
+//   {
+//     id: 2,
+//     teacherId: 2,
+//     teacherName: "Prof. Amina Khelifi",
+//     subject: "Chemistry",
+//     schoolYear: "2AS",
+//     schedule: "Tuesday 16:00-18:00",
+//     price: 450,
+//     enrolledStudents: [2],
+//     studentNames: ["Fatima Zahra"],
+//     status: "active",
+//     payments: {
+//       students: { 2: false },
+//       teacherPaid: false,
+//     },
+//     percentageCut: 60,
+//     courseType: "Individual",
+//   },
+// ]
 
 export default function TeacherProfile() {
   const router = useRouter()
   const params = useParams()
   const teacherId = params.id as string
-  const [teacher, setTeacher] = useState<any>(null)
+  const [teacher, setTeacher] = useState<Teacher | null>(null)
   const [isEditing, setIsEditing] = useState(false)
   const [editedTeacher, setEditedTeacher] = useState<any>(null)
   const [user, setUser] = useState<any>(null)
-  const [courses, setCourses] = useState(mockCourses)
+  const [courses, setCourses] = useState<Course[]>([])
   const [showSaveConfirmation, setShowSaveConfirmation] = useState(false)
 
   useEffect(() => {
@@ -110,13 +113,33 @@ export default function TeacherProfile() {
     setUser(JSON.parse(userData))
 
     // Get teacher data
-    const teacherData = mockTeacherDetails[teacherId as keyof typeof mockTeacherDetails]
-    if (teacherData) {
-      setTeacher(teacherData)
-      setEditedTeacher({ ...teacherData })
-    } else {
-      router.push("/receptionist")
+    // const teacherData = mockTeacherDetails[teacherId as keyof typeof mockTeacherDetails]
+    // if (teacherData) {
+    //   setTeacher(teacherData)
+    //   setEditedTeacher({ ...teacherData })
+    // } else {
+    //   router.push("/receptionist")
+    // }
+
+    const fetchData = async () => {
+      try {
+        const teacherData = await DataService.getTeacher(teacherId)
+        if (teacherData) {
+          setTeacher(teacherData)
+          setEditedTeacher({ ...teacherData })
+        } else {
+          router.push("/receptionist")
+        }
+
+        const coursesData = await DataService.getCourses()
+        setCourses(coursesData)
+      } catch (error) {
+        console.error("Error fetching data:", error)
+        router.push("/receptionist")
+      }
     }
+
+    fetchData()
   }, [teacherId, router])
 
   const handleEdit = () => {
@@ -131,6 +154,16 @@ export default function TeacherProfile() {
     setTeacher({ ...editedTeacher })
     setIsEditing(false)
     setShowSaveConfirmation(false)
+
+    if (teacherId && editedTeacher) {
+      DataService.updateTeacher(teacherId, editedTeacher)
+        .then(() => {
+          console.log("Teacher updated successfully")
+        })
+        .catch((error) => {
+          console.error("Error updating teacher:", error)
+        })
+    }
   }
 
   const handleCancel = () => {
@@ -153,7 +186,7 @@ export default function TeacherProfile() {
   }
 
   const canEdit = user.role === "receptionist" || user.role === "manager"
-  const teacherCourses = courses.filter((course) => course.teacherId === Number.parseInt(teacherId))
+  const teacherCourses = courses.filter((course) => course.teacherId === teacher.id)
   const activeCourses = teacherCourses.filter((course) => course.status === "active")
   const completedCourses = teacherCourses.filter((course) => course.status === "completed")
 

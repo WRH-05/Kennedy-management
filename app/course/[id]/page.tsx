@@ -25,6 +25,8 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
+import { DataService } from "@/services/dataService"
+import type { Course } from "@/mocks/courses"
 
 // Mock data for course detail
 const mockCourses = [
@@ -93,7 +95,7 @@ export default function CourseDetail() {
   const router = useRouter()
   const params = useParams()
   const courseId = params.id as string
-  const [course, setCourse] = useState<any>(null)
+  const [course, setCourse] = useState<Course | null>(null)
   const [user, setUser] = useState<any>(null)
   const [showAddStudentDialog, setShowAddStudentDialog] = useState(false)
   const [selectedStudent, setSelectedStudent] = useState("")
@@ -105,6 +107,9 @@ export default function CourseDetail() {
     description: "",
     action: () => {},
   })
+  const [selectedHistoryMonth, setSelectedHistoryMonth] = useState<string>("")
+  const [showHistoryDialog, setShowHistoryDialog] = useState(false)
+  const [showResetDialog, setShowResetDialog] = useState(false)
 
   useEffect(() => {
     // Check if user is logged in
@@ -116,7 +121,7 @@ export default function CourseDetail() {
     setUser(JSON.parse(userData))
 
     // Get course data
-    const courseData = mockCourses.find((c) => c.id.toString() === courseId)
+    const courseData = DataService.getCourseById(Number.parseInt(courseId))
     if (courseData) {
       setCourse(courseData)
     } else {
@@ -138,41 +143,53 @@ export default function CourseDetail() {
   }
 
   const toggleStudentPayment = (studentId: number) => {
-    const currentStatus = course.payments.students[studentId] || false
+    const currentStatus = course?.current.payments.students[studentId] || false
     setConfirmDialog({
       open: true,
       title: "Confirm Payment Status",
       description: `Mark payment as ${currentStatus ? "unpaid" : "paid"}?`,
       action: () => {
-        setCourse((prev: any) => ({
-          ...prev,
-          payments: {
-            ...prev.payments,
-            students: {
-              ...prev.payments.students,
-              [studentId]: !currentStatus,
+        setCourse((prev: any) => {
+          if (!prev) return null
+          return {
+            ...prev,
+            current: {
+              ...prev.current,
+              payments: {
+                ...prev.current.payments,
+                students: {
+                  ...prev.current.payments.students,
+                  [studentId]: !currentStatus,
+                },
+              },
             },
-          },
-        }))
+          }
+        })
         setConfirmDialog({ open: false, title: "", description: "", action: () => {} })
       },
     })
   }
 
   const toggleTeacherPayment = () => {
-    const currentStatus = course.payments.teacherPaid
+    const currentStatus = course?.current.payments.teacherPaid
     setConfirmDialog({
       open: true,
       title: "Confirm Teacher Payment",
       description: `Mark teacher payment as ${currentStatus ? "unpaid" : "paid"}?`,
       action: () => {
-        setCourse((prev: any) => ({
-          ...prev,
-          payments: {
-            ...prev.payments,
-            teacherPaid: !currentStatus,
-          },
-        }))
+        setCourse((prev: any) => {
+          if (!prev) return null
+          return {
+            ...prev,
+            current: {
+              ...prev.current,
+              payments: {
+                ...prev.current.payments,
+                teacherPaid: !currentStatus,
+              },
+            },
+          }
+        })
         setConfirmDialog({ open: false, title: "", description: "", action: () => {} })
       },
     })
@@ -185,22 +202,28 @@ export default function CourseDetail() {
     const student = mockStudents.find((s) => s.id.toString() === selectedStudent)
     if (!student) return
 
-    setCourse((prev: any) => ({
-      ...prev,
-      enrolledStudents: [...prev.enrolledStudents, student.id],
-      studentNames: [...prev.studentNames, student.name],
-      payments: {
-        ...prev.payments,
-        students: {
-          ...prev.payments.students,
-          [student.id]: false,
+    setCourse((prev: any) => {
+      if (!prev) return null
+      return {
+        ...prev,
+        current: {
+          ...prev.current,
+          enrolledStudents: [...prev.current.enrolledStudents, student.id],
+          studentNames: [...prev.current.studentNames, student.name],
+          payments: {
+            ...prev.current.payments,
+            students: {
+              ...prev.current.payments.students,
+              [student.id]: false,
+            },
+          },
+          attendance: {
+            ...prev.current.attendance,
+            [student.id]: { week1: false, week2: false, week3: false, week4: false },
+          },
         },
-      },
-      attendance: {
-        ...prev.attendance,
-        [student.id]: { week1: false, week2: false, week3: false, week4: false },
-      },
-    }))
+      }
+    })
 
     setSelectedStudent("")
     setStudentSearchQuery("")
@@ -208,38 +231,43 @@ export default function CourseDetail() {
   }
 
   const removeStudentFromCourse = (studentId: number) => {
-    const studentName = course.studentNames[course.enrolledStudents.findIndex((id: number) => id === studentId)]
+    const studentName =
+      course?.current.studentNames[course?.current.enrolledStudents.findIndex((id: number) => id === studentId)]
     setConfirmDialog({
       open: true,
       title: "Remove Student",
       description: `Are you sure you want to remove ${studentName} from this course?`,
       action: () => {
         setCourse((prev: any) => {
-          const studentIndex = prev.enrolledStudents.findIndex((id: number) => id === studentId)
+          if (!prev) return null
+          const studentIndex = prev.current.enrolledStudents.findIndex((id: number) => id === studentId)
           if (studentIndex === -1) return prev
 
-          const newEnrolledStudents = [...prev.enrolledStudents]
+          const newEnrolledStudents = [...prev.current.enrolledStudents]
           newEnrolledStudents.splice(studentIndex, 1)
 
-          const newStudentNames = [...prev.studentNames]
+          const newStudentNames = [...prev.current.studentNames]
           newStudentNames.splice(studentIndex, 1)
 
-          const newPayments = { ...prev.payments }
+          const newPayments = { ...prev.current.payments }
           delete newPayments.students[studentId]
 
-          const newAttendance = { ...prev.attendance }
+          const newAttendance = { ...prev.current.attendance }
           delete newAttendance[studentId]
 
           return {
             ...prev,
-            enrolledStudents: newEnrolledStudents,
-            studentNames: newStudentNames,
-            payments: {
-              ...newPayments,
-              students: { ...newPayments.students },
-            },
-            attendance: {
-              ...newAttendance,
+            current: {
+              ...prev.current,
+              enrolledStudents: newEnrolledStudents,
+              studentNames: newStudentNames,
+              payments: {
+                ...newPayments,
+                students: { ...newPayments.students },
+              },
+              attendance: {
+                ...newAttendance,
+              },
             },
           }
         })
@@ -247,6 +275,25 @@ export default function CourseDetail() {
       },
     })
   }
+
+  const handleResetForNewMonth = () => {
+    if (!course) return
+
+    const currentMonth = new Date().toISOString().slice(0, 7) // YYYY-MM format
+    const updatedCourse = DataService.resetCourseForNewMonth(course.id, currentMonth)
+
+    if (updatedCourse) {
+      setCourse(updatedCourse)
+      setShowResetDialog(false)
+    }
+  }
+
+  const viewHistory = (month: string) => {
+    setSelectedHistoryMonth(month)
+    setShowHistoryDialog(true)
+  }
+
+  const selectedHistory = course?.history.find((h) => h.month === selectedHistoryMonth)
 
   if (!course || !user) {
     return (
@@ -258,9 +305,11 @@ export default function CourseDetail() {
     )
   }
 
-  const availableStudents = mockStudents.filter((student) => !course.enrolledStudents.includes(student.id))
+  const availableStudents = mockStudents.filter((student) => !course.current.enrolledStudents.includes(student.id))
 
-  const teacherEarnings = Math.round((course.price * course.enrolledStudents.length * course.percentageCut) / 100)
+  const teacherEarnings = Math.round(
+    (course.current.price * course.current.enrolledStudents.length * course.current.percentageCut) / 100,
+  )
 
   const filteredStudents = availableStudents.filter((student) =>
     student.name.toLowerCase().includes(studentSearchQuery.toLowerCase()),
@@ -294,8 +343,8 @@ export default function CourseDetail() {
               </CardHeader>
               <CardContent className="space-y-4">
                 <div>
-                  <h3 className="font-semibold text-lg">{course.subject}</h3>
-                  <p className="text-gray-600">{course.schoolYear}</p>
+                  <h3 className="font-semibold text-lg">{course.current.subject}</h3>
+                  <p className="text-gray-600">{course.current.schoolYear}</p>
                 </div>
                 <div className="space-y-2">
                   <p>
@@ -310,34 +359,34 @@ export default function CourseDetail() {
                   </p>
                   <p>
                     <span className="font-medium">Type:</span>
-                    <Badge variant={course.courseType === "Group" ? "default" : "secondary"} className="ml-2">
-                      {course.courseType}
+                    <Badge variant={course.current.courseType === "Group" ? "default" : "secondary"} className="ml-2">
+                      {course.current.courseType}
                     </Badge>
                   </p>
                   <p>
-                    <span className="font-medium">Schedule:</span> {course.schedule}
+                    <span className="font-medium">Schedule:</span> {course.current.schedule}
                   </p>
                   <p>
-                    <span className="font-medium">Duration:</span> {course.duration}h
+                    <span className="font-medium">Duration:</span> {course.current.duration}h
                   </p>
                   <p>
                     <span className="font-medium">
-                      {course.courseType === "Group" ? "Monthly Price" : "Session Price"}:
+                      {course.current.courseType === "Group" ? "Monthly Price" : "Session Price"}:
                     </span>{" "}
-                    {course.price} DA
+                    {course.current.price} DA
                   </p>
                   <p>
-                    <span className="font-medium">Teacher Cut:</span> {course.percentageCut}%
+                    <span className="font-medium">Teacher Cut:</span> {course.current.percentageCut}%
                   </p>
                   <p>
-                    <span className="font-medium">Enrolled Students:</span> {course.enrolledStudents.length}
+                    <span className="font-medium">Enrolled Students:</span> {course.current.enrolledStudents.length}
                   </p>
                 </div>
                 <div className="pt-4 border-t">
                   <p>
                     <span className="font-medium">Status:</span>
-                    <Badge variant={course.status === "active" ? "default" : "secondary"} className="ml-2">
-                      {course.status}
+                    <Badge variant={course.current.status === "active" ? "default" : "secondary"} className="ml-2">
+                      {course.current.status}
                     </Badge>
                   </p>
                 </div>
@@ -356,19 +405,21 @@ export default function CourseDetail() {
                 <div className="flex items-center justify-between">
                   <Label>Teacher Payment</Label>
                   <Button
-                    variant={course.payments.teacherPaid ? "default" : "destructive"}
+                    variant={course.current.payments.teacherPaid ? "default" : "destructive"}
                     size="sm"
                     onClick={toggleTeacherPayment}
                   >
-                    {course.payments.teacherPaid ? "Paid" : "Pay"}
+                    {course.current.payments.teacherPaid ? "Paid" : "Pay"}
                   </Button>
                 </div>
                 <div className="pt-4 border-t">
                   <div className="flex justify-between items-center">
                     <span className="font-medium">
-                      Total {course.courseType === "Group" ? "Monthly" : "Session"} Revenue:
+                      Total {course.current.courseType === "Group" ? "Monthly" : "Session"} Revenue:
                     </span>
-                    <span className="text-lg font-bold">{course.price * course.enrolledStudents.length} DA</span>
+                    <span className="text-lg font-bold">
+                      {course.current.price * course.current.enrolledStudents.length} DA
+                    </span>
                   </div>
                   <div className="flex justify-between items-center">
                     <span className="font-medium">Teacher Earnings:</span>
@@ -467,7 +518,7 @@ export default function CourseDetail() {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {course.enrolledStudents.map((studentId: number, idx: number) => (
+                    {course.current.enrolledStudents.map((studentId: number, idx: number) => (
                       <TableRow key={studentId}>
                         <TableCell className="font-medium">
                           <Button
@@ -475,14 +526,16 @@ export default function CourseDetail() {
                             className="p-0 h-auto font-medium text-left"
                             onClick={() => router.push(`/student/${studentId}`)}
                           >
-                            {course.studentNames[idx]}
+                            {course.current.studentNames[idx]}
                           </Button>
                         </TableCell>
                         {["week1", "week2", "week3", "week4"].map((week) => (
                           <TableCell key={week}>
                             <Select
                               value={
-                                course.attendance[studentId]?.[week as keyof (typeof course.attendance)[studentId]]
+                                course.current.attendance[studentId]?.[
+                                  week as keyof (typeof course.current.attendance)[studentId]
+                                ]
                                   ? "p"
                                   : "a"
                               }
@@ -500,11 +553,11 @@ export default function CourseDetail() {
                         ))}
                         <TableCell>
                           <Button
-                            variant={course.payments.students[studentId] ? "default" : "destructive"}
+                            variant={course.current.payments.students[studentId] ? "default" : "destructive"}
                             size="sm"
                             onClick={() => toggleStudentPayment(studentId)}
                           >
-                            {course.payments.students[studentId] ? "Paid" : "Pay"}
+                            {course.current.payments.students[studentId] ? "Paid" : "Pay"}
                           </Button>
                         </TableCell>
                         <TableCell>
@@ -522,62 +575,137 @@ export default function CourseDetail() {
                   </TableBody>
                 </Table>
 
-                {course.enrolledStudents.length === 0 && (
+                {course.current.enrolledStudents.length === 0 && (
                   <div className="text-center py-8 text-gray-500">No students enrolled in this course.</div>
                 )}
               </CardContent>
             </Card>
 
-            {/* Course History */}
+            {/* Course History Section */}
             <Card className="mt-6">
               <CardHeader>
-                <CardTitle className="flex items-center">
-                  <Calendar className="h-5 w-5 mr-2" />
-                  Course History
-                </CardTitle>
+                <div className="flex justify-between items-center">
+                  <CardTitle className="flex items-center">
+                    <Calendar className="h-5 w-5 mr-2" />
+                    Course History
+                  </CardTitle>
+                  <Button onClick={() => setShowResetDialog(true)} variant="outline">
+                    <Calendar className="h-4 w-4 mr-2" />
+                    Reset for New Month
+                  </Button>
+                </div>
               </CardHeader>
               <CardContent>
                 <div className="space-y-4">
-                  <div className="flex justify-between items-center p-3 bg-gray-50 rounded-lg">
-                    <div>
-                      <p className="font-medium">Course Created</p>
-                      <p className="text-sm text-gray-600">Course was set up and activated</p>
-                    </div>
-                    <Badge variant="outline">Created</Badge>
-                  </div>
-
-                  {Object.entries(course.payments.students).some(([_, paid]) => paid) && (
-                    <div className="flex justify-between items-center p-3 bg-green-50 rounded-lg">
-                      <div>
-                        <p className="font-medium">Student Payments Received</p>
-                        <p className="text-sm text-gray-600">Some students have paid their fees</p>
+                  {course.history.length === 0 ? (
+                    <p className="text-gray-500 text-center py-4">No history available</p>
+                  ) : (
+                    course.history.map((entry) => (
+                      <div key={entry.month} className="flex justify-between items-center p-3 bg-gray-50 rounded-lg">
+                        <div>
+                          <p className="font-medium">
+                            {new Date(entry.month + "-01").toLocaleDateString("en-US", {
+                              month: "long",
+                              year: "numeric",
+                            })}
+                          </p>
+                          <p className="text-sm text-gray-600">
+                            {entry.students.length} students •
+                            {Object.values(entry.payments.students).filter(Boolean).length} paid • Teacher{" "}
+                            {entry.payments.teacherPaid ? "paid" : "unpaid"}
+                          </p>
+                        </div>
+                        <Button variant="outline" size="sm" onClick={() => viewHistory(entry.month)}>
+                          View Details
+                        </Button>
                       </div>
-                      <Badge variant="default">Payments</Badge>
-                    </div>
-                  )}
-
-                  {course.payments.teacherPaid && (
-                    <div className="flex justify-between items-center p-3 bg-blue-50 rounded-lg">
-                      <div>
-                        <p className="font-medium">Teacher Payment Made</p>
-                        <p className="text-sm text-gray-600">{teacherEarnings} DA paid to teacher</p>
-                      </div>
-                      <Badge variant="default">Paid</Badge>
-                    </div>
-                  )}
-
-                  {course.status === "completed" && (
-                    <div className="flex justify-between items-center p-3 bg-purple-50 rounded-lg">
-                      <div>
-                        <p className="font-medium">Course Completed</p>
-                        <p className="text-sm text-gray-600">All sessions finished</p>
-                      </div>
-                      <Badge variant="default">Completed</Badge>
-                    </div>
+                    ))
                   )}
                 </div>
               </CardContent>
             </Card>
+
+            {/* History Dialog */}
+            <Dialog open={showHistoryDialog} onOpenChange={setShowHistoryDialog}>
+              <DialogContent className="max-w-4xl">
+                <DialogHeader>
+                  <DialogTitle>
+                    Course History -{" "}
+                    {selectedHistory
+                      ? new Date(selectedHistory.month + "-01").toLocaleDateString("en-US", {
+                          month: "long",
+                          year: "numeric",
+                        })
+                      : ""}
+                  </DialogTitle>
+                </DialogHeader>
+                {selectedHistory && (
+                  <div className="space-y-4">
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>Students</TableHead>
+                          <TableHead>Week 1</TableHead>
+                          <TableHead>Week 2</TableHead>
+                          <TableHead>Week 3</TableHead>
+                          <TableHead>Week 4</TableHead>
+                          <TableHead>Payment</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {selectedHistory.students.map((studentId, idx) => (
+                          <TableRow key={studentId}>
+                            <TableCell className="font-medium">{selectedHistory.studentNames[idx]}</TableCell>
+                            {["week1", "week2", "week3", "week4"].map((week) => (
+                              <TableCell key={week}>
+                                <Badge
+                                  variant={selectedHistory.attendance[studentId]?.[week] ? "default" : "secondary"}
+                                >
+                                  {selectedHistory.attendance[studentId]?.[week] ? "P" : "A"}
+                                </Badge>
+                              </TableCell>
+                            ))}
+                            <TableCell>
+                              <Badge variant={selectedHistory.payments.students[studentId] ? "default" : "destructive"}>
+                                {selectedHistory.payments.students[studentId] ? "Paid" : "Unpaid"}
+                              </Badge>
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                    <div className="pt-4 border-t">
+                      <p className="font-medium">
+                        Teacher Payment:
+                        <Badge
+                          variant={selectedHistory.payments.teacherPaid ? "default" : "destructive"}
+                          className="ml-2"
+                        >
+                          {selectedHistory.payments.teacherPaid ? "Paid" : "Unpaid"}
+                        </Badge>
+                      </p>
+                    </div>
+                  </div>
+                )}
+              </DialogContent>
+            </Dialog>
+
+            {/* Reset Confirmation Dialog */}
+            <AlertDialog open={showResetDialog} onOpenChange={setShowResetDialog}>
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>Reset Course for New Month</AlertDialogTitle>
+                  <AlertDialogDescription>
+                    This will move the current month's data to history and reset attendance and payments for a new
+                    month. Students will remain enrolled. This action cannot be undone.
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel>Cancel</AlertDialogCancel>
+                  <AlertDialogAction onClick={handleResetForNewMonth}>Reset Course</AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
           </div>
         </div>
       </div>
