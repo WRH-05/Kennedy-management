@@ -1,111 +1,96 @@
 "use client"
 
+import type React from "react"
 import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { Checkbox } from "@/components/ui/checkbox"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Badge } from "@/components/ui/badge"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { LogOut, DollarSign, Users, BookOpen, TrendingUp, Calendar } from "lucide-react"
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog"
+import { LogOut, Users, Search, GraduationCap, BookOpen, Plus, DollarSign, Check, X, Calendar } from "lucide-react"
 import { DataService } from "@/services/dataService"
 import type { Student } from "@/mocks/students"
 import type { Teacher } from "@/mocks/teachers"
 import type { Course } from "@/mocks/courses"
-import type { PaymentRecord } from "@/mocks/payments"
+import type { Payment } from "@/mocks/payments"
 import { SortControls, type SortConfig } from "@/components/ui/sort-controls"
-
-// Mock data for manager view with enhanced payment histories
-const mockRevenue = [
-  { studentName: "Ahmed Ben Ali", course: "Mathematics", amount: 500, month: "2024-01", paid: true },
-  { studentName: "Fatima Zahra", course: "Physics", amount: 800, month: "2024-01", paid: false },
-  { studentName: "Fatima Zahra", course: "Chemistry", amount: 450, month: "2024-01", paid: true },
-  { studentName: "Omar Khaled", course: "Biology", amount: 600, month: "2024-01", paid: true },
-]
-
-const mockPayouts = [
-  {
-    teacherName: "Prof. Salim",
-    percentage: 65,
-    totalGenerated: 1500,
-    totalPayout: 975,
-    approved: false,
-    month: "2024-01",
-  },
-  {
-    teacherName: "Prof. Amina",
-    percentage: 70,
-    totalGenerated: 2400,
-    totalPayout: 1680,
-    approved: true,
-    month: "2024-01",
-  },
-  {
-    teacherName: "Prof. Omar",
-    percentage: 60,
-    totalGenerated: 1350,
-    totalPayout: 810,
-    approved: false,
-    month: "2024-01",
-  },
-]
-
-const mockStudentData = [
-  { id: 1, name: "Ahmed Ben Ali", schoolYear: "3AS", totalPaid: 500, coursesEnrolled: 1 },
-  { id: 2, name: "Fatima Zahra", schoolYear: "BAC", totalPaid: 450, coursesEnrolled: 2 },
-  { id: 3, name: "Omar Khaled", schoolYear: "2AS", totalPaid: 600, coursesEnrolled: 1 },
-]
-
-const mockTeacherData = [
-  { id: 1, name: "Prof. Salim", subjects: ["Mathematics"], students: 15, totalEarnings: 975 },
-  { id: 2, name: "Prof. Amina", subjects: ["Physics"], students: 12, totalEarnings: 1680 },
-  { id: 3, name: "Prof. Omar", subjects: ["Chemistry"], students: 18, totalEarnings: 810 },
-]
-
-const mockStudentPaymentHistory = [
-  {
-    studentId: 1,
-    studentName: "Ahmed Ben Ali",
-    month: "2024-01",
-    courses: [{ course: "Mathematics", amount: 500, paid: true }],
-  },
-  {
-    studentId: 2,
-    studentName: "Fatima Zahra",
-    month: "2024-01",
-    courses: [
-      { course: "Physics", amount: 800, paid: false },
-      { course: "Chemistry", amount: 450, paid: true },
-    ],
-  },
-]
-
-const mockProfessorPaymentHistory = [
-  {
-    professorId: 1,
-    professorName: "Prof. Salim",
-    month: "2024-01",
-    sessions: [{ course: "Mathematics", students: 1, amount: 975, paid: false }],
-  },
-  {
-    professorId: 2,
-    professorName: "Prof. Amina",
-    month: "2024-01",
-    sessions: [{ course: "Physics", students: 1, amount: 1680, paid: true }],
-  },
-]
 
 export default function ManagerDashboard() {
   const router = useRouter()
   const [user, setUser] = useState<any>(null)
-  const [payouts, setPayouts] = useState(mockPayouts)
-  const [selectedMonth, setSelectedMonth] = useState("2024-01")
   const [students, setStudents] = useState<Student[]>([])
   const [teachers, setTeachers] = useState<Teacher[]>([])
   const [courses, setCourses] = useState<Course[]>([])
-  const [payments, setPayments] = useState<PaymentRecord[]>([])
+  const [payments, setPayments] = useState<Payment[]>([])
+  const [searchQuery, setSearchQuery] = useState("")
+  const [searchResults, setSearchResults] = useState<any[]>([])
+  const [showSearchResults, setShowSearchResults] = useState(false)
   const [sortConfig, setSortConfig] = useState<SortConfig>({ key: "", direction: null })
+
+  // Dialog states
+  const [showAddStudentDialog, setShowAddStudentDialog] = useState(false)
+  const [showAddTeacherDialog, setShowAddTeacherDialog] = useState(false)
+  const [showAddCourseDialog, setShowAddCourseDialog] = useState(false)
+
+  // Form states
+  const [newStudent, setNewStudent] = useState({
+    name: "",
+    schoolYear: "",
+    specialty: "",
+    address: "",
+    birthDate: "",
+    phone: "",
+    email: "",
+    school: "",
+    photos: false,
+    copyOfId: false,
+    registrationForm: false,
+    registrationFeePaid: false,
+  })
+
+  const [newTeacher, setNewTeacher] = useState({
+    name: "",
+    address: "",
+    phone: "",
+    email: "",
+    school: "",
+    schoolYears: [] as string[],
+    subjects: [] as string[],
+  })
+
+  const [newCourse, setNewCourse] = useState({
+    teacherId: "",
+    teacherName: "",
+    subject: "",
+    schoolYear: "",
+    percentageCut: 50,
+    courseType: "Group",
+    duration: 2,
+    dayOfWeek: "",
+    startHour: "09:00",
+    price: 500,
+  })
+
+  const [teacherSearchQuery, setTeacherSearchQuery] = useState("")
+  const [showTeacherResults, setShowTeacherResults] = useState(false)
+  const [filteredTeachers, setFilteredTeachers] = useState<Teacher[]>([])
 
   useEffect(() => {
     const userData = localStorage.getItem("user")
@@ -127,65 +112,248 @@ export default function ManagerDashboard() {
     }
   }, [router])
 
+  // Enhanced search functionality
+  useEffect(() => {
+    if (searchQuery.trim()) {
+      const studentResults = students
+        .filter((student) => student.name.toLowerCase().includes(searchQuery.toLowerCase()))
+        .map((student) => ({ ...student, type: "student" }))
+
+      const teacherResults = teachers
+        .filter((teacher) => teacher.name.toLowerCase().includes(searchQuery.toLowerCase()))
+        .map((teacher) => ({ ...teacher, type: "teacher" }))
+
+      const courseResults = courses
+        .filter(
+          (course) =>
+            course.subject.toLowerCase().includes(searchQuery.toLowerCase()) ||
+            course.schoolYear.toLowerCase().includes(searchQuery.toLowerCase()) ||
+            course.teacherName.toLowerCase().includes(searchQuery.toLowerCase()),
+        )
+        .map((course) => ({ ...course, type: "course" }))
+
+      setSearchResults([...studentResults, ...teacherResults, ...courseResults])
+      setShowSearchResults(true)
+    } else {
+      setSearchResults([])
+      setShowSearchResults(false)
+    }
+  }, [searchQuery, students, teachers, courses])
+
+  useEffect(() => {
+    if (teacherSearchQuery.trim()) {
+      const filtered = teachers.filter((teacher) =>
+        teacher.name.toLowerCase().includes(teacherSearchQuery.toLowerCase()),
+      )
+      setFilteredTeachers(filtered)
+      setShowTeacherResults(true)
+    } else {
+      setFilteredTeachers([])
+      setShowTeacherResults(false)
+    }
+  }, [teacherSearchQuery, teachers])
+
   const handleLogout = () => {
     localStorage.removeItem("user")
     router.push("/")
   }
 
-  const approvePayout = (teacherName: string) => {
-    setPayouts(payouts.map((payout) => (payout.teacherName === teacherName ? { ...payout, approved: true } : payout)))
+  const handleAddStudent = (e: React.FormEvent) => {
+    e.preventDefault()
+    const student = DataService.addStudent({
+      name: newStudent.name,
+      schoolYear: newStudent.schoolYear,
+      specialty: newStudent.specialty,
+      address: newStudent.address,
+      birthDate: newStudent.birthDate,
+      phone: newStudent.phone,
+      email: newStudent.email,
+      school: newStudent.school,
+      registrationFeePaid: newStudent.registrationFeePaid,
+    })
+    setStudents([...students, student])
+    setNewStudent({
+      name: "",
+      schoolYear: "",
+      specialty: "",
+      address: "",
+      birthDate: "",
+      phone: "",
+      email: "",
+      school: "",
+      photos: false,
+      copyOfId: false,
+      registrationForm: false,
+      registrationFeePaid: false,
+    })
+    setShowAddStudentDialog(false)
   }
 
-  const handleMonthlyRollover = () => {
-    // Simulate monthly rollover - copy active group courses to new month
-    alert("Monthly rollover completed! Active group courses have been copied to the new month.")
+  const handleAddTeacher = (e: React.FormEvent) => {
+    e.preventDefault()
+    const teacher = DataService.addTeacher({
+      name: newTeacher.name,
+      address: newTeacher.address,
+      phone: newTeacher.phone,
+      email: newTeacher.email,
+      school: newTeacher.school,
+      schoolYears: newTeacher.schoolYears,
+      subjects: newTeacher.subjects,
+    })
+    setTeachers([...teachers, teacher])
+    setNewTeacher({
+      name: "",
+      address: "",
+      phone: "",
+      email: "",
+      school: "",
+      schoolYears: [],
+      subjects: [],
+    })
+    setShowAddTeacherDialog(false)
   }
 
-  const totalRevenue = courses.reduce((sum, course) => {
-    return (
-      sum +
-      Object.entries(course.current.payments.students)
-        .filter(([_, paid]) => paid)
-        .reduce((courseSum, _) => courseSum + course.price, 0)
-    )
-  }, 0)
+  const handleAddCourse = (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!newCourse.teacherId) return
 
-  const totalPayouts = payments
-    .filter((p) => p.status === "approved" && p.type === "teacher")
-    .reduce((sum, payment) => sum + payment.amount, 0)
-  const netProfit = totalRevenue - totalPayouts
+    const teacher = teachers.find((t) => t.id.toString() === newCourse.teacherId)
+    if (!teacher) return
 
-  const handleSort = (key: string) => {
-    let direction: "asc" | "desc" | null = "asc"
-    if (sortConfig.key === key && sortConfig.direction === "asc") {
-      direction = "desc"
-    } else if (sortConfig.key === key && sortConfig.direction === "desc") {
-      direction = null
+    const endHour = calculateEndHour(newCourse.startHour, newCourse.duration)
+
+    const course = DataService.addCourse({
+      templateId: courses.length + 1,
+      teacherId: teacher.id,
+      teacherName: teacher.name,
+      subject: newCourse.subject,
+      schoolYear: newCourse.schoolYear,
+      percentageCut: newCourse.percentageCut,
+      courseType: newCourse.courseType as "Group" | "Individual",
+      duration: newCourse.duration,
+      dayOfWeek: newCourse.dayOfWeek,
+      startHour: newCourse.startHour,
+      endHour: endHour,
+      schedule: `${newCourse.dayOfWeek} ${newCourse.startHour}-${endHour}`,
+      price: newCourse.price,
+      enrolledStudents: [],
+      status: "active" as const,
+      payments: {
+        students: {},
+        teacherPaid: false,
+      },
+      current: {
+        students: [],
+        attendance: {},
+        payments: {
+          students: {},
+          teacherPaid: false,
+        },
+      },
+      history: [],
+    })
+    setCourses([...courses, course])
+    setNewCourse({
+      teacherId: "",
+      teacherName: "",
+      subject: "",
+      schoolYear: "",
+      percentageCut: 50,
+      courseType: "Group",
+      duration: 2,
+      dayOfWeek: "",
+      startHour: "09:00",
+      price: 500,
+    })
+    setShowAddCourseDialog(false)
+  }
+
+  const calculateEndHour = (startHour: string, duration: number) => {
+    const [hours, minutes] = startHour.split(":").map(Number)
+    const startMinutes = hours * 60 + minutes
+    const endMinutes = startMinutes + duration * 60
+    const endHours = Math.floor(endMinutes / 60)
+    const endMins = endMinutes % 60
+    return `${endHours.toString().padStart(2, "0")}:${endMins.toString().padStart(2, "0")}`
+  }
+
+  const handleMultiSelect = (value: string, currentArray: string[], setter: (arr: string[]) => void) => {
+    if (currentArray.includes(value)) {
+      setter(currentArray.filter((item) => item !== value))
+    } else {
+      setter([...currentArray, value])
     }
-    setSortConfig({ key, direction })
   }
 
-  const sortData = <T extends Record<string, any>>(data: T[], key: string, direction: "asc" | "desc" | null): T[] => {
-    if (!direction) return data
+  const handleSearchResultClick = (result: any) => {
+    if (result.type === "student") {
+      router.push(`/student/${result.id}`)
+    } else if (result.type === "teacher") {
+      router.push(`/teacher/${result.id}`)
+    } else if (result.type === "course") {
+      router.push(`/course/${result.id}`)
+    }
+    setSearchQuery("")
+    setShowSearchResults(false)
+  }
+
+  const handleApprovePayment = (paymentId: number) => {
+    const updatedPayment = DataService.updatePayment(paymentId, {
+      status: "approved",
+      approvedBy: user.username,
+      approvedAt: new Date().toISOString(),
+    })
+    if (updatedPayment) {
+      setPayments(payments.map((p) => (p.id === paymentId ? updatedPayment : p)))
+    }
+  }
+
+  const handleRejectPayment = (paymentId: number) => {
+    const updatedPayment = DataService.updatePayment(paymentId, {
+      status: "rejected",
+      approvedBy: user.username,
+      approvedAt: new Date().toISOString(),
+    })
+    if (updatedPayment) {
+      setPayments(payments.map((p) => (p.id === paymentId ? updatedPayment : p)))
+    }
+  }
+
+  // Sorting functions
+  const sortData = (data: any[], sortConfig: SortConfig) => {
+    if (!sortConfig.key) {
+      return data
+    }
 
     return [...data].sort((a, b) => {
-      let aVal = a[key]
-      let bVal = b[key]
+      const direction = sortConfig.direction === "ascending" ? 1 : -1
+      const key = sortConfig.key
 
-      // Handle special cases
-      if (key === "nextSession") {
-        aVal = new Date(aVal || "9999-12-31").getTime()
-        bVal = new Date(bVal || "9999-12-31").getTime()
-      } else if (typeof aVal === "string") {
-        aVal = aVal.toLowerCase()
-        bVal = bVal.toLowerCase()
+      if (a[key] < b[key]) {
+        return -1 * direction
       }
-
-      if (aVal < bVal) return direction === "asc" ? -1 : 1
-      if (aVal > bVal) return direction === "asc" ? 1 : -1
+      if (a[key] > b[key]) {
+        return 1 * direction
+      }
       return 0
     })
   }
+
+  const sortedStudents = sortData(students, sortConfig)
+  const sortedTeachers = sortData(teachers, sortConfig)
+  const sortedCourses = sortData(courses, sortConfig)
+
+  // Group payments by month
+  const paymentsByMonth = payments.reduce(
+    (acc, payment) => {
+      if (!acc[payment.month]) {
+        acc[payment.month] = []
+      }
+      acc[payment.month].push(payment)
+      return acc
+    },
+    {} as Record<string, Payment[]>,
+  )
 
   if (!user) return null
 
@@ -196,11 +364,58 @@ export default function ManagerDashboard() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-16">
             <h1 className="text-xl font-semibold text-gray-900">Manager Dashboard</h1>
+
+            {/* Enhanced Global Search */}
+            <div className="flex-1 max-w-md mx-4 relative">
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
+                <Input
+                  placeholder="Search students, teachers, courses..."
+                  className="pl-10"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                />
+              </div>
+
+              {/* Enhanced Search Results Dropdown */}
+              {showSearchResults && searchResults.length > 0 && (
+                <div className="absolute top-full left-0 right-0 mt-1 bg-white border rounded-md shadow-lg z-50 max-h-60 overflow-y-auto">
+                  {searchResults.map((result, index) => (
+                    <div
+                      key={index}
+                      className="px-4 py-2 hover:bg-gray-50 cursor-pointer border-b last:border-b-0"
+                      onClick={() => handleSearchResultClick(result)}
+                    >
+                      <div className="flex items-center justify-between">
+                        <span className="font-medium">{result.name || result.subject}</span>
+                        <Badge
+                          variant={
+                            result.type === "student" ? "default" : result.type === "teacher" ? "secondary" : "outline"
+                          }
+                        >
+                          {result.type === "student" ? "Student" : result.type === "teacher" ? "Teacher" : "Course"}
+                        </Badge>
+                      </div>
+                      {result.type === "student" && (
+                        <p className="text-sm text-gray-600">
+                          {result.schoolYear} - {result.school}
+                        </p>
+                      )}
+                      {result.type === "teacher" && (
+                        <p className="text-sm text-gray-600">{result.subjects?.join(", ")}</p>
+                      )}
+                      {result.type === "course" && (
+                        <p className="text-sm text-gray-600">
+                          {result.teacherName} - {result.schoolYear} - {result.schedule}
+                        </p>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
             <div className="flex items-center space-x-4">
-              <Button onClick={handleMonthlyRollover} variant="outline">
-                <Calendar className="h-4 w-4 mr-2" />
-                Monthly Rollover
-              </Button>
               <span className="text-sm text-gray-600">Welcome, {user.username}</span>
               <Button variant="outline" size="sm" onClick={handleLogout}>
                 <LogOut className="h-4 w-4 mr-2" />
@@ -212,180 +427,13 @@ export default function ManagerDashboard() {
       </header>
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* Summary Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Total Revenue</CardTitle>
-              <TrendingUp className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{totalRevenue.toLocaleString()} DA</div>
-              <p className="text-xs text-muted-foreground">This month</p>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Total Payouts</CardTitle>
-              <DollarSign className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{totalPayouts.toLocaleString()} DA</div>
-              <p className="text-xs text-muted-foreground">To teachers</p>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Net Profit</CardTitle>
-              <TrendingUp className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{netProfit.toLocaleString()} DA</div>
-              <p className="text-xs text-muted-foreground">This month</p>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Active Students</CardTitle>
-              <Users className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{students.length}</div>
-              <p className="text-xs text-muted-foreground">Enrolled</p>
-            </CardContent>
-          </Card>
-        </div>
-
-        <Tabs defaultValue="payments" className="space-y-6">
-          <TabsList className="grid w-full grid-cols-6">
-            <TabsTrigger value="payments">Payments</TabsTrigger>
+        <Tabs defaultValue="students" className="space-y-6">
+          <TabsList className="grid w-full grid-cols-4">
             <TabsTrigger value="students">Students</TabsTrigger>
-            <TabsTrigger value="teachers">Teachers</TabsTrigger>
             <TabsTrigger value="courses">Courses</TabsTrigger>
-            <TabsTrigger value="analytics">Analytics</TabsTrigger>
+            <TabsTrigger value="teachers">Teachers</TabsTrigger>
+            <TabsTrigger value="payments">Payments</TabsTrigger>
           </TabsList>
-
-          {/* Payments Tab - Merged from Student and Professor payments */}
-          <TabsContent value="payments">
-            <Card>
-              <CardHeader>
-                <div className="flex justify-between items-center">
-                  <CardTitle className="flex items-center">
-                    <DollarSign className="h-5 w-5 mr-2" />
-                    Payment Management
-                  </CardTitle>
-                  <Select value={selectedMonth} onValueChange={setSelectedMonth}>
-                    <SelectTrigger className="w-40">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="2025-02">February 2025</SelectItem>
-                      <SelectItem value="2025-01">January 2025</SelectItem>
-                      <SelectItem value="2024-12">December 2024</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-6">
-                  {Object.entries(
-                    payments
-                      .filter((p) => p.month === selectedMonth)
-                      .reduce(
-                        (acc, payment) => {
-                          if (!acc[payment.month]) acc[payment.month] = []
-                          acc[payment.month].push(payment)
-                          return acc
-                        },
-                        {} as Record<string, PaymentRecord[]>,
-                      ),
-                  ).map(([month, monthPayments]) => (
-                    <div key={month} className="border rounded-lg p-4">
-                      <h3 className="font-semibold text-lg mb-3">
-                        {new Date(month + "-01").toLocaleDateString("en-US", { month: "long", year: "numeric" })}
-                      </h3>
-                      <Table>
-                        <TableHeader>
-                          <TableRow>
-                            <TableHead>Type</TableHead>
-                            <TableHead>Name</TableHead>
-                            <TableHead>Course</TableHead>
-                            <TableHead>Amount</TableHead>
-                            <TableHead>Status</TableHead>
-                            <TableHead>Created By</TableHead>
-                            <TableHead>Actions</TableHead>
-                          </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                          {monthPayments.map((payment) => {
-                            const name =
-                              payment.type === "student"
-                                ? students.find((s) => s.id === payment.studentId)?.name
-                                : teachers.find((t) => t.id === payment.teacherId)?.name
-
-                            return (
-                              <TableRow key={payment.id}>
-                                <TableCell>
-                                  <Badge variant={payment.type === "student" ? "default" : "secondary"}>
-                                    {payment.type}
-                                  </Badge>
-                                </TableCell>
-                                <TableCell className="font-medium">{name}</TableCell>
-                                <TableCell>{payment.courseName}</TableCell>
-                                <TableCell>{payment.amount} DA</TableCell>
-                                <TableCell>
-                                  <Badge
-                                    variant={
-                                      payment.status === "approved"
-                                        ? "default"
-                                        : payment.status === "rejected"
-                                          ? "destructive"
-                                          : "secondary"
-                                    }
-                                  >
-                                    {payment.status}
-                                  </Badge>
-                                </TableCell>
-                                <TableCell>{payment.createdBy}</TableCell>
-                                <TableCell>
-                                  {payment.status === "pending" && (
-                                    <div className="flex space-x-2">
-                                      <Button
-                                        size="sm"
-                                        onClick={() => {
-                                          DataService.approvePayment(payment.id, user.username)
-                                          setPayments(DataService.getPayments())
-                                        }}
-                                      >
-                                        Approve
-                                      </Button>
-                                      <Button
-                                        size="sm"
-                                        variant="outline"
-                                        onClick={() => {
-                                          DataService.updatePayment(payment.id, { status: "rejected" })
-                                          setPayments(DataService.getPayments())
-                                        }}
-                                      >
-                                        Reject
-                                      </Button>
-                                    </div>
-                                  )}
-                                  {payment.status === "approved" && (
-                                    <span className="text-sm text-gray-600">by {payment.approvedBy}</span>
-                                  )}
-                                </TableCell>
-                              </TableRow>
-                            )
-                          })}
-                        </TableBody>
-                      </Table>
-                    </div>
-                  ))}
-                </div>
-              </CardContent>
-            </Card>
-          </TabsContent>
 
           {/* Students Tab - Same as Receptionist */}
           <TabsContent value="students">
@@ -394,16 +442,179 @@ export default function ManagerDashboard() {
                 <div className="flex justify-between items-center">
                   <CardTitle className="flex items-center">
                     <Users className="h-5 w-5 mr-2" />
-                    Student Management
+                    Student List
                   </CardTitle>
-                  <div className="flex items-center space-x-2">
-                    <SortControls sortKey="name" currentSort={sortConfig} onSort={handleSort} label="Name" />
+                  <div className="flex items-center space-x-4">
                     <SortControls
-                      sortKey="schoolYear"
-                      currentSort={sortConfig}
-                      onSort={handleSort}
-                      label="School Year"
+                      sortConfig={sortConfig}
+                      setSortConfig={setSortConfig}
+                      columns={[
+                        { key: "name", label: "Name" },
+                        { key: "schoolYear", label: "School Year" },
+                        { key: "specialty", label: "Specialty" },
+                      ]}
                     />
+                    <Dialog open={showAddStudentDialog} onOpenChange={setShowAddStudentDialog}>
+                      <DialogTrigger asChild>
+                        <Button>
+                          <Plus className="h-4 w-4 mr-2" />
+                          Add Student
+                        </Button>
+                      </DialogTrigger>
+                      <DialogContent className="max-w-2xl">
+                        <DialogHeader>
+                          <DialogTitle>Add New Student</DialogTitle>
+                        </DialogHeader>
+                        <form onSubmit={handleAddStudent} className="space-y-4">
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div className="space-y-2">
+                              <Label htmlFor="name">Student Name</Label>
+                              <Input
+                                id="name"
+                                value={newStudent.name}
+                                onChange={(e) => setNewStudent({ ...newStudent, name: e.target.value })}
+                                required
+                              />
+                            </div>
+                            <div className="space-y-2">
+                              <Label htmlFor="schoolYear">School Year</Label>
+                              <Select
+                                value={newStudent.schoolYear}
+                                onValueChange={(value) => setNewStudent({ ...newStudent, schoolYear: value })}
+                              >
+                                <SelectTrigger>
+                                  <SelectValue placeholder="Select school year" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  <SelectItem value="1AS">1AS</SelectItem>
+                                  <SelectItem value="2AS">2AS</SelectItem>
+                                  <SelectItem value="3AS">3AS</SelectItem>
+                                  <SelectItem value="BEM">BEM</SelectItem>
+                                  <SelectItem value="BAC">BAC</SelectItem>
+                                </SelectContent>
+                              </Select>
+                            </div>
+                            <div className="space-y-2">
+                              <Label htmlFor="specialty">Specialty</Label>
+                              <Select
+                                value={newStudent.specialty}
+                                onValueChange={(value) => setNewStudent({ ...newStudent, specialty: value })}
+                              >
+                                <SelectTrigger>
+                                  <SelectValue placeholder="Select specialty" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  <SelectItem value="Math">Mathematics</SelectItem>
+                                  <SelectItem value="Sciences">Sciences</SelectItem>
+                                  <SelectItem value="Literature">Literature</SelectItem>
+                                  <SelectItem value="Languages">Languages</SelectItem>
+                                </SelectContent>
+                              </Select>
+                            </div>
+                            <div className="space-y-2">
+                              <Label htmlFor="address">Address</Label>
+                              <Input
+                                id="address"
+                                value={newStudent.address}
+                                onChange={(e) => setNewStudent({ ...newStudent, address: e.target.value })}
+                                required
+                              />
+                            </div>
+                            <div className="space-y-2">
+                              <Label htmlFor="birthDate">Birth Date</Label>
+                              <Input
+                                id="birthDate"
+                                type="date"
+                                value={newStudent.birthDate}
+                                onChange={(e) => setNewStudent({ ...newStudent, birthDate: e.target.value })}
+                                required
+                              />
+                            </div>
+                            <div className="space-y-2">
+                              <Label htmlFor="phone">Phone Number</Label>
+                              <Input
+                                id="phone"
+                                value={newStudent.phone}
+                                onChange={(e) => setNewStudent({ ...newStudent, phone: e.target.value })}
+                                required
+                              />
+                            </div>
+                            <div className="space-y-2">
+                              <Label htmlFor="email">Email (Optional)</Label>
+                              <Input
+                                id="email"
+                                type="email"
+                                value={newStudent.email}
+                                onChange={(e) => setNewStudent({ ...newStudent, email: e.target.value })}
+                              />
+                            </div>
+                            <div className="space-y-2">
+                              <Label htmlFor="school">School They Attend</Label>
+                              <Input
+                                id="school"
+                                value={newStudent.school}
+                                onChange={(e) => setNewStudent({ ...newStudent, school: e.target.value })}
+                                required
+                              />
+                            </div>
+                          </div>
+
+                          <div className="space-y-4">
+                            <Label>Document Checklist</Label>
+                            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                              <div className="flex items-center space-x-2">
+                                <Checkbox
+                                  id="photos"
+                                  checked={newStudent.photos}
+                                  onCheckedChange={(checked) =>
+                                    setNewStudent({ ...newStudent, photos: checked as boolean })
+                                  }
+                                />
+                                <Label htmlFor="photos">Photos</Label>
+                              </div>
+                              <div className="flex items-center space-x-2">
+                                <Checkbox
+                                  id="copyOfId"
+                                  checked={newStudent.copyOfId}
+                                  onCheckedChange={(checked) =>
+                                    setNewStudent({ ...newStudent, copyOfId: checked as boolean })
+                                  }
+                                />
+                                <Label htmlFor="copyOfId">Copy of ID</Label>
+                              </div>
+                              <div className="flex items-center space-x-2">
+                                <Checkbox
+                                  id="registrationForm"
+                                  checked={newStudent.registrationForm}
+                                  onCheckedChange={(checked) =>
+                                    setNewStudent({ ...newStudent, registrationForm: checked as boolean })
+                                  }
+                                />
+                                <Label htmlFor="registrationForm">Registration Form</Label>
+                              </div>
+                            </div>
+                          </div>
+
+                          <div className="flex items-center space-x-2">
+                            <Checkbox
+                              id="registrationFee"
+                              checked={newStudent.registrationFeePaid}
+                              onCheckedChange={(checked) =>
+                                setNewStudent({ ...newStudent, registrationFeePaid: checked as boolean })
+                              }
+                            />
+                            <Label htmlFor="registrationFee">Registration Fee Paid</Label>
+                          </div>
+
+                          <div className="flex justify-end space-x-2">
+                            <Button type="button" variant="outline" onClick={() => setShowAddStudentDialog(false)}>
+                              Cancel
+                            </Button>
+                            <Button type="submit">Add Student</Button>
+                          </div>
+                        </form>
+                      </DialogContent>
+                    </Dialog>
                   </div>
                 </div>
               </CardHeader>
@@ -416,12 +627,13 @@ export default function ManagerDashboard() {
                       <TableHead>Specialty</TableHead>
                       <TableHead>Enrolled Courses</TableHead>
                       <TableHead>Payment Status</TableHead>
-                      <TableHead>Actions</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {sortData(students, sortConfig.key, sortConfig.direction).map((student) => {
-                      const studentCourses = courses.filter((c) => c.current.enrolledStudents.includes(student.id))
+                    {sortedStudents.map((student) => {
+                      const studentCourses = courses.filter(
+                        (course) => course.enrolledStudents && course.enrolledStudents.includes(student.id),
+                      )
                       return (
                         <TableRow key={student.id}>
                           <TableCell className="font-medium">
@@ -446,17 +658,300 @@ export default function ManagerDashboard() {
                             {studentCourses.map((course, idx) => (
                               <Badge
                                 key={idx}
-                                variant={course.current.payments.students[student.id] ? "default" : "destructive"}
+                                variant={course.payments.students[student.id] ? "default" : "destructive"}
                                 className="mr-1"
                               >
-                                {course.current.payments.students[student.id] ? "Paid" : "Pending"}
+                                {course.payments.students[student.id] ? "Paid" : "Pending"}
                               </Badge>
                             ))}
                           </TableCell>
-                          <TableCell>
-                            <Button variant="outline" size="sm" onClick={() => router.push(`/student/${student.id}`)}>
-                              View Details
+                        </TableRow>
+                      )
+                    })}
+                  </TableBody>
+                </Table>
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          {/* Courses Tab - Same as Receptionist */}
+          <TabsContent value="courses">
+            <Card>
+              <CardHeader>
+                <div className="flex justify-between items-center">
+                  <CardTitle className="flex items-center">
+                    <BookOpen className="h-5 w-5 mr-2" />
+                    All Courses
+                  </CardTitle>
+                  <div className="flex items-center space-x-4">
+                    <SortControls
+                      sortConfig={sortConfig}
+                      setSortConfig={setSortConfig}
+                      columns={[
+                        { key: "subject", label: "Subject" },
+                        { key: "teacherName", label: "Teacher" },
+                        { key: "schoolYear", label: "School Year" },
+                      ]}
+                    />
+                    <Dialog open={showAddCourseDialog} onOpenChange={setShowAddCourseDialog}>
+                      <DialogTrigger asChild>
+                        <Button>
+                          <Plus className="h-4 w-4 mr-2" />
+                          Add Course
+                        </Button>
+                      </DialogTrigger>
+                      <DialogContent className="max-w-2xl">
+                        <DialogHeader>
+                          <DialogTitle>Add New Course</DialogTitle>
+                        </DialogHeader>
+                        <form onSubmit={handleAddCourse} className="space-y-4">
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div className="space-y-2 md:col-span-2">
+                              <Label htmlFor="teacherSearch">Teacher</Label>
+                              <div className="relative">
+                                <Input
+                                  id="teacherSearch"
+                                  placeholder="Search for a teacher..."
+                                  value={teacherSearchQuery}
+                                  onChange={(e) => setTeacherSearchQuery(e.target.value)}
+                                  required
+                                />
+                                {showTeacherResults && filteredTeachers.length > 0 && (
+                                  <div className="absolute top-full left-0 right-0 mt-1 bg-white border rounded-md shadow-lg z-50 max-h-40 overflow-y-auto">
+                                    {filteredTeachers.map((teacher) => (
+                                      <div
+                                        key={teacher.id}
+                                        className="px-4 py-2 hover:bg-gray-50 cursor-pointer border-b last:border-b-0"
+                                        onClick={() => {
+                                          setNewCourse({
+                                            ...newCourse,
+                                            teacherId: teacher.id.toString(),
+                                            teacherName: teacher.name,
+                                          })
+                                          setTeacherSearchQuery(teacher.name)
+                                          setShowTeacherResults(false)
+                                        }}
+                                      >
+                                        <div className="font-medium">{teacher.name}</div>
+                                        <div className="text-sm text-gray-600">{teacher.subjects.join(", ")}</div>
+                                      </div>
+                                    ))}
+                                  </div>
+                                )}
+                              </div>
+                              {newCourse.teacherName && (
+                                <div className="text-sm text-green-600">Selected: {newCourse.teacherName}</div>
+                              )}
+                            </div>
+                            {newCourse.teacherId && (
+                              <>
+                                <div className="space-y-2">
+                                  <Label htmlFor="subject">Subject</Label>
+                                  <Select
+                                    value={newCourse.subject}
+                                    onValueChange={(value) => setNewCourse({ ...newCourse, subject: value })}
+                                    required
+                                  >
+                                    <SelectTrigger>
+                                      <SelectValue placeholder="Select subject" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                      {teachers
+                                        .find((t) => t.id.toString() === newCourse.teacherId)
+                                        ?.subjects.map((subject) => (
+                                          <SelectItem key={subject} value={subject}>
+                                            {subject}
+                                          </SelectItem>
+                                        ))}
+                                    </SelectContent>
+                                  </Select>
+                                </div>
+                                <div className="space-y-2">
+                                  <Label htmlFor="schoolYear">School Year</Label>
+                                  <Select
+                                    value={newCourse.schoolYear}
+                                    onValueChange={(value) => setNewCourse({ ...newCourse, schoolYear: value })}
+                                    required
+                                  >
+                                    <SelectTrigger>
+                                      <SelectValue placeholder="Select school year" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                      {teachers
+                                        .find((t) => t.id.toString() === newCourse.teacherId)
+                                        ?.schoolYears.map((year) => (
+                                          <SelectItem key={year} value={year}>
+                                            {year}
+                                          </SelectItem>
+                                        ))}
+                                    </SelectContent>
+                                  </Select>
+                                </div>
+                              </>
+                            )}
+                            <div className="space-y-2">
+                              <Label htmlFor="percentageCut">Percentage Cut (40-70%)</Label>
+                              <Input
+                                id="percentageCut"
+                                type="number"
+                                min="40"
+                                max="70"
+                                value={newCourse.percentageCut}
+                                onChange={(e) =>
+                                  setNewCourse({ ...newCourse, percentageCut: Number.parseInt(e.target.value) })
+                                }
+                                required
+                              />
+                            </div>
+                            <div className="space-y-2">
+                              <Label htmlFor="courseType">Course Type</Label>
+                              <Select
+                                value={newCourse.courseType}
+                                onValueChange={(value) => setNewCourse({ ...newCourse, courseType: value })}
+                                required
+                              >
+                                <SelectTrigger>
+                                  <SelectValue />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  <SelectItem value="Group">Group</SelectItem>
+                                  <SelectItem value="Individual">Individual</SelectItem>
+                                </SelectContent>
+                              </Select>
+                            </div>
+                            <div className="space-y-2">
+                              <Label htmlFor="duration">Duration (hours)</Label>
+                              <Input
+                                id="duration"
+                                type="number"
+                                step="0.5"
+                                min="0.5"
+                                max="4"
+                                value={newCourse.duration}
+                                onChange={(e) =>
+                                  setNewCourse({ ...newCourse, duration: Number.parseFloat(e.target.value) })
+                                }
+                                required
+                              />
+                            </div>
+                            <div className="space-y-2">
+                              <Label htmlFor="dayOfWeek">Day of the Week</Label>
+                              <Select
+                                value={newCourse.dayOfWeek}
+                                onValueChange={(value) => setNewCourse({ ...newCourse, dayOfWeek: value })}
+                                required
+                              >
+                                <SelectTrigger>
+                                  <SelectValue placeholder="Select day" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  <SelectItem value="Monday">Monday</SelectItem>
+                                  <SelectItem value="Tuesday">Tuesday</SelectItem>
+                                  <SelectItem value="Wednesday">Wednesday</SelectItem>
+                                  <SelectItem value="Thursday">Thursday</SelectItem>
+                                  <SelectItem value="Friday">Friday</SelectItem>
+                                  <SelectItem value="Saturday">Saturday</SelectItem>
+                                  <SelectItem value="Sunday">Sunday</SelectItem>
+                                </SelectContent>
+                              </Select>
+                            </div>
+                            <div className="space-y-2">
+                              <Label htmlFor="startHour">Start Hour</Label>
+                              <Input
+                                id="startHour"
+                                type="time"
+                                value={newCourse.startHour}
+                                onChange={(e) => setNewCourse({ ...newCourse, startHour: e.target.value })}
+                                required
+                              />
+                            </div>
+                            <div className="space-y-2">
+                              <Label htmlFor="price">
+                                {newCourse.courseType === "Group" ? "Monthly Price" : "Session Price"} (DA)
+                              </Label>
+                              <Input
+                                id="price"
+                                type="number"
+                                value={newCourse.price}
+                                onChange={(e) => setNewCourse({ ...newCourse, price: Number.parseInt(e.target.value) })}
+                                required
+                              />
+                            </div>
+                            <div className="space-y-2">
+                              <Label>End Hour (Calculated)</Label>
+                              <div className="p-2 bg-gray-50 rounded border text-sm">
+                                {newCourse.startHour && newCourse.duration
+                                  ? calculateEndHour(newCourse.startHour, newCourse.duration)
+                                  : "--:--"}
+                              </div>
+                            </div>
+                          </div>
+                          <div className="flex justify-end space-x-2">
+                            <Button type="button" variant="outline" onClick={() => setShowAddCourseDialog(false)}>
+                              Cancel
                             </Button>
+                            <Button type="submit">Add Course</Button>
+                          </div>
+                        </form>
+                      </DialogContent>
+                    </Dialog>
+                  </div>
+                </div>
+              </CardHeader>
+              <CardContent>
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Status</TableHead>
+                      <TableHead>Course</TableHead>
+                      <TableHead>Teacher</TableHead>
+                      <TableHead>Type</TableHead>
+                      <TableHead>Schedule</TableHead>
+                      <TableHead>Students</TableHead>
+                      <TableHead>Price</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {sortedCourses.map((course) => {
+                      const enrolledStudents = students.filter(
+                        (s) => course.enrolledStudents && course.enrolledStudents.includes(s.id),
+                      )
+                      return (
+                        <TableRow key={course.id}>
+                          <TableCell>
+                            <div
+                              className={`w-3 h-3 rounded-full ${
+                                course.status === "active" ? "bg-green-500" : "bg-red-500"
+                              }`}
+                            />
+                          </TableCell>
+                          <TableCell className="font-medium">
+                            <Button
+                              variant="link"
+                              className="p-0 h-auto font-medium text-left"
+                              onClick={() => router.push(`/course/${course.id}`)}
+                            >
+                              {course.subject} - {course.schoolYear}
+                            </Button>
+                          </TableCell>
+                          <TableCell>
+                            <Button
+                              variant="link"
+                              className="p-0 h-auto font-medium text-left"
+                              onClick={() => router.push(`/teacher/${course.teacherId}`)}
+                            >
+                              {course.teacherName}
+                            </Button>
+                          </TableCell>
+                          <TableCell>
+                            <Badge variant={course.courseType === "Group" ? "default" : "secondary"}>
+                              {course.courseType}
+                            </Badge>
+                          </TableCell>
+                          <TableCell>{course.schedule}</TableCell>
+                          <TableCell>{enrolledStudents.length} students</TableCell>
+                          <TableCell>
+                            {course.price} DA {course.courseType === "Group" ? "/month" : "/session"}
                           </TableCell>
                         </TableRow>
                       )
@@ -473,11 +968,169 @@ export default function ManagerDashboard() {
               <CardHeader>
                 <div className="flex justify-between items-center">
                   <CardTitle className="flex items-center">
-                    <BookOpen className="h-5 w-5 mr-2" />
-                    Teacher Management
+                    <GraduationCap className="h-5 w-5 mr-2" />
+                    Teacher List
                   </CardTitle>
-                  <div className="flex items-center space-x-2">
-                    <SortControls sortKey="name" currentSort={sortConfig} onSort={handleSort} label="Name" />
+                  <div className="flex items-center space-x-4">
+                    <SortControls
+                      sortConfig={sortConfig}
+                      setSortConfig={setSortConfig}
+                      columns={[
+                        { key: "name", label: "Name" },
+                        { key: "school", label: "School" },
+                      ]}
+                    />
+                    <Dialog open={showAddTeacherDialog} onOpenChange={setShowAddTeacherDialog}>
+                      <DialogTrigger asChild>
+                        <Button>
+                          <Plus className="h-4 w-4 mr-2" />
+                          Add Teacher
+                        </Button>
+                      </DialogTrigger>
+                      <DialogContent className="max-w-2xl">
+                        <DialogHeader>
+                          <DialogTitle>Add New Teacher</DialogTitle>
+                        </DialogHeader>
+                        <form onSubmit={handleAddTeacher} className="space-y-4">
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div className="space-y-2">
+                              <Label htmlFor="profName">Full Name</Label>
+                              <Input
+                                id="profName"
+                                value={newTeacher.name}
+                                onChange={(e) => setNewTeacher({ ...newTeacher, name: e.target.value })}
+                                required
+                              />
+                            </div>
+                            <div className="space-y-2">
+                              <Label htmlFor="profAddress">Address</Label>
+                              <Input
+                                id="profAddress"
+                                value={newTeacher.address}
+                                onChange={(e) => setNewTeacher({ ...newTeacher, address: e.target.value })}
+                                required
+                              />
+                            </div>
+                            <div className="space-y-2">
+                              <Label htmlFor="profPhone">Phone Number</Label>
+                              <Input
+                                id="profPhone"
+                                value={newTeacher.phone}
+                                onChange={(e) => setNewTeacher({ ...newTeacher, phone: e.target.value })}
+                                required
+                              />
+                            </div>
+                            <div className="space-y-2">
+                              <Label htmlFor="profEmail">Email (Optional)</Label>
+                              <Input
+                                id="profEmail"
+                                type="email"
+                                value={newTeacher.email}
+                                onChange={(e) => setNewTeacher({ ...newTeacher, email: e.target.value })}
+                              />
+                            </div>
+                            <div className="space-y-2">
+                              <Label htmlFor="profSchool">School They Work At</Label>
+                              <Input
+                                id="profSchool"
+                                value={newTeacher.school}
+                                onChange={(e) => setNewTeacher({ ...newTeacher, school: e.target.value })}
+                                required
+                              />
+                            </div>
+                            <div className="space-y-2">
+                              <Label htmlFor="profSchoolYears">School Years They Teach</Label>
+                              <Select
+                                onValueChange={(value) =>
+                                  handleMultiSelect(value, newTeacher.schoolYears, (arr) =>
+                                    setNewTeacher({ ...newTeacher, schoolYears: arr }),
+                                  )
+                                }
+                              >
+                                <SelectTrigger>
+                                  <SelectValue placeholder="Select school years" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  <SelectItem value="1AS">1AS</SelectItem>
+                                  <SelectItem value="2AS">2AS</SelectItem>
+                                  <SelectItem value="3AS">3AS</SelectItem>
+                                  <SelectItem value="BEM">BEM</SelectItem>
+                                  <SelectItem value="BAC">BAC</SelectItem>
+                                </SelectContent>
+                              </Select>
+                              <div className="flex flex-wrap gap-2 mt-2">
+                                {newTeacher.schoolYears.map((year) => (
+                                  <Badge
+                                    key={year}
+                                    variant="secondary"
+                                    className="cursor-pointer"
+                                    onClick={() =>
+                                      handleMultiSelect(year, newTeacher.schoolYears, (arr) =>
+                                        setNewTeacher({ ...newTeacher, schoolYears: arr }),
+                                      )
+                                    }
+                                  >
+                                    {year} ×
+                                  </Badge>
+                                ))}
+                              </div>
+                            </div>
+                            <div className="space-y-2 md:col-span-2">
+                              <Label htmlFor="profSubjects">Subjects They Teach</Label>
+                              <Select
+                                onValueChange={(value) =>
+                                  handleMultiSelect(value, newTeacher.subjects, (arr) =>
+                                    setNewTeacher({ ...newTeacher, subjects: arr }),
+                                  )
+                                }
+                              >
+                                <SelectTrigger>
+                                  <SelectValue placeholder="Select subjects" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  <SelectItem value="Mathematics">Mathematics</SelectItem>
+                                  <SelectItem value="Physics">Physics</SelectItem>
+                                  <SelectItem value="Chemistry">Chemistry</SelectItem>
+                                  <SelectItem value="Biology">Biology</SelectItem>
+                                  <SelectItem value="Arabic">Arabic</SelectItem>
+                                  <SelectItem value="French">French</SelectItem>
+                                  <SelectItem value="English">English</SelectItem>
+                                  <SelectItem value="History">History</SelectItem>
+                                  <SelectItem value="Geography">Geography</SelectItem>
+                                  <SelectItem value="Philosophy">Philosophy</SelectItem>
+                                </SelectContent>
+                              </Select>
+                              <div className="flex flex-wrap gap-2 mt-2">
+                                {newTeacher.subjects.map((subject) => (
+                                  <Badge
+                                    key={subject}
+                                    variant="default"
+                                    className="cursor-pointer"
+                                    onClick={() =>
+                                      handleMultiSelect(subject, newTeacher.subjects, (arr) =>
+                                        setNewTeacher({ ...newTeacher, subjects: arr }),
+                                      )
+                                    }
+                                  >
+                                    {subject} ×
+                                  </Badge>
+                                ))}
+                              </div>
+                            </div>
+                          </div>
+
+                          <div className="flex justify-end space-x-2">
+                            <Button type="button" variant="outline" onClick={() => setShowAddTeacherDialog(false)}>
+                              Cancel
+                            </Button>
+                            <Button type="submit">
+                              <GraduationCap className="h-4 w-4 mr-2" />
+                              Add Teacher
+                            </Button>
+                          </div>
+                        </form>
+                      </DialogContent>
+                    </Dialog>
                   </div>
                 </div>
               </CardHeader>
@@ -490,19 +1143,18 @@ export default function ManagerDashboard() {
                       <TableHead>School</TableHead>
                       <TableHead>School Years</TableHead>
                       <TableHead>Active Courses</TableHead>
-                      <TableHead>Actions</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {sortData(teachers, sortConfig.key, sortConfig.direction).map((teacher) => {
-                      const teacherCourses = courses.filter((c) => c.teacherId === teacher.id && c.status === "active")
+                    {sortedTeachers.map((teacher) => {
+                      const teacherCourses = courses.filter((c) => c.teacherId === teacher.id)
                       return (
                         <TableRow key={teacher.id}>
                           <TableCell className="font-medium">
                             <Button
                               variant="link"
                               className="p-0 h-auto font-medium text-left"
-                              onClick={() => router.push(`/professor/${teacher.id}`)}
+                              onClick={() => router.push(`/teacher/${teacher.id}`)}
                             >
                               {teacher.name}
                             </Button>
@@ -525,11 +1177,6 @@ export default function ManagerDashboard() {
                           <TableCell>
                             <span className="text-sm text-gray-600">{teacherCourses.length} course(s)</span>
                           </TableCell>
-                          <TableCell>
-                            <Button variant="outline" size="sm" onClick={() => router.push(`/professor/${teacher.id}`)}>
-                              View Profile
-                            </Button>
-                          </TableCell>
                         </TableRow>
                       )
                     })}
@@ -539,145 +1186,148 @@ export default function ManagerDashboard() {
             </Card>
           </TabsContent>
 
-          {/* Courses Tab - Same as Receptionist */}
-          <TabsContent value="courses">
+          {/* Payments Tab - New Merged Tab */}
+          <TabsContent value="payments">
             <Card>
               <CardHeader>
-                <div className="flex justify-between items-center">
-                  <CardTitle className="flex items-center">
-                    <BookOpen className="h-5 w-5 mr-2" />
-                    Course Management
-                  </CardTitle>
-                  <div className="flex items-center space-x-2">
-                    <SortControls sortKey="status" currentSort={sortConfig} onSort={handleSort} label="Status" />
-                    <SortControls sortKey="subject" currentSort={sortConfig} onSort={handleSort} label="Course" />
-                    <SortControls
-                      sortKey="nextSession"
-                      currentSort={sortConfig}
-                      onSort={handleSort}
-                      label="Next Session"
-                    />
-                  </div>
-                </div>
+                <CardTitle className="flex items-center">
+                  <DollarSign className="h-5 w-5 mr-2" />
+                  Payment Management
+                </CardTitle>
               </CardHeader>
               <CardContent>
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Status</TableHead>
-                      <TableHead>Course</TableHead>
-                      <TableHead>Teacher</TableHead>
-                      <TableHead>Type</TableHead>
-                      <TableHead>Schedule</TableHead>
-                      <TableHead>Students</TableHead>
-                      <TableHead>Price</TableHead>
-                      <TableHead>Next Session</TableHead>
-                      <TableHead>Actions</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {sortData(courses, sortConfig.key, sortConfig.direction).map((course) => (
-                      <TableRow key={course.id}>
-                        <TableCell>
-                          <div
-                            className={`w-3 h-3 rounded-full ${
-                              course.status === "active" ? "bg-green-500" : "bg-red-500"
-                            }`}
-                          />
-                        </TableCell>
-                        <TableCell className="font-medium">
-                          <Button
-                            variant="link"
-                            className="p-0 h-auto font-medium text-left"
-                            onClick={() => router.push(`/course/${course.id}`)}
-                          >
-                            {course.subject} - {course.schoolYear}
-                          </Button>
-                        </TableCell>
-                        <TableCell>
-                          <Button
-                            variant="link"
-                            className="p-0 h-auto font-medium text-left"
-                            onClick={() => router.push(`/professor/${course.teacherId}`)}
-                          >
-                            {course.teacherName}
-                          </Button>
-                        </TableCell>
-                        <TableCell>
-                          <Badge variant={course.courseType === "Group" ? "default" : "secondary"}>
-                            {course.courseType}
+                <div className="space-y-6">
+                  {Object.entries(paymentsByMonth)
+                    .sort(([a], [b]) => b.localeCompare(a))
+                    .map(([month, monthPayments]) => (
+                      <div key={month} className="space-y-4">
+                        <div className="flex items-center space-x-2">
+                          <Calendar className="h-4 w-4" />
+                          <h3 className="text-lg font-semibold">
+                            {new Date(month + "-01").toLocaleDateString("en-US", {
+                              year: "numeric",
+                              month: "long",
+                            })}
+                          </h3>
+                          <Badge variant="outline">
+                            {monthPayments.length} payment{monthPayments.length !== 1 ? "s" : ""}
                           </Badge>
-                        </TableCell>
-                        <TableCell>{course.schedule}</TableCell>
-                        <TableCell>{course.current.enrolledStudents.length} students</TableCell>
-                        <TableCell>
-                          {course.price} DA {course.courseType === "Group" ? "/month" : "/session"}
-                        </TableCell>
-                        <TableCell>
-                          {course.nextSession ? new Date(course.nextSession).toLocaleDateString() : "TBD"}
-                        </TableCell>
-                        <TableCell>
-                          <Button variant="outline" size="sm" onClick={() => router.push(`/course/${course.id}`)}>
-                            View Details
-                          </Button>
-                        </TableCell>
-                      </TableRow>
+                        </div>
+                        <Table>
+                          <TableHeader>
+                            <TableRow>
+                              <TableHead>Type</TableHead>
+                              <TableHead>Description</TableHead>
+                              <TableHead>Amount</TableHead>
+                              <TableHead>Status</TableHead>
+                              <TableHead>Created By</TableHead>
+                              <TableHead>Actions</TableHead>
+                            </TableRow>
+                          </TableHeader>
+                          <TableBody>
+                            {monthPayments.map((payment) => (
+                              <TableRow key={payment.id}>
+                                <TableCell>
+                                  <Badge variant={payment.type === "student" ? "default" : "secondary"}>
+                                    {payment.type === "student" ? "Student" : "Teacher"}
+                                  </Badge>
+                                </TableCell>
+                                <TableCell className="max-w-xs">
+                                  <div className="truncate">{payment.description}</div>
+                                </TableCell>
+                                <TableCell className="font-medium">{payment.amount} DA</TableCell>
+                                <TableCell>
+                                  <Badge
+                                    variant={
+                                      payment.status === "approved"
+                                        ? "default"
+                                        : payment.status === "rejected"
+                                          ? "destructive"
+                                          : "secondary"
+                                    }
+                                  >
+                                    {payment.status}
+                                  </Badge>
+                                </TableCell>
+                                <TableCell>
+                                  <div className="text-sm">
+                                    <div className="font-medium">{payment.createdBy}</div>
+                                    <div className="text-gray-500 capitalize">({payment.createdByRole})</div>
+                                  </div>
+                                </TableCell>
+                                <TableCell>
+                                  {payment.status === "pending" && (
+                                    <div className="flex space-x-2">
+                                      <AlertDialog>
+                                        <AlertDialogTrigger asChild>
+                                          <Button size="sm" variant="default">
+                                            <Check className="h-4 w-4 mr-1" />
+                                            Approve
+                                          </Button>
+                                        </AlertDialogTrigger>
+                                        <AlertDialogContent>
+                                          <AlertDialogHeader>
+                                            <AlertDialogTitle>Approve Payment</AlertDialogTitle>
+                                            <AlertDialogDescription>
+                                              Are you sure you want to approve this payment of {payment.amount} DA? This
+                                              action cannot be undone.
+                                            </AlertDialogDescription>
+                                          </AlertDialogHeader>
+                                          <AlertDialogFooter>
+                                            <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                            <AlertDialogAction onClick={() => handleApprovePayment(payment.id)}>
+                                              Approve Payment
+                                            </AlertDialogAction>
+                                          </AlertDialogFooter>
+                                        </AlertDialogContent>
+                                      </AlertDialog>
+                                      <AlertDialog>
+                                        <AlertDialogTrigger asChild>
+                                          <Button size="sm" variant="destructive">
+                                            <X className="h-4 w-4 mr-1" />
+                                            Reject
+                                          </Button>
+                                        </AlertDialogTrigger>
+                                        <AlertDialogContent>
+                                          <AlertDialogHeader>
+                                            <AlertDialogTitle>Reject Payment</AlertDialogTitle>
+                                            <AlertDialogDescription>
+                                              Are you sure you want to reject this payment of {payment.amount} DA? This
+                                              action cannot be undone.
+                                            </AlertDialogDescription>
+                                          </AlertDialogHeader>
+                                          <AlertDialogFooter>
+                                            <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                            <AlertDialogAction onClick={() => handleRejectPayment(payment.id)}>
+                                              Reject Payment
+                                            </AlertDialogAction>
+                                          </AlertDialogFooter>
+                                        </AlertDialogContent>
+                                      </AlertDialog>
+                                    </div>
+                                  )}
+                                  {payment.status !== "pending" && payment.approvedBy && (
+                                    <div className="text-sm text-gray-500">
+                                      <div>By: {payment.approvedBy}</div>
+                                      <div>{new Date(payment.approvedAt!).toLocaleDateString()}</div>
+                                    </div>
+                                  )}
+                                </TableCell>
+                              </TableRow>
+                            ))}
+                          </TableBody>
+                        </Table>
+                      </div>
                     ))}
-                  </TableBody>
-                </Table>
+                  {Object.keys(paymentsByMonth).length === 0 && (
+                    <div className="text-center py-8 text-gray-500">
+                      <DollarSign className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                      <p>No payments found</p>
+                    </div>
+                  )}
+                </div>
               </CardContent>
             </Card>
-          </TabsContent>
-
-          {/* Analytics Tab - Renamed from previous tabs */}
-          <TabsContent value="analytics">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <Card>
-                <CardHeader>
-                  <CardTitle>Revenue Analytics</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-4">
-                    <div className="text-center p-4 bg-green-50 rounded-lg">
-                      <p className="text-sm text-gray-600">Total Monthly Revenue</p>
-                      <p className="text-2xl font-bold text-green-600">{totalRevenue.toLocaleString()} DA</p>
-                    </div>
-                    <div className="text-center p-4 bg-blue-50 rounded-lg">
-                      <p className="text-sm text-gray-600">Total Payouts</p>
-                      <p className="text-2xl font-bold text-blue-600">{totalPayouts.toLocaleString()} DA</p>
-                    </div>
-                    <div className="text-center p-4 bg-purple-50 rounded-lg">
-                      <p className="text-sm text-gray-600">Net Profit</p>
-                      <p className="text-2xl font-bold text-purple-600">{netProfit.toLocaleString()} DA</p>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-
-              <Card>
-                <CardHeader>
-                  <CardTitle>System Statistics</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-4">
-                    <div className="text-center p-4 bg-orange-50 rounded-lg">
-                      <p className="text-sm text-gray-600">Active Students</p>
-                      <p className="text-2xl font-bold text-orange-600">{students.length}</p>
-                    </div>
-                    <div className="text-center p-4 bg-red-50 rounded-lg">
-                      <p className="text-sm text-gray-600">Active Teachers</p>
-                      <p className="text-2xl font-bold text-red-600">{teachers.length}</p>
-                    </div>
-                    <div className="text-center p-4 bg-indigo-50 rounded-lg">
-                      <p className="text-sm text-gray-600">Active Courses</p>
-                      <p className="text-2xl font-bold text-indigo-600">
-                        {courses.filter((c) => c.status === "active").length}
-                      </p>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            </div>
           </TabsContent>
         </Tabs>
       </div>

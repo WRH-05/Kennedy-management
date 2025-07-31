@@ -21,105 +21,6 @@ import type { Teacher } from "@/mocks/teachers"
 import type { Course } from "@/mocks/courses"
 import { SortControls, type SortConfig } from "@/components/ui/sort-controls"
 
-// Mock data with updated structure
-// const mockStudents = [
-//   {
-//     id: 1,
-//     name: "Ahmed Ben Ali",
-//     schoolYear: "3AS",
-//     specialty: "Math",
-//     address: "123 Rue de la Paix, Alger",
-//     birthDate: "2005-03-15",
-//     phone: "+213 555 123 456",
-//     email: "ahmed.benali@email.com",
-//     school: "Lycée Mohamed Boudiaf",
-//     registrationFeePaid: true,
-//   },
-//   {
-//     id: 2,
-//     name: "Fatima Zahra",
-//     schoolYear: "BAC",
-//     specialty: "Sciences",
-//     address: "456 Avenue Mohamed V, Oran",
-//     birthDate: "2004-07-22",
-//     phone: "+213 555 789 012",
-//     email: "fatima.zahra@email.com",
-//     school: "Lycée Ibn Khaldoun",
-//     registrationFeePaid: true,
-//   },
-// ]
-
-// const mockTeachers = [
-//   {
-//     id: 1,
-//     name: "Prof. Salim Benali",
-//     address: "789 Rue des Professeurs, Alger",
-//     phone: "+213 555 111 222",
-//     email: "salim.benali@school.dz",
-//     school: "Lycée Mohamed Boudiaf",
-//     schoolYears: ["3AS", "BAC"],
-//     subjects: ["Mathematics", "Physics"],
-//   },
-//   {
-//     id: 2,
-//     name: "Prof. Amina Khelifi",
-//     address: "321 Avenue de l'Université, Oran",
-//     phone: "+213 555 333 444",
-//     email: "amina.khelifi@school.dz",
-//     school: "Lycée Ibn Khaldoun",
-//     schoolYears: ["2AS"],
-//     subjects: ["Physics", "Chemistry"],
-//   },
-// ]
-
-// // Course data (only group courses)
-// const mockCourses = [
-//   {
-//     id: 1,
-//     teacherId: 1,
-//     teacherName: "Prof. Salim Benali",
-//     subject: "Mathematics",
-//     schoolYear: "3AS",
-//     schedule: "Monday 9:00-11:00",
-//     monthlyPrice: 500,
-//     enrolledStudents: [1],
-//     status: "active",
-//     payments: {
-//       students: { 1: true }, // studentId: paid
-//       teacherPaid: false,
-//     },
-//     percentageCut: 50,
-//     courseType: "Group",
-//     duration: 2,
-//     dayOfWeek: "Monday",
-//     startHour: "09:00",
-//     endHour: "11:00",
-//     price: 500,
-//   },
-//   {
-//     id: 2,
-//     teacherId: 2,
-//     teacherName: "Prof. Amina Khelifi",
-//     subject: "Chemistry",
-//     schoolYear: "2AS",
-//     schedule: "Tuesday 16:00-18:00",
-//     monthlyPrice: 450,
-//     enrolledStudents: [2],
-//     status: "active",
-//     payments: {
-//       students: { 2: false },
-//       teacherPaid: false,
-//     },
-//     percentageCut: 50,
-//     courseType: "Group",
-//     duration: 2,
-//     dayOfWeek: "Tuesday",
-//     startHour: "16:00",
-//     endHour: "18:00",
-//     price: 450,
-//   },
-// ]
-
 export default function ReceptionistDashboard() {
   const router = useRouter()
   const [user, setUser] = useState<any>(null)
@@ -180,7 +81,7 @@ export default function ReceptionistDashboard() {
   // Add teacher search state
   const [teacherSearchQuery, setTeacherSearchQuery] = useState("")
   const [showTeacherResults, setShowTeacherResults] = useState(false)
-  const [filteredTeachers, setFilteredTeachers] = useState<any[]>([])
+  const [filteredTeachers, setFilteredTeachers] = useState<Teacher[]>([])
 
   useEffect(() => {
     const userData = localStorage.getItem("user")
@@ -250,8 +151,7 @@ export default function ReceptionistDashboard() {
 
   const handleAddStudent = (e: React.FormEvent) => {
     e.preventDefault()
-    const student = {
-      id: students.length + 1,
+    const student = DataService.addStudent({
       name: newStudent.name,
       schoolYear: newStudent.schoolYear,
       specialty: newStudent.specialty,
@@ -261,7 +161,7 @@ export default function ReceptionistDashboard() {
       email: newStudent.email,
       school: newStudent.school,
       registrationFeePaid: newStudent.registrationFeePaid,
-    }
+    })
     setStudents([...students, student])
     setNewStudent({
       name: "",
@@ -283,8 +183,7 @@ export default function ReceptionistDashboard() {
   // Update handleAddTeacher function
   const handleAddTeacher = (e: React.FormEvent) => {
     e.preventDefault()
-    const teacher = {
-      id: teachers.length + 1,
+    const teacher = DataService.addTeacher({
       name: newTeacher.name,
       address: newTeacher.address,
       phone: newTeacher.phone,
@@ -292,7 +191,7 @@ export default function ReceptionistDashboard() {
       school: newTeacher.school,
       schoolYears: newTeacher.schoolYears,
       subjects: newTeacher.subjects,
-    }
+    })
     setTeachers([...teachers, teacher])
     setNewTeacher({
       name: "",
@@ -316,14 +215,14 @@ export default function ReceptionistDashboard() {
 
     const endHour = calculateEndHour(newCourse.startHour, newCourse.duration)
 
-    const course = {
-      id: courses.length + 1,
+    const course = DataService.addCourse({
+      templateId: courses.length + 1,
       teacherId: teacher.id,
       teacherName: teacher.name,
       subject: newCourse.subject,
       schoolYear: newCourse.schoolYear,
       percentageCut: newCourse.percentageCut,
-      courseType: newCourse.courseType,
+      courseType: newCourse.courseType as "Group" | "Individual",
       duration: newCourse.duration,
       dayOfWeek: newCourse.dayOfWeek,
       startHour: newCourse.startHour,
@@ -331,12 +230,21 @@ export default function ReceptionistDashboard() {
       schedule: `${newCourse.dayOfWeek} ${newCourse.startHour}-${endHour}`,
       price: newCourse.price,
       enrolledStudents: [],
-      status: "active",
+      status: "active" as const,
       payments: {
         students: {},
         teacherPaid: false,
       },
-    }
+      current: {
+        students: [],
+        attendance: {},
+        payments: {
+          students: {},
+          teacherPaid: false,
+        },
+      },
+      history: [],
+    })
     setCourses([...courses, course])
     setNewCourse({
       teacherId: "",
@@ -382,10 +290,6 @@ export default function ReceptionistDashboard() {
     }
     setSearchQuery("")
     setShowSearchResults(false)
-  }
-
-  const getStudentCourses = (studentId: number) => {
-    return courses.filter((course) => course.enrolledStudents.includes(studentId))
   }
 
   // Sorting functions
@@ -500,176 +404,178 @@ export default function ReceptionistDashboard() {
                     <Users className="h-5 w-5 mr-2" />
                     Student List
                   </CardTitle>
-                  <SortControls
-                    sortConfig={sortConfig}
-                    setSortConfig={setSortConfig}
-                    columns={[
-                      { key: "name", label: "Name" },
-                      { key: "schoolYear", label: "School Year" },
-                      { key: "specialty", label: "Specialty" },
-                    ]}
-                  />
-                  <Dialog open={showAddStudentDialog} onOpenChange={setShowAddStudentDialog}>
-                    <DialogTrigger asChild>
-                      <Button>
-                        <Plus className="h-4 w-4 mr-2" />
-                        Add Student
-                      </Button>
-                    </DialogTrigger>
-                    <DialogContent className="max-w-2xl">
-                      <DialogHeader>
-                        <DialogTitle>Add New Student</DialogTitle>
-                      </DialogHeader>
-                      <form onSubmit={handleAddStudent} className="space-y-4">
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                          <div className="space-y-2">
-                            <Label htmlFor="name">Student Name</Label>
-                            <Input
-                              id="name"
-                              value={newStudent.name}
-                              onChange={(e) => setNewStudent({ ...newStudent, name: e.target.value })}
-                              required
-                            />
-                          </div>
-                          <div className="space-y-2">
-                            <Label htmlFor="schoolYear">School Year</Label>
-                            <Select
-                              value={newStudent.schoolYear}
-                              onValueChange={(value) => setNewStudent({ ...newStudent, schoolYear: value })}
-                            >
-                              <SelectTrigger>
-                                <SelectValue placeholder="Select school year" />
-                              </SelectTrigger>
-                              <SelectContent>
-                                <SelectItem value="1AS">1AS</SelectItem>
-                                <SelectItem value="2AS">2AS</SelectItem>
-                                <SelectItem value="3AS">3AS</SelectItem>
-                                <SelectItem value="BEM">BEM</SelectItem>
-                                <SelectItem value="BAC">BAC</SelectItem>
-                              </SelectContent>
-                            </Select>
-                          </div>
-                          <div className="space-y-2">
-                            <Label htmlFor="specialty">Specialty</Label>
-                            <Select
-                              value={newStudent.specialty}
-                              onValueChange={(value) => setNewStudent({ ...newStudent, specialty: value })}
-                            >
-                              <SelectTrigger>
-                                <SelectValue placeholder="Select specialty" />
-                              </SelectTrigger>
-                              <SelectContent>
-                                <SelectItem value="Math">Mathematics</SelectItem>
-                                <SelectItem value="Sciences">Sciences</SelectItem>
-                                <SelectItem value="Literature">Literature</SelectItem>
-                                <SelectItem value="Languages">Languages</SelectItem>
-                              </SelectContent>
-                            </Select>
-                          </div>
-                          <div className="space-y-2">
-                            <Label htmlFor="address">Address</Label>
-                            <Input
-                              id="address"
-                              value={newStudent.address}
-                              onChange={(e) => setNewStudent({ ...newStudent, address: e.target.value })}
-                              required
-                            />
-                          </div>
-                          <div className="space-y-2">
-                            <Label htmlFor="birthDate">Birth Date</Label>
-                            <Input
-                              id="birthDate"
-                              type="date"
-                              value={newStudent.birthDate}
-                              onChange={(e) => setNewStudent({ ...newStudent, birthDate: e.target.value })}
-                              required
-                            />
-                          </div>
-                          <div className="space-y-2">
-                            <Label htmlFor="phone">Phone Number</Label>
-                            <Input
-                              id="phone"
-                              value={newStudent.phone}
-                              onChange={(e) => setNewStudent({ ...newStudent, phone: e.target.value })}
-                              required
-                            />
-                          </div>
-                          <div className="space-y-2">
-                            <Label htmlFor="email">Email (Optional)</Label>
-                            <Input
-                              id="email"
-                              type="email"
-                              value={newStudent.email}
-                              onChange={(e) => setNewStudent({ ...newStudent, email: e.target.value })}
-                            />
-                          </div>
-                          <div className="space-y-2">
-                            <Label htmlFor="school">School They Attend</Label>
-                            <Input
-                              id="school"
-                              value={newStudent.school}
-                              onChange={(e) => setNewStudent({ ...newStudent, school: e.target.value })}
-                              required
-                            />
-                          </div>
-                        </div>
-
-                        <div className="space-y-4">
-                          <Label>Document Checklist</Label>
-                          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                            <div className="flex items-center space-x-2">
-                              <Checkbox
-                                id="photos"
-                                checked={newStudent.photos}
-                                onCheckedChange={(checked) =>
-                                  setNewStudent({ ...newStudent, photos: checked as boolean })
-                                }
+                  <div className="flex items-center space-x-4">
+                    <SortControls
+                      sortConfig={sortConfig}
+                      setSortConfig={setSortConfig}
+                      columns={[
+                        { key: "name", label: "Name" },
+                        { key: "schoolYear", label: "School Year" },
+                        { key: "specialty", label: "Specialty" },
+                      ]}
+                    />
+                    <Dialog open={showAddStudentDialog} onOpenChange={setShowAddStudentDialog}>
+                      <DialogTrigger asChild>
+                        <Button>
+                          <Plus className="h-4 w-4 mr-2" />
+                          Add Student
+                        </Button>
+                      </DialogTrigger>
+                      <DialogContent className="max-w-2xl">
+                        <DialogHeader>
+                          <DialogTitle>Add New Student</DialogTitle>
+                        </DialogHeader>
+                        <form onSubmit={handleAddStudent} className="space-y-4">
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div className="space-y-2">
+                              <Label htmlFor="name">Student Name</Label>
+                              <Input
+                                id="name"
+                                value={newStudent.name}
+                                onChange={(e) => setNewStudent({ ...newStudent, name: e.target.value })}
+                                required
                               />
-                              <Label htmlFor="photos">Photos</Label>
                             </div>
-                            <div className="flex items-center space-x-2">
-                              <Checkbox
-                                id="copyOfId"
-                                checked={newStudent.copyOfId}
-                                onCheckedChange={(checked) =>
-                                  setNewStudent({ ...newStudent, copyOfId: checked as boolean })
-                                }
-                              />
-                              <Label htmlFor="copyOfId">Copy of ID</Label>
+                            <div className="space-y-2">
+                              <Label htmlFor="schoolYear">School Year</Label>
+                              <Select
+                                value={newStudent.schoolYear}
+                                onValueChange={(value) => setNewStudent({ ...newStudent, schoolYear: value })}
+                              >
+                                <SelectTrigger>
+                                  <SelectValue placeholder="Select school year" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  <SelectItem value="1AS">1AS</SelectItem>
+                                  <SelectItem value="2AS">2AS</SelectItem>
+                                  <SelectItem value="3AS">3AS</SelectItem>
+                                  <SelectItem value="BEM">BEM</SelectItem>
+                                  <SelectItem value="BAC">BAC</SelectItem>
+                                </SelectContent>
+                              </Select>
                             </div>
-                            <div className="flex items-center space-x-2">
-                              <Checkbox
-                                id="registrationForm"
-                                checked={newStudent.registrationForm}
-                                onCheckedChange={(checked) =>
-                                  setNewStudent({ ...newStudent, registrationForm: checked as boolean })
-                                }
+                            <div className="space-y-2">
+                              <Label htmlFor="specialty">Specialty</Label>
+                              <Select
+                                value={newStudent.specialty}
+                                onValueChange={(value) => setNewStudent({ ...newStudent, specialty: value })}
+                              >
+                                <SelectTrigger>
+                                  <SelectValue placeholder="Select specialty" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  <SelectItem value="Math">Mathematics</SelectItem>
+                                  <SelectItem value="Sciences">Sciences</SelectItem>
+                                  <SelectItem value="Literature">Literature</SelectItem>
+                                  <SelectItem value="Languages">Languages</SelectItem>
+                                </SelectContent>
+                              </Select>
+                            </div>
+                            <div className="space-y-2">
+                              <Label htmlFor="address">Address</Label>
+                              <Input
+                                id="address"
+                                value={newStudent.address}
+                                onChange={(e) => setNewStudent({ ...newStudent, address: e.target.value })}
+                                required
                               />
-                              <Label htmlFor="registrationForm">Registration Form</Label>
+                            </div>
+                            <div className="space-y-2">
+                              <Label htmlFor="birthDate">Birth Date</Label>
+                              <Input
+                                id="birthDate"
+                                type="date"
+                                value={newStudent.birthDate}
+                                onChange={(e) => setNewStudent({ ...newStudent, birthDate: e.target.value })}
+                                required
+                              />
+                            </div>
+                            <div className="space-y-2">
+                              <Label htmlFor="phone">Phone Number</Label>
+                              <Input
+                                id="phone"
+                                value={newStudent.phone}
+                                onChange={(e) => setNewStudent({ ...newStudent, phone: e.target.value })}
+                                required
+                              />
+                            </div>
+                            <div className="space-y-2">
+                              <Label htmlFor="email">Email (Optional)</Label>
+                              <Input
+                                id="email"
+                                type="email"
+                                value={newStudent.email}
+                                onChange={(e) => setNewStudent({ ...newStudent, email: e.target.value })}
+                              />
+                            </div>
+                            <div className="space-y-2">
+                              <Label htmlFor="school">School They Attend</Label>
+                              <Input
+                                id="school"
+                                value={newStudent.school}
+                                onChange={(e) => setNewStudent({ ...newStudent, school: e.target.value })}
+                                required
+                              />
                             </div>
                           </div>
-                        </div>
 
-                        <div className="flex items-center space-x-2">
-                          <Checkbox
-                            id="registrationFee"
-                            checked={newStudent.registrationFeePaid}
-                            onCheckedChange={(checked) =>
-                              setNewStudent({ ...newStudent, registrationFeePaid: checked as boolean })
-                            }
-                          />
-                          <Label htmlFor="registrationFee">Registration Fee Paid</Label>
-                        </div>
+                          <div className="space-y-4">
+                            <Label>Document Checklist</Label>
+                            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                              <div className="flex items-center space-x-2">
+                                <Checkbox
+                                  id="photos"
+                                  checked={newStudent.photos}
+                                  onCheckedChange={(checked) =>
+                                    setNewStudent({ ...newStudent, photos: checked as boolean })
+                                  }
+                                />
+                                <Label htmlFor="photos">Photos</Label>
+                              </div>
+                              <div className="flex items-center space-x-2">
+                                <Checkbox
+                                  id="copyOfId"
+                                  checked={newStudent.copyOfId}
+                                  onCheckedChange={(checked) =>
+                                    setNewStudent({ ...newStudent, copyOfId: checked as boolean })
+                                  }
+                                />
+                                <Label htmlFor="copyOfId">Copy of ID</Label>
+                              </div>
+                              <div className="flex items-center space-x-2">
+                                <Checkbox
+                                  id="registrationForm"
+                                  checked={newStudent.registrationForm}
+                                  onCheckedChange={(checked) =>
+                                    setNewStudent({ ...newStudent, registrationForm: checked as boolean })
+                                  }
+                                />
+                                <Label htmlFor="registrationForm">Registration Form</Label>
+                              </div>
+                            </div>
+                          </div>
 
-                        <div className="flex justify-end space-x-2">
-                          <Button type="button" variant="outline" onClick={() => setShowAddStudentDialog(false)}>
-                            Cancel
-                          </Button>
-                          <Button type="submit">Add Student</Button>
-                        </div>
-                      </form>
-                    </DialogContent>
-                  </Dialog>
+                          <div className="flex items-center space-x-2">
+                            <Checkbox
+                              id="registrationFee"
+                              checked={newStudent.registrationFeePaid}
+                              onCheckedChange={(checked) =>
+                                setNewStudent({ ...newStudent, registrationFeePaid: checked as boolean })
+                              }
+                            />
+                            <Label htmlFor="registrationFee">Registration Fee Paid</Label>
+                          </div>
+
+                          <div className="flex justify-end space-x-2">
+                            <Button type="button" variant="outline" onClick={() => setShowAddStudentDialog(false)}>
+                              Cancel
+                            </Button>
+                            <Button type="submit">Add Student</Button>
+                          </div>
+                        </form>
+                      </DialogContent>
+                    </Dialog>
+                  </div>
                 </div>
               </CardHeader>
               <CardContent>
@@ -685,7 +591,9 @@ export default function ReceptionistDashboard() {
                   </TableHeader>
                   <TableBody>
                     {sortedStudents.map((student) => {
-                      const studentCourses = courses.filter((course) => course.enrolledStudents.includes(student.id))
+                      const studentCourses = courses.filter(
+                        (course) => course.enrolledStudents && course.enrolledStudents.includes(student.id),
+                      )
                       return (
                         <TableRow key={student.id}>
                           <TableCell className="font-medium">
@@ -735,217 +643,219 @@ export default function ReceptionistDashboard() {
                     <BookOpen className="h-5 w-5 mr-2" />
                     All Courses
                   </CardTitle>
-                  <SortControls
-                    sortConfig={sortConfig}
-                    setSortConfig={setSortConfig}
-                    columns={[
-                      { key: "subject", label: "Subject" },
-                      { key: "teacherName", label: "Teacher" },
-                      { key: "schoolYear", label: "School Year" },
-                    ]}
-                  />
-                  <Dialog open={showAddCourseDialog} onOpenChange={setShowAddCourseDialog}>
-                    <DialogTrigger asChild>
-                      <Button>
-                        <Plus className="h-4 w-4 mr-2" />
-                        Add Course
-                      </Button>
-                    </DialogTrigger>
-                    <DialogContent className="max-w-2xl">
-                      <DialogHeader>
-                        <DialogTitle>Add New Course</DialogTitle>
-                      </DialogHeader>
-                      <form onSubmit={handleAddCourse} className="space-y-4">
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                          <div className="space-y-2 md:col-span-2">
-                            <Label htmlFor="teacherSearch">Teacher</Label>
-                            <div className="relative">
-                              <Input
-                                id="teacherSearch"
-                                placeholder="Search for a teacher..."
-                                value={teacherSearchQuery}
-                                onChange={(e) => setTeacherSearchQuery(e.target.value)}
-                                required
-                              />
-                              {showTeacherResults && filteredTeachers.length > 0 && (
-                                <div className="absolute top-full left-0 right-0 mt-1 bg-white border rounded-md shadow-lg z-50 max-h-40 overflow-y-auto">
-                                  {filteredTeachers.map((teacher) => (
-                                    <div
-                                      key={teacher.id}
-                                      className="px-4 py-2 hover:bg-gray-50 cursor-pointer border-b last:border-b-0"
-                                      onClick={() => {
-                                        setNewCourse({
-                                          ...newCourse,
-                                          teacherId: teacher.id.toString(),
-                                          teacherName: teacher.name,
-                                        })
-                                        setTeacherSearchQuery(teacher.name)
-                                        setShowTeacherResults(false)
-                                      }}
-                                    >
-                                      <div className="font-medium">{teacher.name}</div>
-                                      <div className="text-sm text-gray-600">{teacher.subjects.join(", ")}</div>
-                                    </div>
-                                  ))}
-                                </div>
+                  <div className="flex items-center space-x-4">
+                    <SortControls
+                      sortConfig={sortConfig}
+                      setSortConfig={setSortConfig}
+                      columns={[
+                        { key: "subject", label: "Subject" },
+                        { key: "teacherName", label: "Teacher" },
+                        { key: "schoolYear", label: "School Year" },
+                      ]}
+                    />
+                    <Dialog open={showAddCourseDialog} onOpenChange={setShowAddCourseDialog}>
+                      <DialogTrigger asChild>
+                        <Button>
+                          <Plus className="h-4 w-4 mr-2" />
+                          Add Course
+                        </Button>
+                      </DialogTrigger>
+                      <DialogContent className="max-w-2xl">
+                        <DialogHeader>
+                          <DialogTitle>Add New Course</DialogTitle>
+                        </DialogHeader>
+                        <form onSubmit={handleAddCourse} className="space-y-4">
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div className="space-y-2 md:col-span-2">
+                              <Label htmlFor="teacherSearch">Teacher</Label>
+                              <div className="relative">
+                                <Input
+                                  id="teacherSearch"
+                                  placeholder="Search for a teacher..."
+                                  value={teacherSearchQuery}
+                                  onChange={(e) => setTeacherSearchQuery(e.target.value)}
+                                  required
+                                />
+                                {showTeacherResults && filteredTeachers.length > 0 && (
+                                  <div className="absolute top-full left-0 right-0 mt-1 bg-white border rounded-md shadow-lg z-50 max-h-40 overflow-y-auto">
+                                    {filteredTeachers.map((teacher) => (
+                                      <div
+                                        key={teacher.id}
+                                        className="px-4 py-2 hover:bg-gray-50 cursor-pointer border-b last:border-b-0"
+                                        onClick={() => {
+                                          setNewCourse({
+                                            ...newCourse,
+                                            teacherId: teacher.id.toString(),
+                                            teacherName: teacher.name,
+                                          })
+                                          setTeacherSearchQuery(teacher.name)
+                                          setShowTeacherResults(false)
+                                        }}
+                                      >
+                                        <div className="font-medium">{teacher.name}</div>
+                                        <div className="text-sm text-gray-600">{teacher.subjects.join(", ")}</div>
+                                      </div>
+                                    ))}
+                                  </div>
+                                )}
+                              </div>
+                              {newCourse.teacherName && (
+                                <div className="text-sm text-green-600">Selected: {newCourse.teacherName}</div>
                               )}
                             </div>
-                            {newCourse.teacherName && (
-                              <div className="text-sm text-green-600">Selected: {newCourse.teacherName}</div>
+                            {newCourse.teacherId && (
+                              <>
+                                <div className="space-y-2">
+                                  <Label htmlFor="subject">Subject</Label>
+                                  <Select
+                                    value={newCourse.subject}
+                                    onValueChange={(value) => setNewCourse({ ...newCourse, subject: value })}
+                                    required
+                                  >
+                                    <SelectTrigger>
+                                      <SelectValue placeholder="Select subject" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                      {teachers
+                                        .find((t) => t.id.toString() === newCourse.teacherId)
+                                        ?.subjects.map((subject) => (
+                                          <SelectItem key={subject} value={subject}>
+                                            {subject}
+                                          </SelectItem>
+                                        ))}
+                                    </SelectContent>
+                                  </Select>
+                                </div>
+                                <div className="space-y-2">
+                                  <Label htmlFor="schoolYear">School Year</Label>
+                                  <Select
+                                    value={newCourse.schoolYear}
+                                    onValueChange={(value) => setNewCourse({ ...newCourse, schoolYear: value })}
+                                    required
+                                  >
+                                    <SelectTrigger>
+                                      <SelectValue placeholder="Select school year" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                      {teachers
+                                        .find((t) => t.id.toString() === newCourse.teacherId)
+                                        ?.schoolYears.map((year) => (
+                                          <SelectItem key={year} value={year}>
+                                            {year}
+                                          </SelectItem>
+                                        ))}
+                                    </SelectContent>
+                                  </Select>
+                                </div>
+                              </>
                             )}
-                          </div>
-                          {newCourse.teacherId && (
-                            <>
-                              <div className="space-y-2">
-                                <Label htmlFor="subject">Subject</Label>
-                                <Select
-                                  value={newCourse.subject}
-                                  onValueChange={(value) => setNewCourse({ ...newCourse, subject: value })}
-                                  required
-                                >
-                                  <SelectTrigger>
-                                    <SelectValue placeholder="Select subject" />
-                                  </SelectTrigger>
-                                  <SelectContent>
-                                    {teachers
-                                      .find((t) => t.id.toString() === newCourse.teacherId)
-                                      ?.subjects.map((subject) => (
-                                        <SelectItem key={subject} value={subject}>
-                                          {subject}
-                                        </SelectItem>
-                                      ))}
-                                  </SelectContent>
-                                </Select>
+                            <div className="space-y-2">
+                              <Label htmlFor="percentageCut">Percentage Cut (40-70%)</Label>
+                              <Input
+                                id="percentageCut"
+                                type="number"
+                                min="40"
+                                max="70"
+                                value={newCourse.percentageCut}
+                                onChange={(e) =>
+                                  setNewCourse({ ...newCourse, percentageCut: Number.parseInt(e.target.value) })
+                                }
+                                required
+                              />
+                            </div>
+                            <div className="space-y-2">
+                              <Label htmlFor="courseType">Course Type</Label>
+                              <Select
+                                value={newCourse.courseType}
+                                onValueChange={(value) => setNewCourse({ ...newCourse, courseType: value })}
+                                required
+                              >
+                                <SelectTrigger>
+                                  <SelectValue />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  <SelectItem value="Group">Group</SelectItem>
+                                  <SelectItem value="Individual">Individual</SelectItem>
+                                </SelectContent>
+                              </Select>
+                            </div>
+                            <div className="space-y-2">
+                              <Label htmlFor="duration">Duration (hours)</Label>
+                              <Input
+                                id="duration"
+                                type="number"
+                                step="0.5"
+                                min="0.5"
+                                max="4"
+                                value={newCourse.duration}
+                                onChange={(e) =>
+                                  setNewCourse({ ...newCourse, duration: Number.parseFloat(e.target.value) })
+                                }
+                                required
+                              />
+                            </div>
+                            <div className="space-y-2">
+                              <Label htmlFor="dayOfWeek">Day of the Week</Label>
+                              <Select
+                                value={newCourse.dayOfWeek}
+                                onValueChange={(value) => setNewCourse({ ...newCourse, dayOfWeek: value })}
+                                required
+                              >
+                                <SelectTrigger>
+                                  <SelectValue placeholder="Select day" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  <SelectItem value="Monday">Monday</SelectItem>
+                                  <SelectItem value="Tuesday">Tuesday</SelectItem>
+                                  <SelectItem value="Wednesday">Wednesday</SelectItem>
+                                  <SelectItem value="Thursday">Thursday</SelectItem>
+                                  <SelectItem value="Friday">Friday</SelectItem>
+                                  <SelectItem value="Saturday">Saturday</SelectItem>
+                                  <SelectItem value="Sunday">Sunday</SelectItem>
+                                </SelectContent>
+                              </Select>
+                            </div>
+                            <div className="space-y-2">
+                              <Label htmlFor="startHour">Start Hour</Label>
+                              <Input
+                                id="startHour"
+                                type="time"
+                                value={newCourse.startHour}
+                                onChange={(e) => setNewCourse({ ...newCourse, startHour: e.target.value })}
+                                required
+                              />
+                            </div>
+                            <div className="space-y-2">
+                              <Label htmlFor="price">
+                                {newCourse.courseType === "Group" ? "Monthly Price" : "Session Price"} (DA)
+                              </Label>
+                              <Input
+                                id="price"
+                                type="number"
+                                value={newCourse.price}
+                                onChange={(e) => setNewCourse({ ...newCourse, price: Number.parseInt(e.target.value) })}
+                                required
+                              />
+                            </div>
+                            <div className="space-y-2">
+                              <Label>End Hour (Calculated)</Label>
+                              <div className="p-2 bg-gray-50 rounded border text-sm">
+                                {newCourse.startHour && newCourse.duration
+                                  ? calculateEndHour(newCourse.startHour, newCourse.duration)
+                                  : "--:--"}
                               </div>
-                              <div className="space-y-2">
-                                <Label htmlFor="schoolYear">School Year</Label>
-                                <Select
-                                  value={newCourse.schoolYear}
-                                  onValueChange={(value) => setNewCourse({ ...newCourse, schoolYear: value })}
-                                  required
-                                >
-                                  <SelectTrigger>
-                                    <SelectValue placeholder="Select school year" />
-                                  </SelectTrigger>
-                                  <SelectContent>
-                                    {teachers
-                                      .find((t) => t.id.toString() === newCourse.teacherId)
-                                      ?.schoolYears.map((year) => (
-                                        <SelectItem key={year} value={year}>
-                                          {year}
-                                        </SelectItem>
-                                      ))}
-                                  </SelectContent>
-                                </Select>
-                              </div>
-                            </>
-                          )}
-                          <div className="space-y-2">
-                            <Label htmlFor="percentageCut">Percentage Cut (40-70%)</Label>
-                            <Input
-                              id="percentageCut"
-                              type="number"
-                              min="40"
-                              max="70"
-                              value={newCourse.percentageCut}
-                              onChange={(e) =>
-                                setNewCourse({ ...newCourse, percentageCut: Number.parseInt(e.target.value) })
-                              }
-                              required
-                            />
-                          </div>
-                          <div className="space-y-2">
-                            <Label htmlFor="courseType">Course Type</Label>
-                            <Select
-                              value={newCourse.courseType}
-                              onValueChange={(value) => setNewCourse({ ...newCourse, courseType: value })}
-                              required
-                            >
-                              <SelectTrigger>
-                                <SelectValue />
-                              </SelectTrigger>
-                              <SelectContent>
-                                <SelectItem value="Group">Group</SelectItem>
-                                <SelectItem value="Individual">Individual</SelectItem>
-                              </SelectContent>
-                            </Select>
-                          </div>
-                          <div className="space-y-2">
-                            <Label htmlFor="duration">Duration (hours)</Label>
-                            <Input
-                              id="duration"
-                              type="number"
-                              step="0.5"
-                              min="0.5"
-                              max="4"
-                              value={newCourse.duration}
-                              onChange={(e) =>
-                                setNewCourse({ ...newCourse, duration: Number.parseFloat(e.target.value) })
-                              }
-                              required
-                            />
-                          </div>
-                          <div className="space-y-2">
-                            <Label htmlFor="dayOfWeek">Day of the Week</Label>
-                            <Select
-                              value={newCourse.dayOfWeek}
-                              onValueChange={(value) => setNewCourse({ ...newCourse, dayOfWeek: value })}
-                              required
-                            >
-                              <SelectTrigger>
-                                <SelectValue placeholder="Select day" />
-                              </SelectTrigger>
-                              <SelectContent>
-                                <SelectItem value="Monday">Monday</SelectItem>
-                                <SelectItem value="Tuesday">Tuesday</SelectItem>
-                                <SelectItem value="Wednesday">Wednesday</SelectItem>
-                                <SelectItem value="Thursday">Thursday</SelectItem>
-                                <SelectItem value="Friday">Friday</SelectItem>
-                                <SelectItem value="Saturday">Saturday</SelectItem>
-                                <SelectItem value="Sunday">Sunday</SelectItem>
-                              </SelectContent>
-                            </Select>
-                          </div>
-                          <div className="space-y-2">
-                            <Label htmlFor="startHour">Start Hour</Label>
-                            <Input
-                              id="startHour"
-                              type="time"
-                              value={newCourse.startHour}
-                              onChange={(e) => setNewCourse({ ...newCourse, startHour: e.target.value })}
-                              required
-                            />
-                          </div>
-                          <div className="space-y-2">
-                            <Label htmlFor="price">
-                              {newCourse.courseType === "Group" ? "Monthly Price" : "Session Price"} (DA)
-                            </Label>
-                            <Input
-                              id="price"
-                              type="number"
-                              value={newCourse.price}
-                              onChange={(e) => setNewCourse({ ...newCourse, price: Number.parseInt(e.target.value) })}
-                              required
-                            />
-                          </div>
-                          <div className="space-y-2">
-                            <Label>End Hour (Calculated)</Label>
-                            <div className="p-2 bg-gray-50 rounded border text-sm">
-                              {newCourse.startHour && newCourse.duration
-                                ? calculateEndHour(newCourse.startHour, newCourse.duration)
-                                : "--:--"}
                             </div>
                           </div>
-                        </div>
-                        <div className="flex justify-end space-x-2">
-                          <Button type="button" variant="outline" onClick={() => setShowAddCourseDialog(false)}>
-                            Cancel
-                          </Button>
-                          <Button type="submit">Add Course</Button>
-                        </div>
-                      </form>
-                    </DialogContent>
-                  </Dialog>
+                          <div className="flex justify-end space-x-2">
+                            <Button type="button" variant="outline" onClick={() => setShowAddCourseDialog(false)}>
+                              Cancel
+                            </Button>
+                            <Button type="submit">Add Course</Button>
+                          </div>
+                        </form>
+                      </DialogContent>
+                    </Dialog>
+                  </div>
                 </div>
               </CardHeader>
               <CardContent>
@@ -963,7 +873,9 @@ export default function ReceptionistDashboard() {
                   </TableHeader>
                   <TableBody>
                     {sortedCourses.map((course) => {
-                      const enrolledStudents = students.filter((s) => course.enrolledStudents.includes(s.id))
+                      const enrolledStudents = students.filter(
+                        (s) => course.enrolledStudents && course.enrolledStudents.includes(s.id),
+                      )
                       return (
                         <TableRow key={course.id}>
                           <TableCell>
@@ -1019,165 +931,167 @@ export default function ReceptionistDashboard() {
                     <GraduationCap className="h-5 w-5 mr-2" />
                     Teacher List
                   </CardTitle>
-                  <SortControls
-                    sortConfig={sortConfig}
-                    setSortConfig={setSortConfig}
-                    columns={[
-                      { key: "name", label: "Name" },
-                      { key: "school", label: "School" },
-                    ]}
-                  />
-                  <Dialog open={showAddTeacherDialog} onOpenChange={setShowAddTeacherDialog}>
-                    <DialogTrigger asChild>
-                      <Button>
-                        <Plus className="h-4 w-4 mr-2" />
-                        Add Teacher
-                      </Button>
-                    </DialogTrigger>
-                    <DialogContent className="max-w-2xl">
-                      <DialogHeader>
-                        <DialogTitle>Add New Teacher</DialogTitle>
-                      </DialogHeader>
-                      <form onSubmit={handleAddTeacher} className="space-y-4">
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                          <div className="space-y-2">
-                            <Label htmlFor="profName">Full Name</Label>
-                            <Input
-                              id="profName"
-                              value={newTeacher.name}
-                              onChange={(e) => setNewTeacher({ ...newTeacher, name: e.target.value })}
-                              required
-                            />
-                          </div>
-                          <div className="space-y-2">
-                            <Label htmlFor="profAddress">Address</Label>
-                            <Input
-                              id="profAddress"
-                              value={newTeacher.address}
-                              onChange={(e) => setNewTeacher({ ...newTeacher, address: e.target.value })}
-                              required
-                            />
-                          </div>
-                          <div className="space-y-2">
-                            <Label htmlFor="profPhone">Phone Number</Label>
-                            <Input
-                              id="profPhone"
-                              value={newTeacher.phone}
-                              onChange={(e) => setNewTeacher({ ...newTeacher, phone: e.target.value })}
-                              required
-                            />
-                          </div>
-                          <div className="space-y-2">
-                            <Label htmlFor="profEmail">Email (Optional)</Label>
-                            <Input
-                              id="profEmail"
-                              type="email"
-                              value={newTeacher.email}
-                              onChange={(e) => setNewTeacher({ ...newTeacher, email: e.target.value })}
-                            />
-                          </div>
-                          <div className="space-y-2">
-                            <Label htmlFor="profSchool">School They Work At</Label>
-                            <Input
-                              id="profSchool"
-                              value={newTeacher.school}
-                              onChange={(e) => setNewTeacher({ ...newTeacher, school: e.target.value })}
-                              required
-                            />
-                          </div>
-                          <div className="space-y-2">
-                            <Label htmlFor="profSchoolYears">School Years They Teach</Label>
-                            <Select
-                              onValueChange={(value) =>
-                                handleMultiSelect(value, newTeacher.schoolYears, (arr) =>
-                                  setNewTeacher({ ...newTeacher, schoolYears: arr }),
-                                )
-                              }
-                            >
-                              <SelectTrigger>
-                                <SelectValue placeholder="Select school years" />
-                              </SelectTrigger>
-                              <SelectContent>
-                                <SelectItem value="1AS">1AS</SelectItem>
-                                <SelectItem value="2AS">2AS</SelectItem>
-                                <SelectItem value="3AS">3AS</SelectItem>
-                                <SelectItem value="BEM">BEM</SelectItem>
-                                <SelectItem value="BAC">BAC</SelectItem>
-                              </SelectContent>
-                            </Select>
-                            <div className="flex flex-wrap gap-2 mt-2">
-                              {newTeacher.schoolYears.map((year) => (
-                                <Badge
-                                  key={year}
-                                  variant="secondary"
-                                  className="cursor-pointer"
-                                  onClick={() =>
-                                    handleMultiSelect(year, newTeacher.schoolYears, (arr) =>
-                                      setNewTeacher({ ...newTeacher, schoolYears: arr }),
-                                    )
-                                  }
-                                >
-                                  {year} ×
-                                </Badge>
-                              ))}
+                  <div className="flex items-center space-x-4">
+                    <SortControls
+                      sortConfig={sortConfig}
+                      setSortConfig={setSortConfig}
+                      columns={[
+                        { key: "name", label: "Name" },
+                        { key: "school", label: "School" },
+                      ]}
+                    />
+                    <Dialog open={showAddTeacherDialog} onOpenChange={setShowAddTeacherDialog}>
+                      <DialogTrigger asChild>
+                        <Button>
+                          <Plus className="h-4 w-4 mr-2" />
+                          Add Teacher
+                        </Button>
+                      </DialogTrigger>
+                      <DialogContent className="max-w-2xl">
+                        <DialogHeader>
+                          <DialogTitle>Add New Teacher</DialogTitle>
+                        </DialogHeader>
+                        <form onSubmit={handleAddTeacher} className="space-y-4">
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div className="space-y-2">
+                              <Label htmlFor="profName">Full Name</Label>
+                              <Input
+                                id="profName"
+                                value={newTeacher.name}
+                                onChange={(e) => setNewTeacher({ ...newTeacher, name: e.target.value })}
+                                required
+                              />
+                            </div>
+                            <div className="space-y-2">
+                              <Label htmlFor="profAddress">Address</Label>
+                              <Input
+                                id="profAddress"
+                                value={newTeacher.address}
+                                onChange={(e) => setNewTeacher({ ...newTeacher, address: e.target.value })}
+                                required
+                              />
+                            </div>
+                            <div className="space-y-2">
+                              <Label htmlFor="profPhone">Phone Number</Label>
+                              <Input
+                                id="profPhone"
+                                value={newTeacher.phone}
+                                onChange={(e) => setNewTeacher({ ...newTeacher, phone: e.target.value })}
+                                required
+                              />
+                            </div>
+                            <div className="space-y-2">
+                              <Label htmlFor="profEmail">Email (Optional)</Label>
+                              <Input
+                                id="profEmail"
+                                type="email"
+                                value={newTeacher.email}
+                                onChange={(e) => setNewTeacher({ ...newTeacher, email: e.target.value })}
+                              />
+                            </div>
+                            <div className="space-y-2">
+                              <Label htmlFor="profSchool">School They Work At</Label>
+                              <Input
+                                id="profSchool"
+                                value={newTeacher.school}
+                                onChange={(e) => setNewTeacher({ ...newTeacher, school: e.target.value })}
+                                required
+                              />
+                            </div>
+                            <div className="space-y-2">
+                              <Label htmlFor="profSchoolYears">School Years They Teach</Label>
+                              <Select
+                                onValueChange={(value) =>
+                                  handleMultiSelect(value, newTeacher.schoolYears, (arr) =>
+                                    setNewTeacher({ ...newTeacher, schoolYears: arr }),
+                                  )
+                                }
+                              >
+                                <SelectTrigger>
+                                  <SelectValue placeholder="Select school years" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  <SelectItem value="1AS">1AS</SelectItem>
+                                  <SelectItem value="2AS">2AS</SelectItem>
+                                  <SelectItem value="3AS">3AS</SelectItem>
+                                  <SelectItem value="BEM">BEM</SelectItem>
+                                  <SelectItem value="BAC">BAC</SelectItem>
+                                </SelectContent>
+                              </Select>
+                              <div className="flex flex-wrap gap-2 mt-2">
+                                {newTeacher.schoolYears.map((year) => (
+                                  <Badge
+                                    key={year}
+                                    variant="secondary"
+                                    className="cursor-pointer"
+                                    onClick={() =>
+                                      handleMultiSelect(year, newTeacher.schoolYears, (arr) =>
+                                        setNewTeacher({ ...newTeacher, schoolYears: arr }),
+                                      )
+                                    }
+                                  >
+                                    {year} ×
+                                  </Badge>
+                                ))}
+                              </div>
+                            </div>
+                            <div className="space-y-2 md:col-span-2">
+                              <Label htmlFor="profSubjects">Subjects They Teach</Label>
+                              <Select
+                                onValueChange={(value) =>
+                                  handleMultiSelect(value, newTeacher.subjects, (arr) =>
+                                    setNewTeacher({ ...newTeacher, subjects: arr }),
+                                  )
+                                }
+                              >
+                                <SelectTrigger>
+                                  <SelectValue placeholder="Select subjects" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  <SelectItem value="Mathematics">Mathematics</SelectItem>
+                                  <SelectItem value="Physics">Physics</SelectItem>
+                                  <SelectItem value="Chemistry">Chemistry</SelectItem>
+                                  <SelectItem value="Biology">Biology</SelectItem>
+                                  <SelectItem value="Arabic">Arabic</SelectItem>
+                                  <SelectItem value="French">French</SelectItem>
+                                  <SelectItem value="English">English</SelectItem>
+                                  <SelectItem value="History">History</SelectItem>
+                                  <SelectItem value="Geography">Geography</SelectItem>
+                                  <SelectItem value="Philosophy">Philosophy</SelectItem>
+                                </SelectContent>
+                              </Select>
+                              <div className="flex flex-wrap gap-2 mt-2">
+                                {newTeacher.subjects.map((subject) => (
+                                  <Badge
+                                    key={subject}
+                                    variant="default"
+                                    className="cursor-pointer"
+                                    onClick={() =>
+                                      handleMultiSelect(subject, newTeacher.subjects, (arr) =>
+                                        setNewTeacher({ ...newTeacher, subjects: arr }),
+                                      )
+                                    }
+                                  >
+                                    {subject} ×
+                                  </Badge>
+                                ))}
+                              </div>
                             </div>
                           </div>
-                          <div className="space-y-2 md:col-span-2">
-                            <Label htmlFor="profSubjects">Subjects They Teach</Label>
-                            <Select
-                              onValueChange={(value) =>
-                                handleMultiSelect(value, newTeacher.subjects, (arr) =>
-                                  setNewTeacher({ ...newTeacher, subjects: arr }),
-                                )
-                              }
-                            >
-                              <SelectTrigger>
-                                <SelectValue placeholder="Select subjects" />
-                              </SelectTrigger>
-                              <SelectContent>
-                                <SelectItem value="Mathematics">Mathematics</SelectItem>
-                                <SelectItem value="Physics">Physics</SelectItem>
-                                <SelectItem value="Chemistry">Chemistry</SelectItem>
-                                <SelectItem value="Biology">Biology</SelectItem>
-                                <SelectItem value="Arabic">Arabic</SelectItem>
-                                <SelectItem value="French">French</SelectItem>
-                                <SelectItem value="English">English</SelectItem>
-                                <SelectItem value="History">History</SelectItem>
-                                <SelectItem value="Geography">Geography</SelectItem>
-                                <SelectItem value="Philosophy">Philosophy</SelectItem>
-                              </SelectContent>
-                            </Select>
-                            <div className="flex flex-wrap gap-2 mt-2">
-                              {newTeacher.subjects.map((subject) => (
-                                <Badge
-                                  key={subject}
-                                  variant="default"
-                                  className="cursor-pointer"
-                                  onClick={() =>
-                                    handleMultiSelect(subject, newTeacher.subjects, (arr) =>
-                                      setNewTeacher({ ...newTeacher, subjects: arr }),
-                                    )
-                                  }
-                                >
-                                  {subject} ×
-                                </Badge>
-                              ))}
-                            </div>
-                          </div>
-                        </div>
 
-                        <div className="flex justify-end space-x-2">
-                          <Button type="button" variant="outline" onClick={() => setShowAddTeacherDialog(false)}>
-                            Cancel
-                          </Button>
-                          <Button type="submit">
-                            <GraduationCap className="h-4 w-4 mr-2" />
-                            Add Teacher
-                          </Button>
-                        </div>
-                      </form>
-                    </DialogContent>
-                  </Dialog>
+                          <div className="flex justify-end space-x-2">
+                            <Button type="button" variant="outline" onClick={() => setShowAddTeacherDialog(false)}>
+                              Cancel
+                            </Button>
+                            <Button type="submit">
+                              <GraduationCap className="h-4 w-4 mr-2" />
+                              Add Teacher
+                            </Button>
+                          </div>
+                        </form>
+                      </DialogContent>
+                    </Dialog>
+                  </div>
                 </div>
               </CardHeader>
               <CardContent>

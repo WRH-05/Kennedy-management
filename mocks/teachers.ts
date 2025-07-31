@@ -7,9 +7,6 @@ export interface Teacher {
   school: string
   schoolYears: string[]
   subjects: string[]
-  totalStudents: number
-  monthlyEarnings: number
-  joinDate: string
 }
 
 export const mockTeachers: Teacher[] = [
@@ -22,9 +19,6 @@ export const mockTeachers: Teacher[] = [
     school: "Lycée Mohamed Boudiaf",
     schoolYears: ["3AS", "BAC"],
     subjects: ["Mathematics", "Physics"],
-    totalStudents: 15,
-    monthlyEarnings: 10500,
-    joinDate: "2023-09-01",
   },
   {
     id: 2,
@@ -33,23 +27,17 @@ export const mockTeachers: Teacher[] = [
     phone: "+213 555 333 444",
     email: "amina.khelifi@school.dz",
     school: "Lycée Ibn Khaldoun",
-    schoolYears: ["2AS"],
+    schoolYears: ["2AS", "3AS"],
     subjects: ["Physics", "Chemistry"],
-    totalStudents: 12,
-    monthlyEarnings: 7800,
-    joinDate: "2023-10-15",
   },
   {
     id: 3,
-    name: "Prof. Omar Mansouri",
-    address: "456 Rue de la République, Constantine",
+    name: "Prof. Omar Djelloul",
+    address: "456 Rue de l'Education, Constantine",
     phone: "+213 555 555 666",
-    email: "omar.mansouri@school.dz",
+    email: "omar.djelloul@school.dz",
     school: "Lycée Emir Abdelkader",
     schoolYears: ["1AS", "2AS"],
-    subjects: ["Biology", "Chemistry"],
-    totalStudents: 18,
-    monthlyEarnings: 9200,
-    joinDate: "2023-08-20",
+    subjects: ["Arabic", "History"],
   },
 ]
