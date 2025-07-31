@@ -9,6 +9,12 @@ export interface Student {
   email: string
   school: string
   registrationFeePaid: boolean
+  registrationDate: string
+  documents: {
+    photos: { uploaded: boolean; filename: string | null }
+    copyOfId: { uploaded: boolean; filename: string | null }
+    registrationForm: { uploaded: boolean; filename: string | null }
+  }
 }
 
 export const mockStudents: Student[] = [
@@ -23,6 +29,12 @@ export const mockStudents: Student[] = [
     email: "ahmed.benali@email.com",
     school: "Lycée Mohamed Boudiaf",
     registrationFeePaid: true,
+    registrationDate: "2024-01-15",
+    documents: {
+      photos: { uploaded: true, filename: "20240115_Ben_Ahmed_Photos.pdf" },
+      copyOfId: { uploaded: false, filename: null },
+      registrationForm: { uploaded: true, filename: "20240115_Ben_Ahmed_Registration.pdf" },
+    },
   },
   {
     id: 2,
@@ -35,17 +47,29 @@ export const mockStudents: Student[] = [
     email: "fatima.zahra@email.com",
     school: "Lycée Ibn Khaldoun",
     registrationFeePaid: true,
+    registrationDate: "2024-01-10",
+    documents: {
+      photos: { uploaded: true, filename: "20240110_Zahra_Fatima_Photos.pdf" },
+      copyOfId: { uploaded: true, filename: "20240110_Zahra_Fatima_ID.pdf" },
+      registrationForm: { uploaded: false, filename: null },
+    },
   },
   {
     id: 3,
-    name: "Youssef Mansouri",
+    name: "Omar Khaled",
     schoolYear: "2AS",
     specialty: "Sciences",
-    address: "789 Boulevard de la République, Constantine",
-    birthDate: "2006-01-10",
-    phone: "+213 555 345 678",
-    email: "youssef.mansouri@email.com",
+    address: "789 Boulevard de l'Indépendance, Constantine",
+    birthDate: "2006-11-08",
+    phone: "+213 555 456 789",
+    email: "omar.khaled@email.com",
     school: "Lycée Emir Abdelkader",
     registrationFeePaid: false,
+    registrationDate: "2024-01-20",
+    documents: {
+      photos: { uploaded: false, filename: null },
+      copyOfId: { uploaded: true, filename: "20240120_Khaled_Omar_ID.pdf" },
+      registrationForm: { uploaded: true, filename: "20240120_Khaled_Omar_Registration.pdf" },
+    },
   },
 ]

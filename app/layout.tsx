@@ -7,7 +7,7 @@ const inter = Inter({ subsets: ["latin"] })
 
 export const metadata: Metadata = {
   title: "Cram School Management System",
-  description: "A minimalistic management system for cram schools",
+  description: "A comprehensive management system for cram schools",
     generator: 'v0.dev'
 }
 

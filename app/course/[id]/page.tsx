@@ -1,12 +1,17 @@
 "use client"
 
+import type React from "react"
 import { useState, useEffect } from "react"
 import { useRouter, useParams } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
+import { ArrowLeft, BookOpen, Users, Calendar, DollarSign, Plus } from "lucide-react"
+import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
 import {
   AlertDialog,
   AlertDialogAction,
@@ -16,115 +21,216 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-  AlertDialogTrigger,
 } from "@/components/ui/alert-dialog"
-import { ArrowLeft, Users, Calendar, History, RotateCcw } from "lucide-react"
 import { DataService } from "@/services/dataService"
 import type { Course } from "@/mocks/courses"
 import type { Student } from "@/mocks/students"
 
-export default function CourseDetailsPage() {
+export default function CourseDetail() {
   const router = useRouter()
   const params = useParams()
-  const courseId = Number.parseInt(params.id as string)
-
+  const courseId = params.id as string
   const [course, setCourse] = useState<Course | null>(null)
   const [students, setStudents] = useState<Student[]>([])
-  const [loading, setLoading] = useState(true)
+  const [user, setUser] = useState<any>(null)
+  const [showAddStudentDialog, setShowAddStudentDialog] = useState(false)
+  const [selectedStudent, setSelectedStudent] = useState("")
+  const [studentSearchQuery, setStudentSearchQuery] = useState("")
+  const [showStudentResults, setShowStudentResults] = useState(false)
+  const [confirmDialog, setConfirmDialog] = useState({
+    open: false,
+    title: "",
+    description: "",
+    action: () => {},
+  })
 
   useEffect(() => {
-    const courseData = DataService.getCourseById(courseId)
-    const studentsData = DataService.getStudents()
+    // Check if user is logged in
+    const userData = localStorage.getItem("user")
+    if (!userData) {
+      router.push("/")
+      return
+    }
+    setUser(JSON.parse(userData))
 
+    // Get course data
+    const courseData = DataService.getCourseById(Number.parseInt(courseId))
     if (courseData) {
       setCourse(courseData)
-      setStudents(studentsData)
-    }
-    setLoading(false)
-  }, [courseId])
-
-  const handleResetForNewMonth = () => {
-    if (!course) return
-
-    const currentMonth = new Date().toISOString().slice(0, 7) // YYYY-MM format
-
-    // Create history entry from current data
-    const historyEntry = {
-      month: currentMonth,
-      students: course.current.students,
-      attendance: course.current.attendance,
-      payments: course.current.payments,
-      completedSessions: Object.values(course.current.attendance).reduce(
-        (total, sessions) => total + sessions.filter(Boolean).length,
-        0,
-      ),
+    } else {
+      router.push("/receptionist")
     }
 
-    // Update course with new history and reset current data
-    const updatedCourse = {
-      ...course,
-      history: [...course.history, historyEntry],
-      current: {
-        students: course.current.students, // Keep students enrolled
-        attendance: {},
-        payments: {
-          students: Object.keys(course.current.payments.students).reduce(
-            (acc, studentId) => {
-              acc[Number.parseInt(studentId)] = false
-              return acc
-            },
-            {} as Record<number, boolean>,
-          ),
-          teacherPaid: false,
+    // Get all students
+    setStudents(DataService.getStudents())
+  }, [courseId, router])
+
+  const updateWeeklyAttendance = (studentId: number, week: string, present: boolean) => {
+    setCourse((prev: any) => {
+      if (!prev) return null
+      return {
+        ...prev,
+        attendance: {
+          ...prev.attendance,
+          [studentId]: {
+            ...prev.attendance[studentId],
+            [week]: present,
+          },
         },
+      }
+    })
+  }
+
+  const toggleStudentPayment = (studentId: number) => {
+    const currentStatus = course?.payments.students[studentId] || false
+    setConfirmDialog({
+      open: true,
+      title: "Confirm Payment Status",
+      description: `Mark payment as ${currentStatus ? "unpaid" : "paid"}?`,
+      action: () => {
+        setCourse((prev: any) => {
+          if (!prev) return null
+          return {
+            ...prev,
+            payments: {
+              ...prev.payments,
+              students: {
+                ...prev.payments.students,
+                [studentId]: !currentStatus,
+              },
+            },
+          }
+        })
+        setConfirmDialog({ open: false, title: "", description: "", action: () => {} })
       },
-    }
-
-    DataService.updateCourse(courseId, updatedCourse)
-    setCourse(updatedCourse)
+    })
   }
 
-  if (loading) {
-    return <div className="min-h-screen bg-gray-50 flex items-center justify-center">Loading...</div>
+  const toggleTeacherPayment = () => {
+    const currentStatus = course?.payments.teacherPaid
+    setConfirmDialog({
+      open: true,
+      title: "Confirm Teacher Payment",
+      description: `Mark teacher payment as ${currentStatus ? "unpaid" : "paid"}?`,
+      action: () => {
+        setCourse((prev: any) => {
+          if (!prev) return null
+          return {
+            ...prev,
+            payments: {
+              ...prev.payments,
+              teacherPaid: !currentStatus,
+            },
+          }
+        })
+        setConfirmDialog({ open: false, title: "", description: "", action: () => {} })
+      },
+    })
   }
 
-  if (!course) {
+  const handleAddStudent = (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!selectedStudent) return
+
+    const student = students.find((s) => s.id.toString() === selectedStudent)
+    if (!student) return
+
+    setCourse((prev: any) => {
+      if (!prev) return null
+      return {
+        ...prev,
+        enrolledStudents: [...prev.enrolledStudents, student.id],
+        studentNames: [...prev.studentNames, student.name],
+        payments: {
+          ...prev.payments,
+          students: {
+            ...prev.payments.students,
+            [student.id]: false,
+          },
+        },
+        attendance: {
+          ...prev.attendance,
+          [student.id]: { week1: false, week2: false, week3: false, week4: false },
+        },
+      }
+    })
+
+    setSelectedStudent("")
+    setStudentSearchQuery("")
+    setShowAddStudentDialog(false)
+  }
+
+  const removeStudentFromCourse = (studentId: number) => {
+    const studentName = course?.studentNames[course?.enrolledStudents.findIndex((id: number) => id === studentId)]
+    setConfirmDialog({
+      open: true,
+      title: "Remove Student",
+      description: `Are you sure you want to remove ${studentName} from this course?`,
+      action: () => {
+        setCourse((prev: any) => {
+          if (!prev) return null
+          const studentIndex = prev.enrolledStudents.findIndex((id: number) => id === studentId)
+          if (studentIndex === -1) return prev
+
+          const newEnrolledStudents = [...prev.enrolledStudents]
+          newEnrolledStudents.splice(studentIndex, 1)
+
+          const newStudentNames = [...prev.studentNames]
+          newStudentNames.splice(studentIndex, 1)
+
+          const newPayments = { ...prev.payments }
+          delete newPayments.students[studentId]
+
+          const newAttendance = { ...prev.attendance }
+          delete newAttendance[studentId]
+
+          return {
+            ...prev,
+            enrolledStudents: newEnrolledStudents,
+            studentNames: newStudentNames,
+            payments: {
+              ...newPayments,
+              students: { ...newPayments.students },
+            },
+            attendance: {
+              ...newAttendance,
+            },
+          }
+        })
+        setConfirmDialog({ open: false, title: "", description: "", action: () => {} })
+      },
+    })
+  }
+
+  if (!course || !user) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="text-center">
-          <h1 className="text-2xl font-bold text-gray-900 mb-4">Course Not Found</h1>
-          <Button onClick={() => router.back()}>
-            <ArrowLeft className="h-4 w-4 mr-2" />
-            Go Back
-          </Button>
+          <h2 className="text-xl font-semibold text-gray-900">Loading...</h2>
         </div>
       </div>
     )
   }
 
-  const enrolledStudents = students.filter((s) => course.enrolledStudents.includes(s.id))
+  const availableStudents = students.filter((student) => !course.enrolledStudents.includes(student.id))
+
+  const teacherEarnings = Math.round((course.price * course.enrolledStudents.length * course.percentageCut) / 100)
+
+  const filteredStudents = availableStudents.filter((student) =>
+    student.name.toLowerCase().includes(studentSearchQuery.toLowerCase()),
+  )
 
   return (
     <div className="min-h-screen bg-gray-50">
+      {/* Header */}
       <header className="bg-white shadow-sm border-b">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center justify-between h-16">
-            <div className="flex items-center space-x-4">
-              <Button variant="ghost" onClick={() => router.back()}>
-                <ArrowLeft className="h-4 w-4 mr-2" />
-                Back
-              </Button>
-              <div>
-                <h1 className="text-xl font-semibold text-gray-900">
-                  {course.subject} - {course.schoolYear}
-                </h1>
-                <p className="text-sm text-gray-600">{course.teacherName}</p>
-              </div>
-            </div>
-            <div className="flex items-center space-x-2">
-              <Badge variant={course.status === "active" ? "default" : "secondary"}>{course.status}</Badge>
-              <Badge variant={course.courseType === "Group" ? "default" : "outline"}>{course.courseType}</Badge>
-            </div>
+          <div className="flex items-center h-16">
+            <Button variant="ghost" size="sm" onClick={() => router.back()} className="mr-4">
+              <ArrowLeft className="h-4 w-4 mr-2" />
+              Back
+            </Button>
+            <h1 className="text-xl font-semibold text-gray-900">Course Details</h1>
           </div>
         </div>
       </header>
@@ -135,311 +241,317 @@ export default function CourseDetailsPage() {
           <div className="lg:col-span-1">
             <Card>
               <CardHeader>
-                <CardTitle>Course Information</CardTitle>
+                <CardTitle className="flex items-center">
+                  <BookOpen className="h-5 w-5 mr-2" />
+                  Course Information
+                </CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
                 <div>
-                  <label className="text-sm font-medium text-gray-500">Schedule</label>
-                  <p className="text-sm">{course.schedule}</p>
+                  <h3 className="font-semibold text-lg">{course.subject}</h3>
+                  <p className="text-gray-600">{course.schoolYear}</p>
                 </div>
-                <div>
-                  <label className="text-sm font-medium text-gray-500">Duration</label>
-                  <p className="text-sm">{course.duration} hours</p>
-                </div>
-                <div>
-                  <label className="text-sm font-medium text-gray-500">Price</label>
-                  <p className="text-sm">
-                    {course.price} DA {course.courseType === "Group" ? "/month" : "/session"}
+                <div className="space-y-2">
+                  <p>
+                    <span className="font-medium">Teacher:</span>{" "}
+                    <Button
+                      variant="link"
+                      className="p-0 h-auto font-medium"
+                      onClick={() => router.push(`/teacher/${course.teacherId}`)}
+                    >
+                      {course.teacherName}
+                    </Button>
+                  </p>
+                  <p>
+                    <span className="font-medium">Type:</span>
+                    <Badge variant={course.courseType === "Group" ? "default" : "secondary"} className="ml-2">
+                      {course.courseType}
+                    </Badge>
+                  </p>
+                  <p>
+                    <span className="font-medium">Schedule:</span> {course.schedule}
+                  </p>
+                  <p>
+                    <span className="font-medium">Duration:</span> {course.duration}h
+                  </p>
+                  <p>
+                    <span className="font-medium">
+                      {course.courseType === "Group" ? "Monthly Price" : "Session Price"}:
+                    </span>{" "}
+                    {course.price} DA
+                  </p>
+                  <p>
+                    <span className="font-medium">Teacher Cut:</span> {course.percentageCut}%
+                  </p>
+                  <p>
+                    <span className="font-medium">Enrolled Students:</span> {course.enrolledStudents.length}
                   </p>
                 </div>
-                <div>
-                  <label className="text-sm font-medium text-gray-500">Teacher Cut</label>
-                  <p className="text-sm">{course.percentageCut}%</p>
-                </div>
-                <div>
-                  <label className="text-sm font-medium text-gray-500">Enrolled Students</label>
-                  <p className="text-sm">{enrolledStudents.length} students</p>
+                <div className="pt-4 border-t">
+                  <p>
+                    <span className="font-medium">Status:</span>
+                    <Badge variant={course.status === "active" ? "default" : "secondary"} className="ml-2">
+                      {course.status}
+                    </Badge>
+                  </p>
                 </div>
               </CardContent>
             </Card>
 
-            {/* Reset Button */}
+            {/* Payment Status */}
             <Card className="mt-6">
               <CardHeader>
                 <CardTitle className="flex items-center">
-                  <RotateCcw className="h-5 w-5 mr-2" />
-                  Monthly Reset
+                  <DollarSign className="h-5 w-5 mr-2" />
+                  Payment Status
                 </CardTitle>
               </CardHeader>
-              <CardContent>
-                <p className="text-sm text-gray-600 mb-4">
-                  Archive current month data and prepare for new month. This will clear attendance and payment records
-                  while keeping enrolled students.
-                </p>
-                <AlertDialog>
-                  <AlertDialogTrigger asChild>
-                    <Button variant="outline" className="w-full bg-transparent">
-                      <RotateCcw className="h-4 w-4 mr-2" />
-                      Reset for New Month
-                    </Button>
-                  </AlertDialogTrigger>
-                  <AlertDialogContent>
-                    <AlertDialogHeader>
-                      <AlertDialogTitle>Reset Course for New Month</AlertDialogTitle>
-                      <AlertDialogDescription>
-                        This will archive the current month's data and reset attendance and payments for a new month.
-                        Students will remain enrolled. This action cannot be undone.
-                      </AlertDialogDescription>
-                    </AlertDialogHeader>
-                    <AlertDialogFooter>
-                      <AlertDialogCancel>Cancel</AlertDialogCancel>
-                      <AlertDialogAction onClick={handleResetForNewMonth}>Reset Course</AlertDialogAction>
-                    </AlertDialogFooter>
-                  </AlertDialogContent>
-                </AlertDialog>
+              <CardContent className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <Label>Teacher Payment</Label>
+                  <Button
+                    variant={course.payments.teacherPaid ? "default" : "destructive"}
+                    size="sm"
+                    onClick={toggleTeacherPayment}
+                  >
+                    {course.payments.teacherPaid ? "Paid" : "Pay"}
+                  </Button>
+                </div>
+                <div className="pt-4 border-t">
+                  <div className="flex justify-between items-center">
+                    <span className="font-medium">
+                      Total {course.courseType === "Group" ? "Monthly" : "Session"} Revenue:
+                    </span>
+                    <span className="text-lg font-bold">{course.price * course.enrolledStudents.length} DA</span>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span className="font-medium">Teacher Earnings:</span>
+                    <span className="text-lg font-bold text-green-600">{teacherEarnings} DA</span>
+                  </div>
+                </div>
               </CardContent>
             </Card>
           </div>
 
-          {/* Main Content */}
+          {/* Students and Attendance */}
           <div className="lg:col-span-2">
-            <Tabs defaultValue="current" className="space-y-6">
-              <TabsList>
-                <TabsTrigger value="current">Current Month</TabsTrigger>
-                <TabsTrigger value="history">History</TabsTrigger>
-              </TabsList>
-
-              {/* Current Month Tab */}
-              <TabsContent value="current">
-                <div className="space-y-6">
-                  {/* Students */}
-                  <Card>
-                    <CardHeader>
-                      <CardTitle className="flex items-center">
-                        <Users className="h-5 w-5 mr-2" />
-                        Enrolled Students
-                      </CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                      <Table>
-                        <TableHeader>
-                          <TableRow>
-                            <TableHead>Name</TableHead>
-                            <TableHead>School Year</TableHead>
-                            <TableHead>Payment Status</TableHead>
-                          </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                          {enrolledStudents.map((student) => (
-                            <TableRow key={student.id}>
-                              <TableCell className="font-medium">{student.name}</TableCell>
-                              <TableCell>{student.schoolYear}</TableCell>
-                              <TableCell>
-                                <Badge
-                                  variant={course.current.payments.students[student.id] ? "default" : "destructive"}
-                                >
-                                  {course.current.payments.students[student.id] ? "Paid" : "Pending"}
-                                </Badge>
-                              </TableCell>
-                            </TableRow>
-                          ))}
-                        </TableBody>
-                      </Table>
-                    </CardContent>
-                  </Card>
-
-                  {/* Attendance */}
-                  <Card>
-                    <CardHeader>
-                      <CardTitle className="flex items-center">
-                        <Calendar className="h-5 w-5 mr-2" />
-                        Attendance Record
-                      </CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                      {Object.keys(course.current.attendance).length > 0 ? (
-                        <Table>
-                          <TableHeader>
-                            <TableRow>
-                              <TableHead>Student</TableHead>
-                              <TableHead>Sessions Attended</TableHead>
-                              <TableHead>Attendance Rate</TableHead>
-                            </TableRow>
-                          </TableHeader>
-                          <TableBody>
-                            {enrolledStudents.map((student) => {
-                              const attendance = course.current.attendance[student.id] || []
-                              const attendedSessions = attendance.filter(Boolean).length
-                              const totalSessions = attendance.length
-                              const attendanceRate =
-                                totalSessions > 0 ? Math.round((attendedSessions / totalSessions) * 100) : 0
-
-                              return (
-                                <TableRow key={student.id}>
-                                  <TableCell className="font-medium">{student.name}</TableCell>
-                                  <TableCell>
-                                    {attendedSessions}/{totalSessions}
-                                  </TableCell>
-                                  <TableCell>
-                                    <Badge
-                                      variant={
-                                        attendanceRate >= 80
-                                          ? "default"
-                                          : attendanceRate >= 60
-                                            ? "secondary"
-                                            : "destructive"
-                                      }
-                                    >
-                                      {attendanceRate}%
-                                    </Badge>
-                                  </TableCell>
-                                </TableRow>
-                              )
-                            })}
-                          </TableBody>
-                        </Table>
-                      ) : (
-                        <div className="text-center py-8 text-gray-500">
-                          <Calendar className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                          <p>No attendance records for this month</p>
+            <Card>
+              <CardHeader>
+                <div className="flex justify-between items-center">
+                  <CardTitle className="flex items-center">
+                    <Users className="h-5 w-5 mr-2" />
+                    Enrolled Students & Management
+                  </CardTitle>
+                  <Dialog open={showAddStudentDialog} onOpenChange={setShowAddStudentDialog}>
+                    <DialogTrigger asChild>
+                      <Button disabled={availableStudents.length === 0}>
+                        <Plus className="h-4 w-4 mr-2" />
+                        Add Student
+                      </Button>
+                    </DialogTrigger>
+                    <DialogContent>
+                      <DialogHeader>
+                        <DialogTitle>Add Student to Course</DialogTitle>
+                      </DialogHeader>
+                      <form onSubmit={handleAddStudent} className="space-y-4">
+                        <div className="space-y-2">
+                          <Label htmlFor="studentSearch">Student</Label>
+                          <div className="relative">
+                            <Input
+                              id="studentSearch"
+                              placeholder="Search for a student..."
+                              value={studentSearchQuery}
+                              onChange={(e) => {
+                                setStudentSearchQuery(e.target.value)
+                                setShowStudentResults(e.target.value.length > 0)
+                              }}
+                              onBlur={() => setTimeout(() => setShowStudentResults(false), 100)}
+                              onFocus={() => setShowStudentResults(studentSearchQuery.length > 0)}
+                              required
+                            />
+                            {showStudentResults && filteredStudents.length > 0 && (
+                              <div className="absolute top-full left-0 right-0 mt-1 bg-white border rounded-md shadow-lg z-50 max-h-40 overflow-y-auto">
+                                {filteredStudents.map((student) => (
+                                  <div
+                                    key={student.id}
+                                    className="px-4 py-2 hover:bg-gray-50 cursor-pointer border-b last:border-b-0"
+                                    onClick={() => {
+                                      setSelectedStudent(student.id.toString())
+                                      setStudentSearchQuery(student.name)
+                                      setShowStudentResults(false)
+                                    }}
+                                  >
+                                    <div className="font-medium">{student.name}</div>
+                                    <div className="text-sm text-gray-600">
+                                      {student.schoolYear} - {student.specialty}
+                                    </div>
+                                  </div>
+                                ))}
+                              </div>
+                            )}
+                          </div>
+                          {selectedStudent && (
+                            <div className="text-sm text-green-600">
+                              Selected: {students.find((s) => s.id.toString() === selectedStudent)?.name}
+                            </div>
+                          )}
                         </div>
-                      )}
-                    </CardContent>
-                  </Card>
+                        <div className="flex justify-end space-x-2">
+                          <Button type="button" variant="outline" onClick={() => setShowAddStudentDialog(false)}>
+                            Cancel
+                          </Button>
+                          <Button type="submit">Add Student</Button>
+                        </div>
+                      </form>
+                    </DialogContent>
+                  </Dialog>
                 </div>
-              </TabsContent>
+              </CardHeader>
+              <CardContent>
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Students</TableHead>
+                      <TableHead>Week 1</TableHead>
+                      <TableHead>Week 2</TableHead>
+                      <TableHead>Week 3</TableHead>
+                      <TableHead>Week 4</TableHead>
+                      <TableHead>Payment</TableHead>
+                      <TableHead>Actions</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {course.enrolledStudents.map((studentId: number, idx: number) => (
+                      <TableRow key={studentId}>
+                        <TableCell className="font-medium">
+                          <Button
+                            variant="link"
+                            className="p-0 h-auto font-medium text-left"
+                            onClick={() => router.push(`/student/${studentId}`)}
+                          >
+                            {course.studentNames[idx]}
+                          </Button>
+                        </TableCell>
+                        {["week1", "week2", "week3", "week4"].map((week) => (
+                          <TableCell key={week}>
+                            <Select
+                              value={
+                                course.attendance?.[studentId]?.[week as keyof (typeof course.attendance)[number]]
+                                  ? "p"
+                                  : "a"
+                              }
+                              onValueChange={(value) => updateWeeklyAttendance(studentId, week, value === "p")}
+                            >
+                              <SelectTrigger className="w-12 h-8">
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="p">P</SelectItem>
+                                <SelectItem value="a">A</SelectItem>
+                              </SelectContent>
+                            </Select>
+                          </TableCell>
+                        ))}
+                        <TableCell>
+                          <Button
+                            variant={course.payments.students[studentId] ? "default" : "destructive"}
+                            size="sm"
+                            onClick={() => toggleStudentPayment(studentId)}
+                          >
+                            {course.payments.students[studentId] ? "Paid" : "Pay"}
+                          </Button>
+                        </TableCell>
+                        <TableCell>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="h-8 px-2 text-xs bg-transparent"
+                            onClick={() => removeStudentFromCourse(studentId)}
+                          >
+                            Remove
+                          </Button>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
 
-              {/* History Tab */}
-              <TabsContent value="history">
-                <Card>
-                  <CardHeader>
-                    <CardTitle className="flex items-center">
-                      <History className="h-5 w-5 mr-2" />
-                      Course History
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    {course.history.length > 0 ? (
-                      <div className="space-y-4">
-                        {course.history
-                          .sort((a, b) => b.month.localeCompare(a.month))
-                          .map((historyEntry, index) => (
-                            <Card key={index} className="border-l-4 border-l-blue-500">
-                              <CardHeader>
-                                <CardTitle className="text-lg">
-                                  {new Date(historyEntry.month + "-01").toLocaleDateString("en-US", {
-                                    year: "numeric",
-                                    month: "long",
-                                  })}
-                                </CardTitle>
-                              </CardHeader>
-                              <CardContent>
-                                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
-                                  <div className="text-center">
-                                    <div className="text-2xl font-bold text-blue-600">
-                                      {historyEntry.students.length}
-                                    </div>
-                                    <div className="text-sm text-gray-600">Students</div>
-                                  </div>
-                                  <div className="text-center">
-                                    <div className="text-2xl font-bold text-green-600">
-                                      {historyEntry.completedSessions}
-                                    </div>
-                                    <div className="text-sm text-gray-600">Sessions</div>
-                                  </div>
-                                  <div className="text-center">
-                                    <div className="text-2xl font-bold text-purple-600">
-                                      {Object.values(historyEntry.payments.students).filter(Boolean).length}
-                                    </div>
-                                    <div className="text-sm text-gray-600">Paid Students</div>
-                                  </div>
-                                </div>
+                {course.enrolledStudents.length === 0 && (
+                  <div className="text-center py-8 text-gray-500">No students enrolled in this course.</div>
+                )}
+              </CardContent>
+            </Card>
 
-                                <div className="space-y-4">
-                                  <div>
-                                    <h4 className="font-medium mb-2">Student Attendance</h4>
-                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
-                                      {historyEntry.students.map((studentId) => {
-                                        const student = students.find((s) => s.id === studentId)
-                                        const attendance = historyEntry.attendance[studentId] || []
-                                        const attendedSessions = attendance.filter(Boolean).length
-                                        const totalSessions = attendance.length
-                                        const attendanceRate =
-                                          totalSessions > 0 ? Math.round((attendedSessions / totalSessions) * 100) : 0
+            {/* Course History */}
+            <Card className="mt-6">
+              <CardHeader>
+                <CardTitle className="flex items-center">
+                  <Calendar className="h-5 w-5 mr-2" />
+                  Course History
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-4">
+                  <div className="flex justify-between items-center p-3 bg-gray-50 rounded-lg">
+                    <div>
+                      <p className="font-medium">Course Created</p>
+                      <p className="text-sm text-gray-600">Course was set up and activated</p>
+                    </div>
+                    <Badge variant="outline">Created</Badge>
+                  </div>
 
-                                        return (
-                                          <div
-                                            key={studentId}
-                                            className="flex justify-between items-center p-2 bg-gray-50 rounded"
-                                          >
-                                            <span className="text-sm font-medium">
-                                              {student?.name || `Student ${studentId}`}
-                                            </span>
-                                            <Badge
-                                              variant={
-                                                attendanceRate >= 80
-                                                  ? "default"
-                                                  : attendanceRate >= 60
-                                                    ? "secondary"
-                                                    : "destructive"
-                                              }
-                                            >
-                                              {attendanceRate}%
-                                            </Badge>
-                                          </div>
-                                        )
-                                      })}
-                                    </div>
-                                  </div>
-
-                                  <div>
-                                    <h4 className="font-medium mb-2">Payment Status</h4>
-                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
-                                      {historyEntry.students.map((studentId) => {
-                                        const student = students.find((s) => s.id === studentId)
-                                        const paid = historyEntry.payments.students[studentId]
-
-                                        return (
-                                          <div
-                                            key={studentId}
-                                            className="flex justify-between items-center p-2 bg-gray-50 rounded"
-                                          >
-                                            <span className="text-sm font-medium">
-                                              {student?.name || `Student ${studentId}`}
-                                            </span>
-                                            <Badge variant={paid ? "default" : "destructive"}>
-                                              {paid ? "Paid" : "Unpaid"}
-                                            </Badge>
-                                          </div>
-                                        )
-                                      })}
-                                      <div className="flex justify-between items-center p-2 bg-gray-50 rounded">
-                                        <span className="text-sm font-medium">Teacher Payment</span>
-                                        <Badge variant={historyEntry.payments.teacherPaid ? "default" : "destructive"}>
-                                          {historyEntry.payments.teacherPaid ? "Paid" : "Unpaid"}
-                                        </Badge>
-                                      </div>
-                                    </div>
-                                  </div>
-                                </div>
-                              </CardContent>
-                            </Card>
-                          ))}
+                  {Object.entries(course.payments.students).some(([_, paid]) => paid) && (
+                    <div className="flex justify-between items-center p-3 bg-green-50 rounded-lg">
+                      <div>
+                        <p className="font-medium">Student Payments Received</p>
+                        <p className="text-sm text-gray-600">Some students have paid their fees</p>
                       </div>
-                    ) : (
-                      <div className="text-center py-8 text-gray-500">
-                        <History className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                        <p>No historical data available</p>
-                        <p className="text-sm">History will appear after monthly resets</p>
+                      <Badge variant="default">Payments</Badge>
+                    </div>
+                  )}
+
+                  {course.payments.teacherPaid && (
+                    <div className="flex justify-between items-center p-3 bg-blue-50 rounded-lg">
+                      <div>
+                        <p className="font-medium">Teacher Payment Made</p>
+                        <p className="text-sm text-gray-600">{teacherEarnings} DA paid to teacher</p>
                       </div>
-                    )}
-                  </CardContent>
-                </Card>
-              </TabsContent>
-            </Tabs>
+                      <Badge variant="default">Paid</Badge>
+                    </div>
+                  )}
+
+                  {course.status === "completed" && (
+                    <div className="flex justify-between items-center p-3 bg-purple-50 rounded-lg">
+                      <div>
+                        <p className="font-medium">Course Completed</p>
+                        <p className="text-sm text-gray-600">All sessions finished</p>
+                      </div>
+                      <Badge variant="default">Completed</Badge>
+                    </div>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
           </div>
         </div>
       </div>
+
+      <AlertDialog open={confirmDialog.open} onOpenChange={(open) => setConfirmDialog({ ...confirmDialog, open })}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>{confirmDialog.title}</AlertDialogTitle>
+            <AlertDialogDescription>{confirmDialog.description}</AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel
+              onClick={() => setConfirmDialog({ open: false, title: "", description: "", action: () => {} })}
+            >
+              Cancel
+            </AlertDialogCancel>
+            <AlertDialogAction onClick={confirmDialog.action}>Confirm</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   )
 }

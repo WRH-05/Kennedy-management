@@ -1,77 +1,121 @@
 "use client"
 
+import type React from "react"
+
 import { useState, useEffect } from "react"
 import { useRouter, useParams } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
-import { ArrowLeft, User, BookOpen, Phone, Mail, MapPin, Calendar, School } from "lucide-react"
+import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
+import { Alert, AlertDescription } from "@/components/ui/alert"
+import { ArrowLeft, Download, User, BookOpen, Upload, AlertTriangle, CheckCircle } from "lucide-react"
 import { DataService } from "@/services/dataService"
 import type { Student } from "@/mocks/students"
 import type { Course } from "@/mocks/courses"
 
-export default function StudentDetailsPage() {
+export default function StudentDashboard() {
   const router = useRouter()
   const params = useParams()
-  const studentId = Number.parseInt(params.id as string)
-
+  const studentId = params.id as string
   const [student, setStudent] = useState<Student | null>(null)
   const [courses, setCourses] = useState<Course[]>([])
-  const [loading, setLoading] = useState(true)
+  const [uploadingDoc, setUploadingDoc] = useState("")
 
   useEffect(() => {
-    const studentData = DataService.getStudentById(studentId)
-    const allCourses = DataService.getCourses()
-    const studentCourses = allCourses.filter(
-      (course) => course.enrolledStudents && course.enrolledStudents.includes(studentId),
-    )
+    // Check if user is logged in
+    const userData = localStorage.getItem("user")
+    if (!userData) {
+      router.push("/")
+      return
+    }
 
+    // Get student data
+    const studentData = DataService.getStudentById(Number.parseInt(studentId))
     if (studentData) {
       setStudent(studentData)
-      setCourses(studentCourses)
+      setCourses(DataService.getStudentCourses(Number.parseInt(studentId)))
+    } else {
+      router.push("/receptionist")
     }
-    setLoading(false)
-  }, [studentId])
+  }, [studentId, router])
 
-  if (loading) {
-    return <div className="min-h-screen bg-gray-50 flex items-center justify-center">Loading...</div>
+  const handleFileUpload = (docType: string, event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0]
+    if (!file) return
+
+    // Validate file type
+    if (file.type !== "application/pdf") {
+      alert("Only PDF files are allowed")
+      return
+    }
+
+    // Validate filename format (YYYYMMDD_Last_First_DocType.pdf)
+    const filenameRegex = /^\d{8}_[A-Za-z]+_[A-Za-z]+_[A-Za-z]+\.pdf$/
+    if (!filenameRegex.test(file.name)) {
+      alert("Filename must follow format: YYYYMMDD_Last_First_DocType.pdf")
+      return
+    }
+
+    // Simulate upload
+    setUploadingDoc(docType)
+    setTimeout(() => {
+      const updatedStudent = {
+        ...student!,
+        documents: {
+          ...student!.documents,
+          [docType]: {
+            uploaded: true,
+            filename: file.name,
+          },
+        },
+      }
+      setStudent(updatedStudent)
+      setUploadingDoc("")
+    }, 1000)
+  }
+
+  const downloadStudentCard = () => {
+    alert("Student card download would be implemented here")
   }
 
   if (!student) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="text-center">
-          <h1 className="text-2xl font-bold text-gray-900 mb-4">Student Not Found</h1>
-          <Button onClick={() => router.back()}>
-            <ArrowLeft className="h-4 w-4 mr-2" />
-            Go Back
-          </Button>
+          <h2 className="text-xl font-semibold text-gray-900">Loading...</h2>
         </div>
       </div>
     )
   }
 
+  const activeCourses = courses.filter((course) => course.status === "active")
+  const completedCourses = courses.filter((course) => course.status === "completed")
+
+  const totalMonthlyFees = activeCourses.reduce((sum, course) => sum + course.monthlyPrice, 0)
+  const paidThisMonth = activeCourses.reduce((sum, course) => {
+    return sum + (course.payments.students[Number.parseInt(studentId)] ? course.monthlyPrice : 0)
+  }, 0)
+
+  // Calculate alerts
+  const missedPayments = activeCourses.filter((course) => !course.payments.students[Number.parseInt(studentId)]).length
+  const missingDocuments = Object.entries(student.documents)
+    .filter(([_, doc]: [string, any]) => !doc.uploaded)
+    .map(([docType, _]) => docType)
+
   return (
     <div className="min-h-screen bg-gray-50">
+      {/* Header */}
       <header className="bg-white shadow-sm border-b">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center justify-between h-16">
-            <div className="flex items-center space-x-4">
-              <Button variant="ghost" onClick={() => router.back()}>
-                <ArrowLeft className="h-4 w-4 mr-2" />
-                Back
-              </Button>
-              <div>
-                <h1 className="text-xl font-semibold text-gray-900">{student.name}</h1>
-                <p className="text-sm text-gray-600">
-                  {student.schoolYear} - {student.specialty}
-                </p>
-              </div>
-            </div>
-            <Badge variant={student.registrationFeePaid ? "default" : "destructive"}>
-              {student.registrationFeePaid ? "Registration Paid" : "Registration Pending"}
-            </Badge>
+          <div className="flex items-center h-16">
+            <Button variant="ghost" size="sm" onClick={() => router.back()} className="mr-4">
+              <ArrowLeft className="h-4 w-4 mr-2" />
+              Back
+            </Button>
+            <h1 className="text-xl font-semibold text-gray-900">Student Dashboard</h1>
           </div>
         </div>
       </header>
@@ -79,7 +123,7 @@ export default function StudentDetailsPage() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           {/* Student Info */}
-          <div className="lg:col-span-1">
+          <div className="lg:col-span-1 space-y-6">
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center">
@@ -88,43 +132,116 @@ export default function StudentDetailsPage() {
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
-                <div className="flex items-center space-x-2">
-                  <School className="h-4 w-4 text-gray-500" />
-                  <div>
-                    <label className="text-sm font-medium text-gray-500">School</label>
-                    <p className="text-sm">{student.school}</p>
+                <div>
+                  <h3 className="font-semibold text-lg">{student.name}</h3>
+                  <p className="text-gray-600">
+                    {student.schoolYear} - {student.specialty}
+                  </p>
+                </div>
+                <div className="space-y-2">
+                  <p>
+                    <span className="font-medium">School:</span> {student.school}
+                  </p>
+                  <p>
+                    <span className="font-medium">Birth Date:</span> {student.birthDate}
+                  </p>
+                  <p>
+                    <span className="font-medium">Phone:</span> {student.phone}
+                  </p>
+                  <p>
+                    <span className="font-medium">Email:</span> {student.email}
+                  </p>
+                  <p>
+                    <span className="font-medium">Address:</span> {student.address}
+                  </p>
+                  <p>
+                    <span className="font-medium">Registration Date:</span> {student.registrationDate}
+                  </p>
+                </div>
+                <div className="pt-4 border-t">
+                  <div className="flex justify-between items-center mb-2">
+                    <span className="font-medium">Monthly Fees:</span>
+                    <span className="text-lg font-bold">{totalMonthlyFees.toLocaleString()} DA</span>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span className="font-medium">Paid This Month:</span>
+                    <span className="text-lg font-bold text-green-600">{paidThisMonth.toLocaleString()} DA</span>
                   </div>
                 </div>
-                <div className="flex items-center space-x-2">
-                  <Calendar className="h-4 w-4 text-gray-500" />
-                  <div>
-                    <label className="text-sm font-medium text-gray-500">Birth Date</label>
-                    <p className="text-sm">{new Date(student.birthDate).toLocaleDateString()}</p>
-                  </div>
+                <Button onClick={downloadStudentCard} className="w-full">
+                  <Download className="h-4 w-4 mr-2" />
+                  Download Student Card
+                </Button>
+              </CardContent>
+            </Card>
+
+            {/* Status Alerts */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center">
+                  <AlertTriangle className="h-5 w-5 mr-2" />
+                  Status Alerts
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                {missedPayments > 0 && (
+                  <Alert>
+                    <AlertTriangle className="h-4 w-4" />
+                    <AlertDescription>{missedPayments} course(s) have missed payments</AlertDescription>
+                  </Alert>
+                )}
+                {missingDocuments.length > 0 && (
+                  <Alert>
+                    <AlertTriangle className="h-4 w-4" />
+                    <AlertDescription>Missing documents: {missingDocuments.join(", ")}</AlertDescription>
+                  </Alert>
+                )}
+                {missedPayments === 0 && missingDocuments.length === 0 && (
+                  <Alert>
+                    <CheckCircle className="h-4 w-4" />
+                    <AlertDescription>All payments up to date and documents complete</AlertDescription>
+                  </Alert>
+                )}
+              </CardContent>
+            </Card>
+
+            {/* Documents Upload */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center">
+                  <Upload className="h-5 w-5 mr-2" />
+                  Documents Upload
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="text-sm text-gray-600 mb-4">
+                  Upload PDF files only. Filename format: YYYYMMDD_Last_First_DocType.pdf
                 </div>
-                <div className="flex items-center space-x-2">
-                  <MapPin className="h-4 w-4 text-gray-500" />
-                  <div>
-                    <label className="text-sm font-medium text-gray-500">Address</label>
-                    <p className="text-sm">{student.address}</p>
-                  </div>
-                </div>
-                <div className="flex items-center space-x-2">
-                  <Phone className="h-4 w-4 text-gray-500" />
-                  <div>
-                    <label className="text-sm font-medium text-gray-500">Phone</label>
-                    <p className="text-sm">{student.phone}</p>
-                  </div>
-                </div>
-                {student.email && (
-                  <div className="flex items-center space-x-2">
-                    <Mail className="h-4 w-4 text-gray-500" />
-                    <div>
-                      <label className="text-sm font-medium text-gray-500">Email</label>
-                      <p className="text-sm">{student.email}</p>
+
+                {Object.entries(student.documents).map(([docType, doc]: [string, any]) => (
+                  <div key={docType} className="space-y-2">
+                    <Label className="capitalize">{docType.replace(/([A-Z])/g, " $1").trim()}</Label>
+                    <div className="flex items-center space-x-2">
+                      {doc.uploaded ? (
+                        <div className="flex items-center space-x-2 text-green-600">
+                          <CheckCircle className="h-4 w-4" />
+                          <span className="text-sm">{doc.filename}</span>
+                        </div>
+                      ) : (
+                        <div className="flex items-center space-x-2">
+                          <Input
+                            type="file"
+                            accept=".pdf"
+                            onChange={(e) => handleFileUpload(docType, e)}
+                            disabled={uploadingDoc === docType}
+                            className="text-sm"
+                          />
+                          {uploadingDoc === docType && <span className="text-sm text-blue-600">Uploading...</span>}
+                        </div>
+                      )}
                     </div>
                   </div>
-                )}
+                ))}
               </CardContent>
             </Card>
           </div>
@@ -135,63 +252,103 @@ export default function StudentDetailsPage() {
               <CardHeader>
                 <CardTitle className="flex items-center">
                   <BookOpen className="h-5 w-5 mr-2" />
-                  Enrolled Courses ({courses.length})
+                  Course Enrollments
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                {courses.length > 0 ? (
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>Course</TableHead>
-                        <TableHead>Teacher</TableHead>
-                        <TableHead>Schedule</TableHead>
-                        <TableHead>Payment Status</TableHead>
-                        <TableHead>Status</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {courses.map((course) => (
-                        <TableRow key={course.id}>
-                          <TableCell className="font-medium">
-                            <Button
-                              variant="link"
-                              className="p-0 h-auto font-medium text-left"
-                              onClick={() => router.push(`/course/${course.id}`)}
-                            >
-                              {course.subject} - {course.schoolYear}
-                            </Button>
-                          </TableCell>
-                          <TableCell>
-                            <Button
-                              variant="link"
-                              className="p-0 h-auto text-left"
-                              onClick={() => router.push(`/teacher/${course.teacherId}`)}
-                            >
-                              {course.teacherName}
-                            </Button>
-                          </TableCell>
-                          <TableCell>{course.schedule}</TableCell>
-                          <TableCell>
-                            <Badge variant={course.payments.students[studentId] ? "default" : "destructive"}>
-                              {course.payments.students[studentId] ? "Paid" : "Pending"}
-                            </Badge>
-                          </TableCell>
-                          <TableCell>
-                            <Badge variant={course.status === "active" ? "default" : "secondary"}>
-                              {course.status}
-                            </Badge>
-                          </TableCell>
+                <div className="space-y-6">
+                  {/* Active Courses */}
+                  <div>
+                    <h3 className="font-medium text-lg mb-4">Active Courses</h3>
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>Course</TableHead>
+                          <TableHead>Teacher</TableHead>
+                          <TableHead>Schedule</TableHead>
+                          <TableHead>Monthly Price</TableHead>
+                          <TableHead>Payment Status</TableHead>
                         </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
-                ) : (
-                  <div className="text-center py-8 text-gray-500">
-                    <BookOpen className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                    <p>No courses enrolled</p>
+                      </TableHeader>
+                      <TableBody>
+                        {activeCourses.map((course) => (
+                          <TableRow key={course.id}>
+                            <TableCell className="font-medium">
+                              <Button
+                                variant="link"
+                                className="p-0 h-auto font-medium text-left"
+                                onClick={() => router.push(`/course/${course.id}`)}
+                              >
+                                {course.subject} - {course.schoolYear}
+                              </Button>
+                            </TableCell>
+                            <TableCell>
+                              <Button
+                                variant="link"
+                                className="p-0 h-auto font-medium text-left"
+                                onClick={() => router.push(`/teacher/${course.teacherId}`)}
+                              >
+                                {course.teacherName}
+                              </Button>
+                            </TableCell>
+                            <TableCell>{course.schedule}</TableCell>
+                            <TableCell>{course.monthlyPrice} DA</TableCell>
+                            <TableCell>
+                              <Badge
+                                variant={
+                                  course.payments.students[Number.parseInt(studentId)] ? "default" : "destructive"
+                                }
+                              >
+                                {course.payments.students[Number.parseInt(studentId)] ? "Paid" : "Pending"}
+                              </Badge>
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
                   </div>
-                )}
+
+                  {/* Completed Courses */}
+                  {completedCourses.length > 0 && (
+                    <div>
+                      <h3 className="font-medium text-lg mb-4">Completed Courses</h3>
+                      <Table>
+                        <TableHeader>
+                          <TableRow>
+                            <TableHead>Course</TableHead>
+                            <TableHead>Teacher</TableHead>
+                            <TableHead>Schedule</TableHead>
+                            <TableHead>Monthly Price</TableHead>
+                            <TableHead>Status</TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {completedCourses.map((course) => (
+                            <TableRow key={course.id} className="opacity-60">
+                              <TableCell className="font-medium">
+                                {course.subject} - {course.schoolYear}
+                              </TableCell>
+                              <TableCell>
+                                <Button
+                                  variant="link"
+                                  className="p-0 h-auto font-medium text-left"
+                                  onClick={() => router.push(`/teacher/${course.teacherId}`)}
+                                >
+                                  {course.teacherName}
+                                </Button>
+                              </TableCell>
+                              <TableCell>{course.schedule}</TableCell>
+                              <TableCell>{course.monthlyPrice} DA</TableCell>
+                              <TableCell>
+                                <Badge variant="default">Completed</Badge>
+                              </TableCell>
+                            </TableRow>
+                          ))}
+                        </TableBody>
+                      </Table>
+                    </div>
+                  )}
+                </div>
               </CardContent>
             </Card>
           </div>
