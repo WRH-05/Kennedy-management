@@ -320,16 +320,110 @@ export const paymentService = {
   },
 
   // Update payment status
-  async updatePaymentStatus(paymentId, status) {
+  async updatePaymentStatus(paymentId, status, approverName = null) {
     return new Promise((resolve) => {
       setTimeout(() => {
-        const payoutIndex = mockPayouts.findIndex(p => p.id === parseInt(paymentId));
-        if (payoutIndex !== -1) {
-          mockPayouts[payoutIndex].status = status;
-          resolve(mockPayouts[payoutIndex]);
-        } else {
-          resolve(null);
+        // Check both student and professor payment histories
+        let payment = null;
+        let paymentType = null;
+
+        // Check student payments
+        const studentPaymentIndex = mockStudentPaymentHistory.findIndex(p => p.id === parseInt(paymentId));
+        if (studentPaymentIndex !== -1) {
+          mockStudentPaymentHistory[studentPaymentIndex].status = status;
+          if (status === 'approved' && approverName) {
+            mockStudentPaymentHistory[studentPaymentIndex].approvedBy = approverName;
+            mockStudentPaymentHistory[studentPaymentIndex].approvedDate = new Date().toISOString().split('T')[0];
+          }
+          payment = mockStudentPaymentHistory[studentPaymentIndex];
+          paymentType = 'student';
         }
+
+        // Check professor payments
+        if (!payment) {
+          const professorPaymentIndex = mockProfessorPaymentHistory.findIndex(p => p.id === parseInt(paymentId));
+          if (professorPaymentIndex !== -1) {
+            mockProfessorPaymentHistory[professorPaymentIndex].status = status;
+            if (status === 'approved' && approverName) {
+              mockProfessorPaymentHistory[professorPaymentIndex].approvedBy = approverName;
+              mockProfessorPaymentHistory[professorPaymentIndex].approvedDate = new Date().toISOString().split('T')[0];
+            }
+            payment = mockProfessorPaymentHistory[professorPaymentIndex];
+            paymentType = 'professor';
+          }
+        }
+
+        // Check payouts
+        if (!payment) {
+          const payoutIndex = mockPayouts.findIndex(p => p.id === parseInt(paymentId));
+          if (payoutIndex !== -1) {
+            mockPayouts[payoutIndex].status = status;
+            if (status === 'approved' && approverName) {
+              mockPayouts[payoutIndex].approvedBy = approverName;
+              mockPayouts[payoutIndex].approvedDate = new Date().toISOString().split('T')[0];
+            }
+            payment = mockPayouts[payoutIndex];
+            paymentType = 'payout';
+          }
+        }
+
+        resolve(payment ? { ...payment, paymentType } : null);
+      }, 100);
+    });
+  },
+
+  // Get all payments combined and sorted by timeline
+  async getAllPayments() {
+    return new Promise((resolve) => {
+      setTimeout(() => {
+        // Combine all payment types
+        const allPayments = [];
+
+        // Add student payments
+        mockStudentPaymentHistory.forEach(payment => {
+          allPayments.push({
+            ...payment,
+            paymentType: 'student',
+            userRole: 'Student',
+            userName: payment.studentName,
+            userId: payment.studentId,
+            description: payment.courses ? payment.courses.join(', ') : 'Course payment',
+            timeline: payment.date || `${payment.month}-01`,
+          });
+        });
+
+        // Add professor payments
+        mockProfessorPaymentHistory.forEach(payment => {
+          allPayments.push({
+            ...payment,
+            paymentType: 'professor',
+            userRole: 'Professor',
+            userName: payment.professorName,
+            userId: payment.professorId,
+            description: payment.courses ? payment.courses.join(', ') : 'Teaching payment',
+            timeline: payment.date || `${payment.month}-01`,
+          });
+        });
+
+        // Add revenue payments (individual student course payments)
+        mockRevenue.forEach((payment, index) => {
+          allPayments.push({
+            id: `revenue_${index}`,
+            paymentType: 'revenue',
+            userRole: 'Student',
+            userName: payment.studentName,
+            amount: payment.amount,
+            status: payment.paid ? 'Paid' : 'Pending',
+            month: payment.month,
+            description: payment.course,
+            timeline: `${payment.month}-15`, // Assume mid-month for revenue
+          });
+        });
+
+        // Sort by timeline (latest first)
+        allPayments.sort((a, b) => new Date(b.timeline) - new Date(a.timeline));
+
+        resolve(allPayments);
       }, 100);
     });
   },

@@ -23,8 +23,7 @@ export default function ManagerDashboard() {
   const [students, setStudents] = useState<any[]>([])
   const [teachers, setTeachers] = useState<any[]>([])
   const [courses, setCourses] = useState<any[]>([])
-  const [studentPaymentHistory, setStudentPaymentHistory] = useState<any[]>([])
-  const [professorPaymentHistory, setProfessorPaymentHistory] = useState<any[]>([])
+  const [allPayments, setAllPayments] = useState<any[]>([])
   const [selectedMonth, setSelectedMonth] = useState("2024-01")
   const [loading, setLoading] = useState(true)
 
@@ -51,12 +50,13 @@ export default function ManagerDashboard() {
     const loadData = async () => {
       setLoading(true)
       try {
-        const [revenueData, payoutsData, studentsData, teachersData, coursesData] = await Promise.all([
+        const [revenueData, payoutsData, studentsData, teachersData, coursesData, paymentsData] = await Promise.all([
           paymentService.getRevenueData(),
           paymentService.getPendingPayouts(),
           studentService.getAllStudents(),
           teacherService.getAllTeachers(),
           courseService.getAllCourseInstances(),
+          paymentService.getAllPayments(),
         ])
 
         setRevenue(revenueData)
@@ -64,6 +64,7 @@ export default function ManagerDashboard() {
         setStudents(studentsData)
         setTeachers(teachersData)
         setCourses(coursesData)
+        setAllPayments(paymentsData)
       } catch (error) {
         console.error('Error loading data:', error)
       } finally {
@@ -74,48 +75,21 @@ export default function ManagerDashboard() {
     loadData()
   }, [])
 
-  useEffect(() => {
-    const loadPaymentHistories = async () => {
-      try {
-        // For demonstration, we'll load payment histories for known student/professor IDs
-        const studentPayments = await Promise.all([
-          paymentService.getStudentPaymentHistory(1),
-          paymentService.getStudentPaymentHistory(2),
-          paymentService.getStudentPaymentHistory(3),
-        ])
-        
-        const professorPayments = await Promise.all([
-          paymentService.getProfessorPaymentHistory(1),
-          paymentService.getProfessorPaymentHistory(2),
-          paymentService.getProfessorPaymentHistory(3),
-        ])
+  const handleLogout = () => {
+    localStorage.removeItem("user")
+    router.push("/")
+  }
 
-        // Format the data for display
-        const formattedStudentHistory = students.map((student: any) => ({
-          studentId: student.id,
-          studentName: student.name,
-          month: selectedMonth,
-          courses: studentPayments[student.id - 1] || []
-        }))
-
-        const formattedProfessorHistory = teachers.map((teacher: any) => ({
-          professorId: teacher.id,
-          professorName: teacher.name,
-          month: selectedMonth,
-          sessions: professorPayments[teacher.id - 1] || []
-        }))
-
-        setStudentPaymentHistory(formattedStudentHistory)
-        setProfessorPaymentHistory(formattedProfessorHistory)
-      } catch (error) {
-        console.error('Error loading payment histories:', error)
-      }
+  const approvePayment = async (paymentId: string, paymentType: string) => {
+    try {
+      await paymentService.updatePaymentStatus(paymentId, 'approved', user.username)
+      // Reload payments to reflect the change
+      const updatedPayments = await paymentService.getAllPayments()
+      setAllPayments(updatedPayments)
+    } catch (error) {
+      console.error('Error approving payment:', error)
     }
-
-    if (students.length > 0 && teachers.length > 0) {
-      loadPaymentHistories()
-    }
-  }, [selectedMonth, students, teachers])
+  }
 
   // Enhanced search functionality
   useEffect(() => {
@@ -157,16 +131,9 @@ export default function ManagerDashboard() {
     setShowSearchResults(false)
   }
 
-  const handleLogout = () => {
-    localStorage.removeItem("user")
-    router.push("/")
-  }
-
   const approvePayout = async (payoutId: number) => {
     try {
-      await paymentService.updatePaymentStatus(payoutId, 'approved')
-      const updatedPayouts = await paymentService.getPendingPayouts()
-      setPayouts(updatedPayouts)
+      await approvePayment(payoutId.toString(), 'payout')
     } catch (error) {
       console.error('Error approving payout:', error)
     }
@@ -302,14 +269,13 @@ export default function ManagerDashboard() {
         </div>
 
         <Tabs defaultValue="revenue" className="space-y-6">
-          <TabsList className="grid w-full grid-cols-8">
+          <TabsList className="grid w-full grid-cols-6">
             <TabsTrigger value="revenue">Revenue</TabsTrigger>
             <TabsTrigger value="payouts">Payouts</TabsTrigger>
+            <TabsTrigger value="payments">Payments</TabsTrigger>
             <TabsTrigger value="students">Students</TabsTrigger>
             <TabsTrigger value="teachers">Teachers</TabsTrigger>
             <TabsTrigger value="courses">Courses</TabsTrigger>
-            <TabsTrigger value="student-payments">Student Payments</TabsTrigger>
-            <TabsTrigger value="professor-payments">Professor Payments</TabsTrigger>
           </TabsList>
 
           {/* Revenue Tab */}
@@ -437,14 +403,14 @@ export default function ManagerDashboard() {
             />
           </TabsContent>
 
-          {/* Student Payment History Tab */}
-          <TabsContent value="student-payments">
+          {/* Unified Payments Tab */}
+          <TabsContent value="payments">
             <Card>
               <CardHeader>
                 <div className="flex justify-between items-center">
                   <CardTitle className="flex items-center">
-                    <Users className="h-5 w-5 mr-2" />
-                    Student Payment History
+                    <DollarSign className="h-5 w-5 mr-2" />
+                    All Payments Management
                   </CardTitle>
                   <Select value={selectedMonth} onValueChange={setSelectedMonth}>
                     <SelectTrigger className="w-40">
@@ -460,26 +426,91 @@ export default function ManagerDashboard() {
               </CardHeader>
               <CardContent>
                 <div className="space-y-6">
-                  {studentPaymentHistory.map((student: any) => (
-                    <div key={student.studentId} className="border rounded-lg p-4">
-                      <h3 className="font-semibold text-lg mb-3">{student.studentName}</h3>
+                  {/* Group payments by month */}
+                  {Object.entries(
+                    allPayments.reduce((acc: Record<string, any[]>, payment: any) => {
+                      const month = payment.month || new Date(payment.timeline).toLocaleDateString('en-US', { year: 'numeric', month: 'long' })
+                      if (!acc[month]) acc[month] = []
+                      acc[month].push(payment)
+                      return acc
+                    }, {} as Record<string, any[]>)
+                  ).map(([month, monthPayments]: [string, any[]]) => (
+                    <div key={month} className="border rounded-lg p-4">
+                      <h3 className="font-semibold text-lg mb-4 text-gray-800">{month}</h3>
                       <Table>
                         <TableHeader>
                           <TableRow>
-                            <TableHead>Course</TableHead>
+                            <TableHead>User Role</TableHead>
+                            <TableHead>Name</TableHead>
+                            <TableHead>Description</TableHead>
                             <TableHead>Amount</TableHead>
+                            <TableHead>Date</TableHead>
                             <TableHead>Status</TableHead>
+                            <TableHead>Approved By</TableHead>
+                            <TableHead>Actions</TableHead>
                           </TableRow>
                         </TableHeader>
                         <TableBody>
-                          {student.courses?.map((course: any, idx: number) => (
-                            <TableRow key={idx}>
-                              <TableCell>{course.course}</TableCell>
-                              <TableCell>{course.amount} DA</TableCell>
+                          {monthPayments
+                            .sort((a: any, b: any) => new Date(b.timeline).getTime() - new Date(a.timeline).getTime())
+                            .map((payment: any, idx: number) => (
+                            <TableRow key={`${payment.id}_${idx}`}>
                               <TableCell>
-                                <Badge variant={course.paid ? "default" : "destructive"}>
-                                  {course.paid ? "Paid" : "Unpaid"}
+                                <Badge variant={payment.userRole === 'Student' ? "default" : "secondary"}>
+                                  {payment.userRole}
                                 </Badge>
+                              </TableCell>
+                              <TableCell className="font-medium">
+                                <Button
+                                  variant="link"
+                                  className="p-0 h-auto font-medium text-left"
+                                  onClick={() => {
+                                    if (payment.userRole === 'Student') {
+                                      router.push(`/student/${payment.userId}`)
+                                    } else if (payment.userRole === 'Professor') {
+                                      router.push(`/teacher/${payment.userId}`)
+                                    }
+                                  }}
+                                >
+                                  {payment.userName}
+                                </Button>
+                              </TableCell>
+                              <TableCell>{payment.description}</TableCell>
+                              <TableCell className="font-medium">{payment.amount?.toLocaleString()} DA</TableCell>
+                              <TableCell>
+                                {payment.date || new Date(payment.timeline).toLocaleDateString()}
+                              </TableCell>
+                              <TableCell>
+                                <Badge variant={
+                                  payment.status === 'Paid' || payment.status === 'approved' 
+                                    ? "default" 
+                                    : payment.status === 'Pending' 
+                                    ? "destructive" 
+                                    : "secondary"
+                                }>
+                                  {payment.status}
+                                </Badge>
+                              </TableCell>
+                              <TableCell>
+                                {payment.approvedBy ? (
+                                  <div className="text-sm">
+                                    <div className="font-medium">{payment.approvedBy}</div>
+                                    <div className="text-gray-500">{payment.approvedDate}</div>
+                                  </div>
+                                ) : (
+                                  <span className="text-gray-400">-</span>
+                                )}
+                              </TableCell>
+                              <TableCell>
+                                {(payment.status === 'Pending' || payment.status === 'pending') && (
+                                  <Button 
+                                    variant="outline" 
+                                    size="sm" 
+                                    onClick={() => approvePayment(payment.id, payment.paymentType)}
+                                  >
+                                    Approve
+                                  </Button>
+                                )}
                               </TableCell>
                             </TableRow>
                           ))}
@@ -487,63 +518,12 @@ export default function ManagerDashboard() {
                       </Table>
                     </div>
                   ))}
-                </div>
-              </CardContent>
-            </Card>
-          </TabsContent>
-
-          {/* Professor Payment History Tab */}
-          <TabsContent value="professor-payments">
-            <Card>
-              <CardHeader>
-                <div className="flex justify-between items-center">
-                  <CardTitle className="flex items-center">
-                    <BookOpen className="h-5 w-5 mr-2" />
-                    Professor Payment History
-                  </CardTitle>
-                  <Select value={selectedMonth} onValueChange={setSelectedMonth}>
-                    <SelectTrigger className="w-40">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="2024-01">January 2024</SelectItem>
-                      <SelectItem value="2023-12">December 2023</SelectItem>
-                      <SelectItem value="2023-11">November 2023</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-6">
-                  {professorPaymentHistory.map((professor: any) => (
-                    <div key={professor.professorId} className="border rounded-lg p-4">
-                      <h3 className="font-semibold text-lg mb-3">{professor.professorName}</h3>
-                      <Table>
-                        <TableHeader>
-                          <TableRow>
-                            <TableHead>Course</TableHead>
-                            <TableHead>Students</TableHead>
-                            <TableHead>Amount</TableHead>
-                            <TableHead>Status</TableHead>
-                          </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                          {professor.sessions?.map((session: any, idx: number) => (
-                            <TableRow key={idx}>
-                              <TableCell>{session.course}</TableCell>
-                              <TableCell>{session.students}</TableCell>
-                              <TableCell>{session.amount} DA</TableCell>
-                              <TableCell>
-                                <Badge variant={session.paid ? "default" : "destructive"}>
-                                  {session.paid ? "Paid" : "Unpaid"}
-                                </Badge>
-                              </TableCell>
-                            </TableRow>
-                          ))}
-                        </TableBody>
-                      </Table>
+                  
+                  {allPayments.length === 0 && (
+                    <div className="text-center py-8 text-gray-500">
+                      No payment records found.
                     </div>
-                  ))}
+                  )}
                 </div>
               </CardContent>
             </Card>
