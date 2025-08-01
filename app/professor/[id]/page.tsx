@@ -14,7 +14,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 import { Switch } from "@/components/ui/switch"
 import { ArrowLeft, Edit, Save, X, GraduationCap, MapPin, Phone, Mail, School, Plus, BookOpen } from "lucide-react"
-import { teacherService, courseService, paymentService } from "@/src/services/dataService"
+import { teacherService, courseService, paymentService } from "@/src/services/appDataService"
 
 const mockCourseTemplates = [
   {

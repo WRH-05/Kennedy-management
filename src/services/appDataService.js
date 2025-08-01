@@ -193,11 +193,107 @@ export const courseService = {
   },
 }
 
+// Payment Services
+export const paymentService = {
+  async getRevenueData() {
+    if (USE_SUPABASE) {
+      return await supabaseDataService.payments.getRevenueData()
+    } else {
+      return await mockDataService.payments.getRevenueData()
+    }
+  },
+
+  async getPendingPayouts() {
+    if (USE_SUPABASE) {
+      return await supabaseDataService.payments.getPendingPayouts()
+    } else {
+      return await mockDataService.payments.getPendingPayouts()
+    }
+  },
+
+  async getStudentPaymentHistory(studentId) {
+    if (USE_SUPABASE) {
+      return await supabaseDataService.payments.getStudentPaymentHistory(studentId)
+    } else {
+      return await mockDataService.payments.getStudentPaymentHistory(studentId)
+    }
+  },
+
+  async getProfessorPaymentHistory(professorId) {
+    if (USE_SUPABASE) {
+      return await supabaseDataService.payments.getProfessorPaymentHistory(professorId)
+    } else {
+      return await mockDataService.payments.getProfessorPaymentHistory(professorId)
+    }
+  },
+
+  async getStudentData() {
+    if (USE_SUPABASE) {
+      return await supabaseDataService.payments.getStudentData()
+    } else {
+      return await mockDataService.payments.getStudentData()
+    }
+  },
+
+  async getTeacherData() {
+    if (USE_SUPABASE) {
+      return await supabaseDataService.payments.getTeacherData()
+    } else {
+      return await mockDataService.payments.getTeacherData()
+    }
+  },
+
+  async updatePaymentStatus(paymentId, status, approverName = null) {
+    if (USE_SUPABASE) {
+      return await supabaseDataService.payments.updatePaymentStatus(paymentId, status, approverName)
+    } else {
+      return await mockDataService.payments.updatePaymentStatus(paymentId, status, approverName)
+    }
+  },
+
+  async getAllPayments() {
+    if (USE_SUPABASE) {
+      return await supabaseDataService.payments.getAllPayments()
+    } else {
+      return await mockDataService.payments.getAllPayments()
+    }
+  },
+
+  async toggleStudentPayment(courseId, studentId) {
+    if (USE_SUPABASE) {
+      return await supabaseDataService.payments.toggleStudentPayment(courseId, studentId)
+    } else {
+      return await mockDataService.payments.toggleStudentPayment(courseId, studentId)
+    }
+  },
+}
+
+// Attendance Services
+export const attendanceService = {
+  async updateAttendance(courseId, studentId, week, attended) {
+    if (USE_SUPABASE) {
+      return await supabaseDataService.attendance.updateAttendance(courseId, studentId, week, attended)
+    } else {
+      return await mockDataService.attendance.updateAttendance(courseId, studentId, week, attended)
+    }
+  },
+
+  async getCourseAttendance(courseId) {
+    if (USE_SUPABASE) {
+      return await supabaseDataService.attendance.getCourseAttendance(courseId)
+    } else {
+      return await mockDataService.attendance.getCourseAttendance(courseId)
+    }
+  },
+}
+
 // Export unified service
 export const appDataService = {
   students: studentService,
   teachers: teacherService,
   courses: courseService,
+  payments: paymentService,
+  attendance: attendanceService,
 }
 
 export default appDataService

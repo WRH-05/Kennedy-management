@@ -11,7 +11,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Badge } from "@/components/ui/badge"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 import { BookOpen, Plus, Archive } from "lucide-react"
-import { courseService, teacherService } from "@/src/services/dataService"
+import { courseService, teacherService } from "@/src/services/appDataService"
 
 interface CoursesTabProps {
   courses: any[]

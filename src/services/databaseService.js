@@ -1,7 +1,7 @@
 // Database Service Layer using Supabase
 // This service provides database operations using Supabase client
 
-import { supabase } from '../lib/supabase'
+import { supabase } from '../../lib/supabase'
 
 // Student Services
 export const studentService = {
@@ -529,6 +529,209 @@ export const paymentService = {
     }
   },
 
+  // Get revenue data
+  async getRevenueData() {
+    try {
+      const { data, error } = await supabase
+        .from('revenue')
+        .select('*')
+        .order('created_at', { ascending: false })
+      
+      if (error) throw error
+      return data || []
+    } catch (error) {
+      console.error('Error fetching revenue data:', error)
+      throw error
+    }
+  },
+
+  // Get pending payouts
+  async getPendingPayouts() {
+    try {
+      const { data, error } = await supabase
+        .from('teacher_payouts')
+        .select('*')
+        .eq('status', 'pending')
+        .order('created_at', { ascending: false })
+      
+      if (error) throw error
+      return data || []
+    } catch (error) {
+      console.error('Error fetching pending payouts:', error)
+      throw error
+    }
+  },
+
+  // Get student payment history
+  async getStudentPaymentHistory(studentId) {
+    try {
+      const { data, error } = await supabase
+        .from('student_payments')
+        .select('*')
+        .eq('student_id', studentId)
+        .order('payment_date', { ascending: false })
+      
+      if (error) throw error
+      return data || []
+    } catch (error) {
+      console.error('Error fetching student payment history:', error)
+      throw error
+    }
+  },
+
+  // Get professor payment history
+  async getProfessorPaymentHistory(professorId) {
+    try {
+      const { data, error } = await supabase
+        .from('teacher_payouts')
+        .select('*')
+        .eq('teacher_id', professorId)
+        .order('payment_date', { ascending: false })
+      
+      if (error) throw error
+      return data || []
+    } catch (error) {
+      console.error('Error fetching professor payment history:', error)
+      throw error
+    }
+  },
+
+  // Get student data for management
+  async getStudentData() {
+    try {
+      // This would typically aggregate payment data per student
+      const { data, error } = await supabase
+        .from('students')
+        .select(`
+          *,
+          student_payments (*)
+        `)
+        .eq('archived', false)
+      
+      if (error) throw error
+      return data || []
+    } catch (error) {
+      console.error('Error fetching student data:', error)
+      throw error
+    }
+  },
+
+  // Get teacher data for management
+  async getTeacherData() {
+    try {
+      // This would typically aggregate earnings data per teacher
+      const { data, error } = await supabase
+        .from('teachers')
+        .select(`
+          *,
+          teacher_payouts (*)
+        `)
+        .eq('archived', false)
+      
+      if (error) throw error
+      return data || []
+    } catch (error) {
+      console.error('Error fetching teacher data:', error)
+      throw error
+    }
+  },
+
+  // Update payment status
+  async updatePaymentStatus(paymentId, status, approverName = null) {
+    try {
+      const updateData = {
+        status,
+        ...(approverName && {
+          approved_by: approverName,
+          approved_date: new Date().toISOString()
+        })
+      }
+
+      const { data, error } = await supabase
+        .from('student_payments')
+        .update(updateData)
+        .eq('id', paymentId)
+        .select()
+        .single()
+      
+      if (error) throw error
+      return data
+    } catch (error) {
+      console.error('Error updating payment status:', error)
+      throw error
+    }
+  },
+
+  // Get all payments combined and sorted by timeline
+  async getAllPayments() {
+    try {
+      const [studentPayments, teacherPayouts] = await Promise.all([
+        supabase.from('student_payments').select('*').order('payment_date', { ascending: false }),
+        supabase.from('teacher_payouts').select('*').order('payment_date', { ascending: false })
+      ])
+      
+      if (studentPayments.error) throw studentPayments.error
+      if (teacherPayouts.error) throw teacherPayouts.error
+      
+      // Combine and sort all payments by date
+      const allPayments = [
+        ...(studentPayments.data || []).map(p => ({ ...p, type: 'student' })),
+        ...(teacherPayouts.data || []).map(p => ({ ...p, type: 'teacher' }))
+      ].sort((a, b) => new Date(b.payment_date || b.created_at) - new Date(a.payment_date || a.created_at))
+      
+      return allPayments
+    } catch (error) {
+      console.error('Error fetching all payments:', error)
+      throw error
+    }
+  },
+
+  // Toggle student payment for course
+  async toggleStudentPayment(courseId, studentId) {
+    try {
+      // Check if payment exists
+      const { data: existingPayment, error: fetchError } = await supabase
+        .from('student_payments')
+        .select('*')
+        .eq('course_id', courseId)
+        .eq('student_id', studentId)
+        .single()
+      
+      if (fetchError && fetchError.code !== 'PGRST116') throw fetchError
+      
+      if (existingPayment) {
+        // Update payment status
+        const { data, error } = await supabase
+          .from('student_payments')
+          .update({ status: existingPayment.status === 'paid' ? 'pending' : 'paid' })
+          .eq('id', existingPayment.id)
+          .select()
+          .single()
+        
+        if (error) throw error
+        return data
+      } else {
+        // Create new payment record
+        const { data, error } = await supabase
+          .from('student_payments')
+          .insert([{
+            course_id: courseId,
+            student_id: studentId,
+            status: 'paid',
+            payment_date: new Date().toISOString()
+          }])
+          .select()
+          .single()
+        
+        if (error) throw error
+        return data
+      }
+    } catch (error) {
+      console.error('Error toggling student payment:', error)
+      throw error
+    }
+  },
+
   // Get student payments
   async getStudentPayments() {
     try {
@@ -550,6 +753,82 @@ export const paymentService = {
   },
 }
 
+// Attendance Services
+export const attendanceService = {
+  // Update attendance for student in course
+  async updateAttendance(courseId, studentId, week, attended) {
+    try {
+      // Check if attendance record exists
+      const { data: existingRecord, error: fetchError } = await supabase
+        .from('attendance')
+        .select('*')
+        .eq('course_id', courseId)
+        .eq('student_id', studentId)
+        .eq('week', week)
+        .single()
+      
+      if (fetchError && fetchError.code !== 'PGRST116') throw fetchError
+      
+      if (existingRecord) {
+        // Update existing record
+        const { data, error } = await supabase
+          .from('attendance')
+          .update({ attended })
+          .eq('id', existingRecord.id)
+          .select()
+          .single()
+        
+        if (error) throw error
+        return data
+      } else {
+        // Create new record
+        const { data, error } = await supabase
+          .from('attendance')
+          .insert([{
+            course_id: courseId,
+            student_id: studentId,
+            week,
+            attended
+          }])
+          .select()
+          .single()
+        
+        if (error) throw error
+        return data
+      }
+    } catch (error) {
+      console.error('Error updating attendance:', error)
+      throw error
+    }
+  },
+
+  // Get attendance for course
+  async getCourseAttendance(courseId) {
+    try {
+      const { data, error } = await supabase
+        .from('attendance')
+        .select('*')
+        .eq('course_id', courseId)
+      
+      if (error) throw error
+      
+      // Transform to expected format: { studentId: { week1: true, week2: false, ... } }
+      const attendanceMap = {}
+      data?.forEach(record => {
+        if (!attendanceMap[record.student_id]) {
+          attendanceMap[record.student_id] = {}
+        }
+        attendanceMap[record.student_id][record.week] = record.attended
+      })
+      
+      return attendanceMap
+    } catch (error) {
+      console.error('Error fetching course attendance:', error)
+      throw error
+    }
+  },
+}
+
 // Export all services
 export const databaseService = {
   students: studentService,
@@ -557,6 +836,7 @@ export const databaseService = {
   courses: courseService,
   archives: archiveService,
   payments: paymentService,
+  attendance: attendanceService,
 }
 
 export default databaseService
