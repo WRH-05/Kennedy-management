@@ -33,3 +33,8 @@ next-env.d.ts
 
 # sql
 db.sql
+
+# github
+/.github/
+.github/workflows
+.github/copilot-instructions.md
