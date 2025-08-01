@@ -1,7 +1,7 @@
 // Database Service Layer using Supabase
 // This service provides database operations using Supabase client
 
-import { supabase } from '../../lib/supabase'
+import { supabase } from '../lib/supabase'
 
 // Student Services
 export const studentService = {
