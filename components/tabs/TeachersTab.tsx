@@ -299,8 +299,11 @@ export default function TeachersTab({
                     </Button>
                   </TableCell>
                   <TableCell>
-                    {teacher.subjects ? 
-                      teacher.subjects.split(',').map((subject: string, idx: number) => (
+                    {teacher.subjects && (teacher.subjects.length > 0 || typeof teacher.subjects === 'string') ? 
+                      (Array.isArray(teacher.subjects) 
+                        ? teacher.subjects 
+                        : (typeof teacher.subjects === 'string' ? teacher.subjects.split(',') : [])
+                      ).filter((s: string) => s && s.trim()).map((subject: string, idx: number) => (
                         <Badge key={idx} variant="secondary" className="mr-1">
                           {subject.trim()}
                         </Badge>
@@ -310,8 +313,11 @@ export default function TeachersTab({
                   </TableCell>
                   <TableCell>{teacher.school}</TableCell>
                   <TableCell>
-                    {teacher.school_years ? 
-                      teacher.school_years.split(',').map((year: string, idx: number) => (
+                    {teacher.school_years && (teacher.school_years.length > 0 || typeof teacher.school_years === 'string') ? 
+                      (Array.isArray(teacher.school_years) 
+                        ? teacher.school_years 
+                        : (typeof teacher.school_years === 'string' ? teacher.school_years.split(',') : [])
+                      ).filter((y: string) => y && y.trim()).map((year: string, idx: number) => (
                         <Badge key={idx} variant="outline" className="mr-1">
                           {year.trim()}
                         </Badge>

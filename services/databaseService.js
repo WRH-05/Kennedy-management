@@ -8,7 +8,7 @@ export const studentService = {
   // Get all students (excluding archived unless specified)
   async getAllStudents(includeArchived = false) {
     try {
-      let query = supabase.from('students').select('*')
+      let query = supabase.from('students').select('*, full_name as name')
       
       if (!includeArchived) {
         query = query.eq('archived', false)
@@ -29,7 +29,7 @@ export const studentService = {
     try {
       const { data, error } = await supabase
         .from('students')
-        .select('*')
+        .select('*, full_name as name')
         .eq('id', id)
         .single()
       
@@ -44,10 +44,17 @@ export const studentService = {
   // Add new student
   async addStudent(studentData) {
     try {
+      // Map 'name' to 'full_name' for database storage
+      const dbData = {
+        ...studentData,
+        full_name: studentData.name,
+      }
+      delete dbData.name // Remove the 'name' field since we're using 'full_name'
+      
       const { data, error } = await supabase
         .from('students')
-        .insert([studentData])
-        .select()
+        .insert([dbData])
+        .select('*, full_name as name')
         .single()
       
       if (error) throw error
@@ -61,11 +68,18 @@ export const studentService = {
   // Update student
   async updateStudent(id, updatedData) {
     try {
+      // Map 'name' to 'full_name' if present
+      const dbData = { ...updatedData }
+      if (dbData.name) {
+        dbData.full_name = dbData.name
+        delete dbData.name
+      }
+      
       const { data, error } = await supabase
         .from('students')
-        .update(updatedData)
+        .update(dbData)
         .eq('id', id)
-        .select()
+        .select('*, full_name as name')
         .single()
       
       if (error) throw error
@@ -83,7 +97,7 @@ export const studentService = {
         .from('students')
         .delete()
         .eq('id', id)
-        .select()
+        .select('*, full_name as name')
         .single()
       
       if (error) throw error
@@ -104,7 +118,7 @@ export const studentService = {
           archived_date: new Date().toISOString() 
         })
         .eq('id', id)
-        .select()
+        .select('*, full_name as name')
         .single()
       
       if (error) throw error
@@ -125,7 +139,7 @@ export const studentService = {
           archived_date: null 
         })
         .eq('id', id)
-        .select()
+        .select('*, full_name as name')
         .single()
       
       if (error) throw error
@@ -142,7 +156,7 @@ export const teacherService = {
   // Get all teachers (excluding archived unless specified)
   async getAllTeachers(includeArchived = false) {
     try {
-      let query = supabase.from('teachers').select('*')
+      let query = supabase.from('teachers').select('*, full_name as name')
       
       if (!includeArchived) {
         query = query.eq('archived', false)
@@ -163,7 +177,7 @@ export const teacherService = {
     try {
       const { data, error } = await supabase
         .from('teachers')
-        .select('*')
+        .select('*, full_name as name')
         .eq('id', id)
         .single()
       
@@ -178,10 +192,17 @@ export const teacherService = {
   // Add new teacher
   async addTeacher(teacherData) {
     try {
+      // Map 'name' to 'full_name' for database storage
+      const dbData = {
+        ...teacherData,
+        full_name: teacherData.name,
+      }
+      delete dbData.name // Remove the 'name' field since we're using 'full_name'
+      
       const { data, error } = await supabase
         .from('teachers')
-        .insert([teacherData])
-        .select()
+        .insert([dbData])
+        .select('*, full_name as name')
         .single()
       
       if (error) throw error
@@ -195,11 +216,18 @@ export const teacherService = {
   // Update teacher
   async updateTeacher(id, updatedData) {
     try {
+      // Map 'name' to 'full_name' if present
+      const dbData = { ...updatedData }
+      if (dbData.name) {
+        dbData.full_name = dbData.name
+        delete dbData.name
+      }
+      
       const { data, error } = await supabase
         .from('teachers')
-        .update(updatedData)
+        .update(dbData)
         .eq('id', id)
-        .select()
+        .select('*, full_name as name')
         .single()
       
       if (error) throw error
@@ -217,7 +245,7 @@ export const teacherService = {
         .from('teachers')
         .delete()
         .eq('id', id)
-        .select()
+        .select('*, full_name as name')
         .single()
       
       if (error) throw error
@@ -238,7 +266,7 @@ export const teacherService = {
           archived_date: new Date().toISOString() 
         })
         .eq('id', id)
-        .select()
+        .select('*, full_name as name')
         .single()
       
       if (error) throw error
@@ -259,7 +287,7 @@ export const teacherService = {
           archived_date: null 
         })
         .eq('id', id)
-        .select()
+        .select('*, full_name as name')
         .single()
       
       if (error) throw error
@@ -604,6 +632,7 @@ export const paymentService = {
         .from('students')
         .select(`
           *,
+          full_name as name,
           student_payments (*)
         `)
         .eq('archived', false)
@@ -624,6 +653,7 @@ export const paymentService = {
         .from('teachers')
         .select(`
           *,
+          full_name as name,
           teacher_payouts (*)
         `)
         .eq('archived', false)
@@ -739,7 +769,7 @@ export const paymentService = {
         .from('payments')
         .select(`
           *,
-          students(name),
+          students(full_name as name),
           course_instances(subject)
         `)
         .order('created_at', { ascending: false })

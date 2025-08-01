@@ -203,7 +203,12 @@ export default function ManagerDashboard() {
                         </p>
                       )}
                       {result.type === "teacher" && (
-                        <p className="text-sm text-gray-600">{result.subjects?.join(", ")}</p>
+                        <p className="text-sm text-gray-600">
+                          {result.subjects ? (Array.isArray(result.subjects) 
+                            ? result.subjects.join(", ") 
+                            : (typeof result.subjects === 'string' ? result.subjects : "No subjects")
+                          ) : "No subjects"}
+                        </p>
                       )}
                       {result.type === "course" && (
                         <p className="text-sm text-gray-600">

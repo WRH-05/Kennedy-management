@@ -49,7 +49,7 @@ export default function TeacherProfile() {
         const teacherData = await teacherService.getTeacherById(Number.parseInt(teacherId))
         if (teacherData) {
           setTeacher(teacherData)
-          setEditedTeacher({ ...teacherData })
+          setEditedTeacher(JSON.parse(JSON.stringify(teacherData))) // Deep copy to avoid reference issues
         } else {
           setError("Teacher not found")
           router.push("/receptionist")
@@ -92,12 +92,14 @@ export default function TeacherProfile() {
   }
 
   const handleCancel = () => {
-    setEditedTeacher({ ...teacher })
+    setEditedTeacher(teacher ? JSON.parse(JSON.stringify(teacher)) : null)
     setIsEditing(false)
   }
 
   const handleInputChange = (field: string, value: any) => {
-    setEditedTeacher({ ...editedTeacher, [field]: value })
+    if (editedTeacher) {
+      setEditedTeacher({ ...editedTeacher, [field]: value })
+    }
   }
 
   if (loading) {
@@ -266,7 +268,10 @@ export default function TeacherProfile() {
                   ) : (
                     <div className="flex flex-wrap gap-2">
                       {teacher.subjects ? 
-                        teacher.subjects.split(',').map((subject: string, idx: number) => (
+                        (Array.isArray(teacher.subjects) 
+                          ? teacher.subjects 
+                          : (typeof teacher.subjects === 'string' ? teacher.subjects.split(',') : [])
+                        ).filter((s: string) => s && s.trim()).map((subject: string, idx: number) => (
                           <Badge key={idx} variant="default">
                             {subject.trim()}
                           </Badge>
@@ -288,7 +293,10 @@ export default function TeacherProfile() {
                   ) : (
                     <div className="flex flex-wrap gap-2">
                       {teacher.school_years ? 
-                        teacher.school_years.split(',').map((year: string, idx: number) => (
+                        (Array.isArray(teacher.school_years) 
+                          ? teacher.school_years 
+                          : (typeof teacher.school_years === 'string' ? teacher.school_years.split(',') : [])
+                        ).filter((y: string) => y && y.trim()).map((year: string, idx: number) => (
                           <Badge key={idx} variant="secondary">
                             {year.trim()}
                           </Badge>

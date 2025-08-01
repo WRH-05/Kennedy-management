@@ -188,7 +188,10 @@ export default function CoursesTab({
                               >
                                 <div className="font-medium">{teacher.name}</div>
                                 <div className="text-sm text-gray-600">
-                                  {teacher.subjects ? teacher.subjects.split(',').map((s: string) => s.trim()).join(", ") : 'No subjects'}
+                                  {teacher.subjects ? (Array.isArray(teacher.subjects) 
+                                    ? teacher.subjects 
+                                    : (typeof teacher.subjects === 'string' ? teacher.subjects.split(',') : [])
+                                  ).filter((s: string) => s && s.trim()).map((s: string) => s.trim()).join(", ") : 'No subjects'}
                                 </div>
                               </div>
                             ))}
@@ -212,13 +215,19 @@ export default function CoursesTab({
                               <SelectValue placeholder="Select subject" />
                             </SelectTrigger>
                             <SelectContent>
-                              {teachers
-                                .find((t) => t.id.toString() === newCourse.teacherId)
-                                ?.subjects.map((subject: string) => (
+                              {(function() {
+                                const teacher = teachers.find((t) => t.id.toString() === newCourse.teacherId);
+                                const subjects = teacher?.subjects;
+                                if (!subjects) return null;
+                                const subjectsList = Array.isArray(subjects) 
+                                  ? subjects 
+                                  : (typeof subjects === 'string' ? subjects.split(',').map((s: string) => s.trim()).filter((s: string) => s) : []);
+                                return subjectsList.map((subject: string) => (
                                   <SelectItem key={subject} value={subject}>
                                     {subject}
                                   </SelectItem>
-                                ))}
+                                ));
+                              })()}
                             </SelectContent>
                           </Select>
                         </div>
@@ -233,13 +242,17 @@ export default function CoursesTab({
                               <SelectValue placeholder="Select school year" />
                             </SelectTrigger>
                             <SelectContent>
-                              {teachers
-                                .find((t) => t.id.toString() === newCourse.teacherId)
-                                ?.school_years?.split(',').map((year: string) => (
+                              {(function() {
+                                const teacher = teachers.find((t) => t.id.toString() === newCourse.teacherId);
+                                const schoolYears = teacher?.school_years;
+                                if (!schoolYears) return null;
+                                const yearsList = Array.isArray(schoolYears) ? schoolYears : schoolYears.split(',');
+                                return yearsList.map((year: string) => (
                                   <SelectItem key={year.trim()} value={year.trim()}>
                                     {year.trim()}
                                   </SelectItem>
-                                ))}
+                                ));
+                              })()}
                             </SelectContent>
                           </Select>
                         </div>
