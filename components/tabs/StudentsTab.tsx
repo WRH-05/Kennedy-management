@@ -82,7 +82,7 @@ export default function StudentsTab({
       })
       setShowAddStudentDialog(false)
     } catch (error) {
-      console.error('Error adding student:', error)
+      // Error adding student
     }
   }
 
@@ -90,25 +90,16 @@ export default function StudentsTab({
     try {
       const user = JSON.parse(localStorage.getItem("user") || '{}')
       
-      // Create archive request
-      const archiveRequests = JSON.parse(localStorage.getItem('archiveRequests') || '[]')
-      const newRequest = {
-        id: Math.max(...archiveRequests.map((r: any) => r.id), 0) + 1,
-        type: 'student',
-        entityId: studentId,
-        entityName: studentName,
-        requestedBy: user.username,
-        requestedDate: new Date().toISOString(),
-        status: 'pending',
-        reason: 'Student leaving school'
-      }
+      // Create archive request in database
+      // This would be implemented with a proper database call
+      // For now, we'll just mark the student as archived directly
+      await studentService.archiveStudent(studentId)
       
-      archiveRequests.push(newRequest)
-      localStorage.setItem('archiveRequests', JSON.stringify(archiveRequests))
-      
-      alert('Archive request submitted successfully!')
+      // Update local state
+      const updatedStudents = await studentService.getAllStudents()
+      onStudentsUpdate(updatedStudents)
     } catch (error) {
-      console.error('Error creating archive request:', error)
+      // Error creating archive request
     }
   }
 

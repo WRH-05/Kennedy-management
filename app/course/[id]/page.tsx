@@ -71,7 +71,6 @@ export default function CourseDetail() {
         setCourse(courseData)
         setStudents(studentsData)
       } catch (error) {
-        console.error('Error loading course data:', error)
         router.push("/receptionist")
       } finally {
         setLoading(false)

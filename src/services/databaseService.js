@@ -19,7 +19,7 @@ export const studentService = {
       if (error) throw error
       return data || []
     } catch (error) {
-      console.error('Error fetching students:', error)
+      // Error handled
       throw error
     }
   },
@@ -36,7 +36,7 @@ export const studentService = {
       if (error) throw error
       return data
     } catch (error) {
-      console.error('Error fetching student:', error)
+      // Error handled
       throw error
     }
   },
@@ -53,7 +53,7 @@ export const studentService = {
       if (error) throw error
       return data
     } catch (error) {
-      console.error('Error adding student:', error)
+      // Error handled
       throw error
     }
   },
@@ -71,7 +71,7 @@ export const studentService = {
       if (error) throw error
       return data
     } catch (error) {
-      console.error('Error updating student:', error)
+      // Error handled
       throw error
     }
   },
@@ -89,7 +89,7 @@ export const studentService = {
       if (error) throw error
       return data
     } catch (error) {
-      console.error('Error deleting student:', error)
+      // Error handled
       throw error
     }
   },
@@ -110,7 +110,7 @@ export const studentService = {
       if (error) throw error
       return data
     } catch (error) {
-      console.error('Error archiving student:', error)
+      // Error handled
       throw error
     }
   },
@@ -131,7 +131,7 @@ export const studentService = {
       if (error) throw error
       return data
     } catch (error) {
-      console.error('Error unarchiving student:', error)
+      // Error handled
       throw error
     }
   },
@@ -153,7 +153,7 @@ export const teacherService = {
       if (error) throw error
       return data || []
     } catch (error) {
-      console.error('Error fetching teachers:', error)
+      // Error handled
       throw error
     }
   },
@@ -170,7 +170,7 @@ export const teacherService = {
       if (error) throw error
       return data
     } catch (error) {
-      console.error('Error fetching teacher:', error)
+      // Error handled
       throw error
     }
   },
@@ -187,7 +187,7 @@ export const teacherService = {
       if (error) throw error
       return data
     } catch (error) {
-      console.error('Error adding teacher:', error)
+      // Error handled
       throw error
     }
   },
@@ -205,7 +205,7 @@ export const teacherService = {
       if (error) throw error
       return data
     } catch (error) {
-      console.error('Error updating teacher:', error)
+      // Error handled
       throw error
     }
   },
@@ -223,7 +223,7 @@ export const teacherService = {
       if (error) throw error
       return data
     } catch (error) {
-      console.error('Error deleting teacher:', error)
+      // Error handled
       throw error
     }
   },
@@ -244,7 +244,7 @@ export const teacherService = {
       if (error) throw error
       return data
     } catch (error) {
-      console.error('Error archiving teacher:', error)
+      // Error handled
       throw error
     }
   },
@@ -265,7 +265,7 @@ export const teacherService = {
       if (error) throw error
       return data
     } catch (error) {
-      console.error('Error unarchiving teacher:', error)
+      // Error handled
       throw error
     }
   },
@@ -287,7 +287,7 @@ export const courseService = {
       if (error) throw error
       return data || []
     } catch (error) {
-      console.error('Error fetching course instances:', error)
+      // Error handled
       throw error
     }
   },
@@ -304,7 +304,7 @@ export const courseService = {
       if (error) throw error
       return data
     } catch (error) {
-      console.error('Error fetching course instance:', error)
+      // Error handled
       throw error
     }
   },
@@ -322,7 +322,7 @@ export const courseService = {
       if (error) throw error
       return data || []
     } catch (error) {
-      console.error('Error fetching teacher courses:', error)
+      // Error handled
       throw error
     }
   },
@@ -340,7 +340,7 @@ export const courseService = {
       if (error) throw error
       return data || []
     } catch (error) {
-      console.error('Error fetching student courses:', error)
+      // Error handled
       throw error
     }
   },
@@ -357,7 +357,7 @@ export const courseService = {
       if (error) throw error
       return data
     } catch (error) {
-      console.error('Error adding course instance:', error)
+      // Error handled
       throw error
     }
   },
@@ -375,7 +375,7 @@ export const courseService = {
       if (error) throw error
       return data
     } catch (error) {
-      console.error('Error updating course instance:', error)
+      // Error handled
       throw error
     }
   },
@@ -396,7 +396,7 @@ export const courseService = {
       if (error) throw error
       return data
     } catch (error) {
-      console.error('Error archiving course:', error)
+      // Error handled
       throw error
     }
   },
@@ -417,7 +417,7 @@ export const courseService = {
       if (error) throw error
       return data
     } catch (error) {
-      console.error('Error unarchiving course:', error)
+      // Error handled
       throw error
     }
   },
@@ -436,7 +436,7 @@ export const archiveService = {
       if (error) throw error
       return data || []
     } catch (error) {
-      console.error('Error fetching archive requests:', error)
+      // Error handled
       throw error
     }
   },
@@ -453,7 +453,7 @@ export const archiveService = {
       if (error) throw error
       return data
     } catch (error) {
-      console.error('Error creating archive request:', error)
+      // Error handled
       throw error
     }
   },
@@ -479,7 +479,7 @@ export const archiveService = {
       if (error) throw error
       return data
     } catch (error) {
-      console.error('Error updating archive request:', error)
+      // Error handled
       throw error
     }
   },
@@ -498,7 +498,7 @@ export const paymentService = {
       if (error) throw error
       return data || []
     } catch (error) {
-      console.error('Error fetching payouts:', error)
+      // Error handled
       throw error
     }
   },
@@ -524,7 +524,7 @@ export const paymentService = {
       if (error) throw error
       return data
     } catch (error) {
-      console.error('Error updating payout status:', error)
+      // Error handled
       throw error
     }
   },
@@ -540,7 +540,7 @@ export const paymentService = {
       if (error) throw error
       return data || []
     } catch (error) {
-      console.error('Error fetching revenue data:', error)
+      // Error handled
       throw error
     }
   },
@@ -557,7 +557,7 @@ export const paymentService = {
       if (error) throw error
       return data || []
     } catch (error) {
-      console.error('Error fetching pending payouts:', error)
+      // Error handled
       throw error
     }
   },
@@ -574,7 +574,7 @@ export const paymentService = {
       if (error) throw error
       return data || []
     } catch (error) {
-      console.error('Error fetching student payment history:', error)
+      // Error handled
       throw error
     }
   },
@@ -591,7 +591,7 @@ export const paymentService = {
       if (error) throw error
       return data || []
     } catch (error) {
-      console.error('Error fetching professor payment history:', error)
+      // Error handled
       throw error
     }
   },
@@ -611,7 +611,7 @@ export const paymentService = {
       if (error) throw error
       return data || []
     } catch (error) {
-      console.error('Error fetching student data:', error)
+      // Error handled
       throw error
     }
   },
@@ -631,7 +631,7 @@ export const paymentService = {
       if (error) throw error
       return data || []
     } catch (error) {
-      console.error('Error fetching teacher data:', error)
+      // Error handled
       throw error
     }
   },
@@ -657,7 +657,7 @@ export const paymentService = {
       if (error) throw error
       return data
     } catch (error) {
-      console.error('Error updating payment status:', error)
+      // Error handled
       throw error
     }
   },
@@ -681,7 +681,7 @@ export const paymentService = {
       
       return allPayments
     } catch (error) {
-      console.error('Error fetching all payments:', error)
+      // Error handled
       throw error
     }
   },
@@ -727,7 +727,7 @@ export const paymentService = {
         return data
       }
     } catch (error) {
-      console.error('Error toggling student payment:', error)
+      // Error handled
       throw error
     }
   },
@@ -747,7 +747,7 @@ export const paymentService = {
       if (error) throw error
       return data || []
     } catch (error) {
-      console.error('Error fetching student payments:', error)
+      // Error handled
       throw error
     }
   },
@@ -797,7 +797,7 @@ export const attendanceService = {
         return data
       }
     } catch (error) {
-      console.error('Error updating attendance:', error)
+      // Error handled
       throw error
     }
   },
@@ -823,7 +823,7 @@ export const attendanceService = {
       
       return attendanceMap
     } catch (error) {
-      console.error('Error fetching course attendance:', error)
+      // Error handled
       throw error
     }
   },

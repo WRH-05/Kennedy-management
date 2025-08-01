@@ -46,7 +46,6 @@ export default function StudentDashboard() {
         const studentCourses = await courseService.getCoursesByStudentId(parseInt(studentId))
         setCourses(studentCourses)
       } catch (error) {
-        console.error('Error loading student data:', error)
         router.push("/receptionist")
       } finally {
         setLoading(false)
@@ -56,20 +55,24 @@ export default function StudentDashboard() {
     loadStudentData()
   }, [studentId, router])
 
+  const [uploadError, setUploadError] = useState<string | null>(null)
+
   const handleFileUpload = (docType: string, event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0]
     if (!file) return
 
+    setUploadError(null)
+
     // Validate file type
     if (file.type !== "application/pdf") {
-      alert("Only PDF files are allowed")
+      setUploadError("Only PDF files are allowed")
       return
     }
 
     // Validate filename format (YYYYMMDD_Last_First_DocType.pdf)
     const filenameRegex = /^\d{8}_[A-Za-z]+_[A-Za-z]+_[A-Za-z]+\.pdf$/
     if (!filenameRegex.test(file.name)) {
-      alert("Filename must follow format: YYYYMMDD_Last_First_DocType.pdf")
+      setUploadError("Filename must follow format: YYYYMMDD_Last_First_DocType.pdf")
       return
     }
 
@@ -92,7 +95,7 @@ export default function StudentDashboard() {
   }
 
   const downloadStudentCard = () => {
-    alert("Student card download would be implemented here")
+    // Student card download functionality would be implemented here
   }
 
   if (!student || loading) {
@@ -232,6 +235,13 @@ export default function StudentDashboard() {
                 <div className="text-sm text-gray-600 mb-4">
                   Upload PDF files only. Filename format: YYYYMMDD_Last_First_DocType.pdf
                 </div>
+
+                {uploadError && (
+                  <Alert>
+                    <AlertTriangle className="h-4 w-4" />
+                    <AlertDescription>{uploadError}</AlertDescription>
+                  </Alert>
+                )}
 
                 {Object.entries(student.documents).map(([docType, doc]: [string, any]) => (
                   <div key={docType} className="space-y-2">

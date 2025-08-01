@@ -3,7 +3,6 @@
 
 import { databaseService as supabaseDataService } from './databaseService.js'
 
-// Add a debug function to check which service is being used
 export const getDataSourceInfo = () => {
   return {
     dataSource: 'Supabase Database',

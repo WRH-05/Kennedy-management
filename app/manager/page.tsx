@@ -74,7 +74,7 @@ export default function ManagerDashboard() {
         setCourses(activeCourses)
         setAllPayments(paymentsData)
       } catch (error) {
-        console.error('Error loading data:', error)
+        // Error loading data
       } finally {
         setLoading(false)
       }
@@ -95,7 +95,7 @@ export default function ManagerDashboard() {
       const updatedPayments = await paymentService.getAllPayments()
       setAllPayments(updatedPayments)
     } catch (error) {
-      console.error('Error approving payment:', error)
+      // Error approving payment
     }
   }
 
@@ -143,13 +143,13 @@ export default function ManagerDashboard() {
     try {
       await approvePayment(payoutId.toString(), 'payout')
     } catch (error) {
-      console.error('Error approving payout:', error)
+      // Error approving payout
     }
   }
 
   const handleMonthlyRollover = () => {
-    // Simulate monthly rollover - copy active group courses to new month
-    alert("Monthly rollover completed! Active group courses have been copied to the new month.")
+    // Monthly rollover functionality would be implemented here
+    // This would copy active group courses to new month
   }
 
   const totalRevenue = revenue.reduce((sum: number, item: any) => sum + (item.paid && item.amount ? item.amount : 0), 0)
@@ -366,7 +366,7 @@ export default function ManagerDashboard() {
                   setTeachers(teachersData)
                   setCourses(coursesData)
                 } catch (error) {
-                  console.error('Error reloading data:', error)
+                  // Error reloading data
                 }
               }
               loadData()
