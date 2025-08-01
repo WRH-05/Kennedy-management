@@ -24,7 +24,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
-import { courseService, studentService, teacherService, paymentService, attendanceService } from "@/src/services/appDataService"
+import { courseService, studentService, teacherService, paymentService, attendanceService } from "@/services/appDataService"
 
 export default function CourseDetail() {
   const router = useRouter()

@@ -12,7 +12,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { ArrowLeft, Download, User, BookOpen, Upload, AlertTriangle, CheckCircle } from "lucide-react"
-import { studentService, courseService } from "@/src/services/appDataService"
+import { studentService, courseService } from "@/services/appDataService"
 
 export default function StudentDashboard() {
   const router = useRouter()

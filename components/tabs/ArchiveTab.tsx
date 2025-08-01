@@ -7,7 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Badge } from "@/components/ui/badge"
 import { Archive, Check, X, Undo } from "lucide-react"
-import { studentService, teacherService, courseService } from "@/src/services/appDataService"
+import { studentService, teacherService, courseService } from "@/services/appDataService"
 
 interface ArchiveTabProps {
   isManager?: boolean

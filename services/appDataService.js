@@ -3,15 +3,6 @@
 
 import { databaseService as supabaseDataService } from './databaseService.js'
 
-export const getDataSourceInfo = () => {
-  return {
-    dataSource: 'Supabase Database',
-    nodeEnv: process.env.NODE_ENV,
-    useSupabaseFlag: process.env.NEXT_PUBLIC_USE_SUPABASE,
-    usingSupabase: true
-  }
-}
-
 // Student Services - Direct Supabase calls
 export const studentService = {
   async getAllStudents(includeArchived = false) {

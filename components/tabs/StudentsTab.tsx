@@ -12,7 +12,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Badge } from "@/components/ui/badge"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 import { Users, Plus, Archive } from "lucide-react"
-import { studentService } from "@/src/services/appDataService"
+import { studentService } from "@/services/appDataService"
 
 interface StudentsTabProps {
   students: any[]

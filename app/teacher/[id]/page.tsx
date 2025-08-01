@@ -19,7 +19,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
-import { teacherService, courseService } from "@/src/services/appDataService"
+import { teacherService, courseService } from "@/services/appDataService"
 
 export default function TeacherProfile() {
   const router = useRouter()
