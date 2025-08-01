@@ -62,10 +62,10 @@ export default function ManagerDashboard() {
           paymentService.getAllPayments(),
         ])
 
-        // Filter out archived items
-        const activeStudents = studentsData.filter((student: any) => !student.archived)
-        const activeTeachers = teachersData.filter((teacher: any) => !teacher.archived)
-        const activeCourses = coursesData.filter((course: any) => !course.archived)
+        // Filter out archived items with null checking
+        const activeStudents = (studentsData || []).filter((student: any) => !student.archived)
+        const activeTeachers = (teachersData || []).filter((teacher: any) => !teacher.archived)
+        const activeCourses = (coursesData || []).filter((course: any) => !course.archived)
 
         setRevenue(revenueData)
         setPayouts(payoutsData)

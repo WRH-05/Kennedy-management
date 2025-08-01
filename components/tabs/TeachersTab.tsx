@@ -82,7 +82,7 @@ export default function TeachersTab({
   }
 
   const getTeacherCourses = (teacherId: number) => {
-    return courses.filter((course) => course.teacherId === teacherId)
+    return (courses || []).filter((course) => course.teacherId === teacherId)
   }
 
   const handleArchiveTeacher = async (teacherId: number, teacherName: string) => {
@@ -285,7 +285,7 @@ export default function TeachersTab({
             </TableRow>
           </TableHeader>
           <TableBody>
-            {teachers.map((teacher) => {
+            {(teachers || []).map((teacher) => {
               const teacherCourses = getTeacherCourses(teacher.id)
               return (
                 <TableRow key={teacher.id}>

@@ -50,10 +50,10 @@ export default function ReceptionistDashboard() {
           courseService.getAllCourseInstances(),
         ])
 
-        // Filter out archived items
-        const activeStudents = studentsData.filter((student: any) => !student.archived)
-        const activeTeachers = teachersData.filter((teacher: any) => !teacher.archived)
-        const activeCourses = coursesData.filter((course: any) => !course.archived)
+        // Filter out archived items with null checking
+        const activeStudents = (studentsData || []).filter((student: any) => !student.archived)
+        const activeTeachers = (teachersData || []).filter((teacher: any) => !teacher.archived)
+        const activeCourses = (coursesData || []).filter((course: any) => !course.archived)
 
         setStudents(activeStudents)
         setTeachers(activeTeachers)
@@ -71,20 +71,20 @@ export default function ReceptionistDashboard() {
   // Enhanced search functionality
   useEffect(() => {
     if (searchQuery.trim()) {
-      const studentResults = students
-        .filter((student) => student.name.toLowerCase().includes(searchQuery.toLowerCase()))
+      const studentResults = (students || [])
+        .filter((student) => student?.name?.toLowerCase().includes(searchQuery.toLowerCase()))
         .map((student) => ({ ...student, type: "student" }))
 
-      const teacherResults = teachers
-        .filter((teacher) => teacher.name.toLowerCase().includes(searchQuery.toLowerCase()))
+      const teacherResults = (teachers || [])
+        .filter((teacher) => teacher?.name?.toLowerCase().includes(searchQuery.toLowerCase()))
         .map((teacher) => ({ ...teacher, type: "teacher" }))
 
-      const courseResults = courses
+      const courseResults = (courses || [])
         .filter(
           (course) =>
-            course.subject.toLowerCase().includes(searchQuery.toLowerCase()) ||
-            course.schoolYear.toLowerCase().includes(searchQuery.toLowerCase()) ||
-            course.teacherName.toLowerCase().includes(searchQuery.toLowerCase()),
+            course?.subject?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+            course?.schoolYear?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+            course?.teacherName?.toLowerCase().includes(searchQuery.toLowerCase()),
         )
         .map((course) => ({ ...course, type: "course" }))
 
