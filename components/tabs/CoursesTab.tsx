@@ -72,24 +72,25 @@ export default function CoursesTab({
       const endHour = calculateEndHour(newCourse.startHour, newCourse.duration)
 
       const course = {
-        teacherId: teacher.id,
-        teacherName: teacher.name,
+        teacher_id: teacher.id,
+        teacher_name: teacher.name,
         subject: newCourse.subject,
-        schoolYear: newCourse.schoolYear,
-        percentageCut: newCourse.percentageCut,
-        courseType: newCourse.courseType,
+        school_year: newCourse.schoolYear,
+        percentage_cut: newCourse.percentageCut,
+        course_type: newCourse.courseType,
         duration: newCourse.duration,
-        dayOfWeek: newCourse.dayOfWeek,
-        startHour: newCourse.startHour,
-        endHour: endHour,
+        day_of_week: newCourse.dayOfWeek,
+        start_hour: newCourse.startHour,
+        end_hour: endHour,
         schedule: `${newCourse.dayOfWeek} ${newCourse.startHour}-${endHour}`,
         price: newCourse.price,
-        enrolledStudents: [],
+        monthly_price: newCourse.price,
+        student_ids: [],
+        student_names: [],
+        enrolled_students: 0,
         status: "active",
-        payments: {
-          students: {},
-          teacherPaid: false,
-        },
+        payments: {},
+        attendance: {},
       }
       await courseService.addCourseInstance(course)
       const updatedCourses = await courseService.getAllCourseInstances()
@@ -383,7 +384,7 @@ export default function CoursesTab({
           </TableHeader>
           <TableBody>
             {courses.map((course) => {
-              const enrolledStudents = students.filter((s) => course.enrolledStudents?.includes(s.id))
+              const enrolledStudents = students.filter((s) => course.student_ids?.includes(s.id))
               return (
                 <TableRow key={course.id}>
                   <TableCell>
@@ -399,33 +400,33 @@ export default function CoursesTab({
                       className="p-0 h-auto font-medium text-left"
                       onClick={() => router.push(`/course/${course.id}`)}
                     >
-                      {course.subject} - {course.schoolYear}
+                      {course.subject} - {course.school_year}
                     </Button>
                   </TableCell>
                   <TableCell>
                     <Button
                       variant="link"
                       className="p-0 h-auto font-medium text-left"
-                      onClick={() => router.push(`/teacher/${course.teacherId}`)}
+                      onClick={() => router.push(`/teacher/${course.teacher_id}`)}
                     >
-                      {course.teacherName}
+                      {course.teacher_name}
                     </Button>
                   </TableCell>
                   <TableCell>
-                    <Badge variant={course.courseType === "Group" ? "default" : "secondary"}>
-                      {course.courseType}
+                    <Badge variant={course.course_type === "Group" ? "default" : "secondary"}>
+                      {course.course_type}
                     </Badge>
                   </TableCell>
                   <TableCell>{course.schedule}</TableCell>
                   <TableCell>{enrolledStudents.length} students</TableCell>
                   <TableCell>
-                    {course.price} DA {course.courseType === "Group" ? "/month" : "/session"}
+                    {course.price} DA {course.course_type === "Group" ? "/month" : "/session"}
                   </TableCell>
                   <TableCell>
                     <Button
                       variant="outline"
                       size="sm"
-                      onClick={() => handleArchiveCourse(course.id, `${course.subject} - ${course.schoolYear}`)}
+                      onClick={() => handleArchiveCourse(course.id, `${course.subject} - ${course.school_year}`)}
                       className="text-orange-600 hover:text-orange-700"
                     >
                       <Archive className="h-4 w-4 mr-1" />

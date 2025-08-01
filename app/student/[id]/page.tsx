@@ -108,7 +108,7 @@ export default function StudentDashboard() {
     )
   }
 
-  const studentCourses = courses.filter((course) => course.enrolledStudents.includes(Number.parseInt(studentId)))
+  const studentCourses = courses.filter((course) => course.student_ids?.includes(Number.parseInt(studentId)))
   const activeCourses = studentCourses.filter((course) => course.status === "active")
   const completedCourses = studentCourses.filter((course) => course.status === "completed")
 
@@ -153,7 +153,7 @@ export default function StudentDashboard() {
                 <div>
                   <h3 className="font-semibold text-lg">{student.name}</h3>
                   <p className="text-gray-600">
-                    {student.schoolYear} - {student.specialty}
+                    {student.school_year} - {student.specialty}
                   </p>
                 </div>
                 <div className="space-y-2">
@@ -311,20 +311,20 @@ export default function StudentDashboard() {
                               <Button
                                 variant="link"
                                 className="p-0 h-auto font-medium text-left"
-                                onClick={() => router.push(`/teacher/${course.teacherId}`)}
+                                onClick={() => router.push(`/teacher/${course.teacher_id}`)}
                               >
-                                {course.teacherName}
+                                {course.teacher_name}
                               </Button>
                             </TableCell>
                             <TableCell>{course.schedule}</TableCell>
-                            <TableCell>{course.monthlyPrice} DA</TableCell>
+                            <TableCell>{course.monthly_price} DA</TableCell>
                             <TableCell>
                               <Badge
                                 variant={
-                                  course.payments.students[Number.parseInt(studentId)] ? "default" : "destructive"
+                                  course.payments && course.payments[Number.parseInt(studentId)] ? "default" : "destructive"
                                 }
                               >
-                                {course.payments.students[Number.parseInt(studentId)] ? "Paid" : "Pending"}
+                                {course.payments && course.payments[Number.parseInt(studentId)] ? "Paid" : "Pending"}
                               </Badge>
                             </TableCell>
                           </TableRow>
@@ -357,9 +357,9 @@ export default function StudentDashboard() {
                                 <Button
                                   variant="link"
                                   className="p-0 h-auto font-medium text-left"
-                                  onClick={() => router.push(`/teacher/${course.teacherId}`)}
+                                  onClick={() => router.push(`/teacher/${course.teacher_id}`)}
                                 >
-                                  {course.teacherName}
+                                  {course.teacher_name}
                                 </Button>
                               </TableCell>
                               <TableCell>{course.schedule}</TableCell>

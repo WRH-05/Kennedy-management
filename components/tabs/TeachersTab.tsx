@@ -82,7 +82,7 @@ export default function TeachersTab({
   }
 
   const getTeacherCourses = (teacherId: number) => {
-    return (courses || []).filter((course) => course.teacherId === teacherId)
+    return (courses || []).filter((course) => course.teacher_id === teacherId)
   }
 
   const handleArchiveTeacher = async (teacherId: number, teacherName: string) => {

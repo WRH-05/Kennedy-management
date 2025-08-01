@@ -143,7 +143,7 @@ export default function CourseDetail() {
 
     setCourse((prev: any) => ({
       ...prev,
-      enrolledStudents: [...prev.enrolledStudents, student.id],
+      student_ids: [...prev.student_ids, student.id],
       studentNames: [...prev.studentNames, student.name],
       payments: {
         ...prev.payments,
@@ -164,17 +164,17 @@ export default function CourseDetail() {
   }
 
   const removeStudentFromCourse = (studentId: number) => {
-    const studentName = course.studentNames[course.enrolledStudents.findIndex((id: number) => id === studentId)]
+    const studentName = course.studentNames[course.student_ids.findIndex((id: number) => id === studentId)]
     setConfirmDialog({
       open: true,
       title: "Remove Student",
       description: `Are you sure you want to remove ${studentName} from this course?`,
       action: () => {
         setCourse((prev: any) => {
-          const studentIndex = prev.enrolledStudents.findIndex((id: number) => id === studentId)
+          const studentIndex = prev.student_ids.findIndex((id: number) => id === studentId)
           if (studentIndex === -1) return prev
 
-          const newEnrolledStudents = [...prev.enrolledStudents]
+          const newEnrolledStudents = [...prev.student_ids]
           newEnrolledStudents.splice(studentIndex, 1)
 
           const newStudentNames = [...prev.studentNames]
@@ -188,7 +188,7 @@ export default function CourseDetail() {
 
           return {
             ...prev,
-            enrolledStudents: newEnrolledStudents,
+            student_ids: newEnrolledStudents,
             studentNames: newStudentNames,
             payments: {
               ...newPayments,
@@ -214,9 +214,9 @@ export default function CourseDetail() {
     )
   }
 
-  const availableStudents = students.filter((student: any) => !course?.enrolledStudents?.includes(student.id))
+  const availableStudents = students.filter((student: any) => !course?.student_ids?.includes(student.id))
 
-  const teacherEarnings = Math.round((course.price * course.enrolledStudents.length * course.percentageCut) / 100)
+  const teacherEarnings = Math.round((course.price * course.student_ids?.length * course.percentage_cut) / 100)
 
   const filteredStudents = availableStudents.filter((student: any) =>
     student.name.toLowerCase().includes(studentSearchQuery.toLowerCase()),
@@ -261,13 +261,13 @@ export default function CourseDetail() {
                       className="p-0 h-auto font-medium"
                       onClick={() => router.push(`/teacher/${course.teacherId}`)}
                     >
-                      {course.teacherName}
+                      {course.teacher_name}
                     </Button>
                   </p>
                   <div>
                     <span className="font-medium">Type:</span>
-                    <Badge variant={course.courseType === "Group" ? "default" : "secondary"} className="ml-2">
-                      {course.courseType}
+                    <Badge variant={course.course_type === "Group" ? "default" : "secondary"} className="ml-2">
+                      {course.course_type}
                     </Badge>
                   </div>
                   <p>
@@ -278,15 +278,15 @@ export default function CourseDetail() {
                   </p>
                   <p>
                     <span className="font-medium">
-                      {course.courseType === "Group" ? "Monthly Price" : "Session Price"}:
+                      {course.course_type === "Group" ? "Monthly Price" : "Session Price"}:
                     </span>{" "}
                     {course.price} DA
                   </p>
                   <p>
-                    <span className="font-medium">Teacher Cut:</span> {course.percentageCut}%
+                    <span className="font-medium">Teacher Cut:</span> {course.percentage_cut}%
                   </p>
                   <p>
-                    <span className="font-medium">Enrolled Students:</span> {course.enrolledStudents.length}
+                    <span className="font-medium">Enrolled Students:</span> {course.student_ids?.length || 0}
                   </p>
                 </div>
                 <div className="pt-4 border-t">
@@ -322,9 +322,9 @@ export default function CourseDetail() {
                 <div className="pt-4 border-t">
                   <div className="flex justify-between items-center">
                     <span className="font-medium">
-                      Total {course.courseType === "Group" ? "Monthly" : "Session"} Revenue:
+                      Total {course.course_type === "Group" ? "Monthly" : "Session"} Revenue:
                     </span>
-                    <span className="text-lg font-bold">{course.price * course.enrolledStudents.length} DA</span>
+                    <span className="text-lg font-bold">{course.price * (course.student_ids?.length || 0)} DA</span>
                   </div>
                   <div className="flex justify-between items-center">
                     <span className="font-medium">Teacher Earnings:</span>
@@ -385,7 +385,7 @@ export default function CourseDetail() {
                                   >
                                     <div className="font-medium">{student.name}</div>
                                     <div className="text-sm text-gray-600">
-                                      {student.schoolYear} - {student.specialty}
+                                      {student.school_year} - {student.specialty}
                                     </div>
                                   </div>
                                 ))}
@@ -423,7 +423,7 @@ export default function CourseDetail() {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {course.enrolledStudents.map((studentId: number, idx: number) => (
+                    {course.student_ids?.map((studentId: number, idx: number) => (
                       <TableRow key={studentId}>
                         <TableCell className="font-medium">
                           <Button
@@ -438,7 +438,7 @@ export default function CourseDetail() {
                           <TableCell key={week}>
                             <Select
                               value={
-                                course.attendance[studentId]?.[week as keyof (typeof course.attendance)[studentId]]
+                                course.attendance[studentId]?.[week as keyof typeof course.attendance[typeof studentId]]
                                   ? "p"
                                   : "a"
                               }
@@ -478,7 +478,7 @@ export default function CourseDetail() {
                   </TableBody>
                 </Table>
 
-                {course.enrolledStudents.length === 0 && (
+                {(course.student_ids?.length || 0) === 0 && (
                   <div className="text-center py-8 text-gray-500">No students enrolled in this course.</div>
                 )}
               </CardContent>

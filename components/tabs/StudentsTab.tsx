@@ -54,7 +54,7 @@ export default function StudentsTab({
     try {
       const student = {
         name: newStudent.name,
-        schoolYear: newStudent.schoolYear,
+        school_year: newStudent.schoolYear,
         specialty: newStudent.specialty,
         address: newStudent.address,
         birthDate: newStudent.birthDate,
@@ -104,7 +104,7 @@ export default function StudentsTab({
   }
 
   const getStudentCourses = (studentId: number) => {
-    return courses.filter((course) => course.enrolledStudents?.includes(studentId))
+    return courses.filter((course) => course.student_ids?.includes(studentId))
   }
 
   return (
@@ -306,7 +306,7 @@ export default function StudentsTab({
                       {student.name}
                     </Button>
                   </TableCell>
-                  <TableCell>{student.schoolYear}</TableCell>
+                  <TableCell>{student.school_year}</TableCell>
                   <TableCell>{student.specialty}</TableCell>
                   {showCourses && (
                     <TableCell>

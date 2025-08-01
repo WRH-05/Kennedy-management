@@ -83,8 +83,8 @@ export default function ReceptionistDashboard() {
         .filter(
           (course) =>
             course?.subject?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-            course?.schoolYear?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-            course?.teacherName?.toLowerCase().includes(searchQuery.toLowerCase()),
+            course?.school_year?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+            course?.teacher_name?.toLowerCase().includes(searchQuery.toLowerCase()),
         )
         .map((course) => ({ ...course, type: "course" }))
 
@@ -156,7 +156,7 @@ export default function ReceptionistDashboard() {
                       </div>
                       {result.type === "student" && (
                         <p className="text-sm text-gray-600">
-                          {result.schoolYear} - {result.school}
+                          {result.school_year} - {result.school}
                         </p>
                       )}
                       {result.type === "teacher" && (
@@ -164,7 +164,7 @@ export default function ReceptionistDashboard() {
                       )}
                       {result.type === "course" && (
                         <p className="text-sm text-gray-600">
-                          {result.teacherName} - {result.schoolYear} - {result.schedule}
+                          {result.teacher_name} - {result.school_year} - {result.schedule}
                         </p>
                       )}
                     </div>

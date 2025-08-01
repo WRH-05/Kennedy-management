@@ -114,8 +114,8 @@ export default function ManagerDashboard() {
         .filter(
           (course) =>
             course.subject.toLowerCase().includes(searchQuery.toLowerCase()) ||
-            course.schoolYear.toLowerCase().includes(searchQuery.toLowerCase()) ||
-            course.teacherName.toLowerCase().includes(searchQuery.toLowerCase()),
+            course.school_year.toLowerCase().includes(searchQuery.toLowerCase()) ||
+            course.teacher_name.toLowerCase().includes(searchQuery.toLowerCase()),
         )
         .map((course) => ({ ...course, type: "course" }))
 
@@ -152,7 +152,7 @@ export default function ManagerDashboard() {
     // This would copy active group courses to new month
   }
 
-  const totalRevenue = revenue.reduce((sum: number, item: any) => sum + (item.paid && item.amount ? item.amount : 0), 0)
+  const totalRevenue = revenue.reduce((sum: number, item: any) => sum + (item.status === 'paid' && item.amount ? item.amount : 0), 0)
   const totalPayouts = payouts.reduce((sum: number, payout: any) => sum + (payout.status === 'approved' && payout.amount ? payout.amount : 0), 0)
   const netProfit = totalRevenue - totalPayouts
 
@@ -199,7 +199,7 @@ export default function ManagerDashboard() {
                       </div>
                       {result.type === "student" && (
                         <p className="text-sm text-gray-600">
-                          {result.schoolYear} - {result.school}
+                          {result.school_year} - {result.school}
                         </p>
                       )}
                       {result.type === "teacher" && (
@@ -212,7 +212,7 @@ export default function ManagerDashboard() {
                       )}
                       {result.type === "course" && (
                         <p className="text-sm text-gray-600">
-                          {result.teacherName} - {result.schoolYear} - {result.schedule}
+                          {result.teacher_name} - {result.school_year} - {result.schedule}
                         </p>
                       )}
                     </div>
