@@ -44,6 +44,14 @@ export default function ReceptionistDashboard() {
     const loadData = async () => {
       setLoading(true)
       try {
+        // Debug logging to confirm data source
+        console.log('🔍 Data Source Check:', {
+          dataSource: 'Supabase Database',
+          nodeEnv: process.env.NODE_ENV,
+          useSupabaseFlag: process.env.NEXT_PUBLIC_USE_SUPABASE,
+          usingSupabase: process.env.NODE_ENV === 'production' || process.env.NEXT_PUBLIC_USE_SUPABASE === 'true'
+        })
+
         const [studentsData, teachersData, coursesData] = await Promise.all([
           studentService.getAllStudents(),
           teacherService.getAllTeachers(),
