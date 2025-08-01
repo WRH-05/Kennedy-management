@@ -10,7 +10,7 @@ import { Badge } from "@/components/ui/badge"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { LogOut, DollarSign, Users, BookOpen, TrendingUp, Calendar, Search } from "lucide-react"
-import { paymentService, studentService, teacherService, courseService } from "@/src/services/appDataService"
+import { paymentService, studentService, teacherService, courseService, getDataSourceInfo } from "@/src/services/appDataService"
 import StudentsTab from "@/components/tabs/StudentsTab"
 import TeachersTab from "@/components/tabs/TeachersTab"
 import CoursesTab from "@/components/tabs/CoursesTab"
@@ -275,6 +275,26 @@ export default function ManagerDashboard() {
             </CardContent>
           </Card>
         </div>
+
+        {/* Data Source Indicator */}
+        <Card className="mb-6">
+          <CardContent className="pt-6">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center space-x-2">
+                <Badge variant={getDataSourceInfo().usingSupabase ? "default" : "secondary"}>
+                  {getDataSourceInfo().dataSource}
+                </Badge>
+                <span className="text-sm text-muted-foreground">
+                  Current data source
+                </span>
+              </div>
+              <div className="text-xs text-muted-foreground">
+                Environment: {getDataSourceInfo().nodeEnv} | 
+                Use Supabase: {getDataSourceInfo().useSupabaseFlag}
+              </div>
+            </div>
+          </CardContent>
+        </Card>
 
         <Tabs defaultValue="revenue" className="space-y-6">
           <TabsList className="grid w-full grid-cols-6">

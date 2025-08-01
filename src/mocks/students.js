@@ -1,19 +1,19 @@
-// Mock student data
-// This file contains all student-related mock data that will be replaced with database calls in the future
+// Mock student data - TEMPORARILY DISABLED FOR TESTING
+// If you see students on your website, you're using Supabase database!
 
 export const students = [
   {
-    id: 1,
-    name: "Ahmed Ben Ali",
-    schoolYear: "3AS",
-    specialty: "Math",
-    address: "123 Rue de la Paix, Alger",
-    birthDate: "2005-03-15",
-    phone: "+213 555 123 456",
-    email: "ahmed.benali@email.com",
-    school: "Lycée Mohamed Boudiaf",
-    registrationDate: "2024-01-15",
-    registrationFeePaid: true,
+    id: 999,
+    name: "🚫 MOCK DATA - If you see this, you're using mock data!",
+    schoolYear: "MOCK",
+    specialty: "Mock Data",
+    address: "Mock Address",
+    birthDate: "2000-01-01",
+    phone: "+213 000 000 000",
+    email: "mock@mock.com",
+    school: "Mock School",
+    registrationDate: "2024-01-01",
+    registrationFeePaid: false,
     documents: {
       photos: { uploaded: true, filename: "20240115_Ben_Ahmed_Photos.pdf" },
       copyOfId: { uploaded: false, filename: null },

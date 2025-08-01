@@ -7,9 +7,26 @@ import { databaseService as supabaseDataService } from './databaseService.js'
 // Feature flag to switch between mock and real database
 const USE_SUPABASE = process.env.NODE_ENV === 'production' || process.env.NEXT_PUBLIC_USE_SUPABASE === 'true'
 
+// Add a debug function to check which service is being used
+export const getDataSourceInfo = () => {
+  return {
+    usingSupabase: USE_SUPABASE,
+    nodeEnv: process.env.NODE_ENV,
+    useSupabaseFlag: process.env.NEXT_PUBLIC_USE_SUPABASE,
+    dataSource: USE_SUPABASE ? 'Supabase Database' : 'Mock Data'
+  }
+}
+
 // Wrapper service that chooses between mock and Supabase based on configuration
 export const studentService = {
   async getAllStudents(includeArchived = false) {
+    console.log('🔍 Data Source Check:', {
+      usingSupabase: USE_SUPABASE,
+      nodeEnv: process.env.NODE_ENV,
+      useSupabaseFlag: process.env.NEXT_PUBLIC_USE_SUPABASE,
+      dataSource: USE_SUPABASE ? 'Supabase Database' : 'Mock Data'
+    })
+    
     if (USE_SUPABASE) {
       return await supabaseDataService.students.getAllStudents(includeArchived)
     } else {
