@@ -52,8 +52,8 @@ export default function TeachersTab({
         phone: newTeacher.phone,
         email: newTeacher.email,
         school: newTeacher.school,
-        schoolYears: newTeacher.schoolYears,
-        subjects: newTeacher.subjects,
+        school_years: newTeacher.schoolYears.join(','), // Convert array to comma-separated string
+        subjects: newTeacher.subjects.join(','), // Convert array to comma-separated string
       }
       await teacherService.addTeacher(teacher)
       const updatedTeachers = await teacherService.getAllTeachers()
@@ -299,19 +299,25 @@ export default function TeachersTab({
                     </Button>
                   </TableCell>
                   <TableCell>
-                    {teacher.subjects.map((subject, idx) => (
-                      <Badge key={idx} variant="secondary" className="mr-1">
-                        {subject}
-                      </Badge>
-                    ))}
+                    {teacher.subjects ? 
+                      teacher.subjects.split(',').map((subject: string, idx: number) => (
+                        <Badge key={idx} variant="secondary" className="mr-1">
+                          {subject.trim()}
+                        </Badge>
+                      )) : 
+                      <span className="text-gray-500">No subjects</span>
+                    }
                   </TableCell>
                   <TableCell>{teacher.school}</TableCell>
                   <TableCell>
-                    {teacher.schoolYears.map((year, idx) => (
-                      <Badge key={idx} variant="outline" className="mr-1">
-                        {year}
-                      </Badge>
-                    ))}
+                    {teacher.school_years ? 
+                      teacher.school_years.split(',').map((year: string, idx: number) => (
+                        <Badge key={idx} variant="outline" className="mr-1">
+                          {year.trim()}
+                        </Badge>
+                      )) : 
+                      <span className="text-gray-500">No school years</span>
+                    }
                   </TableCell>
                   <TableCell>
                     <span className="text-sm text-gray-600">{teacherCourses.length} course(s)</span>

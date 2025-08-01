@@ -187,7 +187,9 @@ export default function CoursesTab({
                                 }}
                               >
                                 <div className="font-medium">{teacher.name}</div>
-                                <div className="text-sm text-gray-600">{teacher.subjects.join(", ")}</div>
+                                <div className="text-sm text-gray-600">
+                                  {teacher.subjects ? teacher.subjects.split(',').map((s: string) => s.trim()).join(", ") : 'No subjects'}
+                                </div>
                               </div>
                             ))}
                           </div>
@@ -233,9 +235,9 @@ export default function CoursesTab({
                             <SelectContent>
                               {teachers
                                 .find((t) => t.id.toString() === newCourse.teacherId)
-                                ?.schoolYears.map((year: string) => (
-                                  <SelectItem key={year} value={year}>
-                                    {year}
+                                ?.school_years?.split(',').map((year: string) => (
+                                  <SelectItem key={year.trim()} value={year.trim()}>
+                                    {year.trim()}
                                   </SelectItem>
                                 ))}
                             </SelectContent>
