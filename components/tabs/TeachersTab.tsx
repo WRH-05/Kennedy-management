@@ -45,17 +45,32 @@ export default function TeachersTab({
 
   const handleAddTeacher = async (e: React.FormEvent) => {
     e.preventDefault()
+    
+    // Validate required fields
+    if (newTeacher.subjects.length === 0) {
+      alert("Please select at least one subject")
+      return
+    }
+    
+    if (newTeacher.schoolYears.length === 0) {
+      alert("Please select at least one school year")
+      return
+    }
+    
     try {
+      console.log("Adding teacher:", newTeacher)
       const teacher = {
         name: newTeacher.name,
         address: newTeacher.address,
         phone: newTeacher.phone,
         email: newTeacher.email,
         school: newTeacher.school,
-        school_years: newTeacher.schoolYears.join(','), // Convert array to comma-separated string
-        subjects: newTeacher.subjects.join(','), // Convert array to comma-separated string
+        school_years: newTeacher.schoolYears, // Send as array, not comma-separated string
+        subjects: newTeacher.subjects, // Send as array, not comma-separated string
       }
+      console.log("Teacher object to add:", teacher)
       await teacherService.addTeacher(teacher)
+      console.log("Teacher added successfully")
       const updatedTeachers = await teacherService.getAllTeachers()
       onTeachersUpdate(updatedTeachers)
       setNewTeacher({
@@ -69,7 +84,8 @@ export default function TeachersTab({
       })
       setShowAddTeacherDialog(false)
     } catch (error) {
-      // Error adding teacher
+      console.error("Error adding teacher:", error)
+      alert("Failed to add teacher: " + (error as Error).message)
     }
   }
 

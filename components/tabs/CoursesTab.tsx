@@ -63,11 +63,29 @@ export default function CoursesTab({
 
   const handleAddCourse = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (!newCourse.teacherId) return
+    
+    if (!newCourse.teacherId) {
+      alert("Please select a teacher")
+      return
+    }
+    
+    if (!newCourse.subject) {
+      alert("Please select a subject")
+      return
+    }
+    
+    if (!newCourse.schoolYear) {
+      alert("Please select a school year")
+      return
+    }
 
     try {
+      console.log("Adding course:", newCourse)
       const teacher = teachers.find((t: any) => t.id.toString() === newCourse.teacherId)
-      if (!teacher) return
+      if (!teacher) {
+        alert("Selected teacher not found")
+        return
+      }
 
       const endHour = calculateEndHour(newCourse.startHour, newCourse.duration)
 
@@ -79,20 +97,15 @@ export default function CoursesTab({
         percentage_cut: newCourse.percentageCut,
         course_type: newCourse.courseType,
         duration: newCourse.duration,
-        day_of_week: newCourse.dayOfWeek,
-        start_hour: newCourse.startHour,
-        end_hour: endHour,
         schedule: `${newCourse.dayOfWeek} ${newCourse.startHour}-${endHour}`,
         price: newCourse.price,
         monthly_price: newCourse.price,
         student_ids: [],
-        student_names: [],
-        enrolled_students: 0,
-        status: "active",
-        payments: {},
-        attendance: {},
+        status: "active"
       }
+      console.log("Course object to add:", course)
       await courseService.addCourseInstance(course)
+      console.log("Course added successfully")
       const updatedCourses = await courseService.getAllCourseInstances()
       onCoursesUpdate(updatedCourses)
       setNewCourse({
@@ -109,7 +122,8 @@ export default function CoursesTab({
       })
       setShowAddCourseDialog(false)
     } catch (error) {
-      // Error adding course
+      console.error("Error adding course:", error)
+      alert("Failed to add course: " + (error as Error).message)
     }
   }
 

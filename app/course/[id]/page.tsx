@@ -134,33 +134,46 @@ export default function CourseDetail() {
     })
   }
 
-  const handleAddStudent = (e: React.FormEvent) => {
+  const handleAddStudent = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!selectedStudent) return
 
-    const student = students.find((s: any) => s.id.toString() === selectedStudent)
-    if (!student) return
+    try {
+      console.log("Adding student to course:", selectedStudent)
+      const student = students.find((s: any) => s.id.toString() === selectedStudent)
+      if (!student) return
 
-    setCourse((prev: any) => ({
-      ...prev,
-      student_ids: [...prev.student_ids, student.id],
-      studentNames: [...prev.studentNames, student.name],
-      payments: {
-        ...prev.payments,
-        students: {
-          ...prev.payments.students,
-          [student.id]: false,
+      // Update the course in the database to include this student
+      const updatedStudentIds = [...course.student_ids, student.id]
+      await courseService.updateCourseInstance(courseId, {
+        student_ids: updatedStudentIds
+      })
+
+      setCourse((prev: any) => ({
+        ...prev,
+        student_ids: [...prev.student_ids, student.id],
+        studentNames: [...prev.studentNames, student.name],
+        payments: {
+          ...prev.payments,
+          students: {
+            ...prev.payments.students,
+            [student.id]: false,
+          },
         },
-      },
-      attendance: {
-        ...prev.attendance,
-        [student.id]: { week1: false, week2: false, week3: false, week4: false },
-      },
-    }))
+        attendance: {
+          ...prev.attendance,
+          [student.id]: { week1: false, week2: false, week3: false, week4: false },
+        },
+      }))
 
-    setSelectedStudent("")
-    setStudentSearchQuery("")
-    setShowAddStudentDialog(false)
+      setSelectedStudent("")
+      setStudentSearchQuery("")
+      setShowAddStudentDialog(false)
+      console.log("Student added to course successfully")
+    } catch (error) {
+      console.error("Error adding student to course:", error)
+      alert("Failed to add student to course: " + (error as Error).message)
+    }
   }
 
   const removeStudentFromCourse = (studentId: number) => {

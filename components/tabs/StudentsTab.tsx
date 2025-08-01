@@ -52,6 +52,7 @@ export default function StudentsTab({
   const handleAddStudent = async (e: React.FormEvent) => {
     e.preventDefault()
     try {
+      console.log("Adding student:", newStudent)
       const student = {
         name: newStudent.name,
         school_year: newStudent.schoolYear,
@@ -63,7 +64,9 @@ export default function StudentsTab({
         school: newStudent.school,
         registrationFeePaid: newStudent.registrationFeePaid,
       }
+      console.log("Student object to add:", student)
       await studentService.addStudent(student)
+      console.log("Student added successfully")
       const updatedStudents = await studentService.getAllStudents()
       onStudentsUpdate(updatedStudents)
       setNewStudent({
@@ -82,7 +85,8 @@ export default function StudentsTab({
       })
       setShowAddStudentDialog(false)
     } catch (error) {
-      // Error adding student
+      console.error("Error adding student:", error)
+      alert("Failed to add student: " + (error as Error).message)
     }
   }
 
