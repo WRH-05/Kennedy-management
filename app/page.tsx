@@ -11,11 +11,14 @@ export default function HomePage() {
 
   useEffect(() => {
     if (!loading) {
-      // Handle users who need email confirmation
+      // For development: Skip email confirmation requirement
+      // Handle users who need email confirmation (commented out for development)
+      /*
       if (user && user.needsEmailConfirmation) {
         router.push('/auth/confirm')
         return
       }
+      */
 
       if (user && user.profile) {
         // Redirect authenticated users with profiles to their dashboard

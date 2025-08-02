@@ -108,12 +108,11 @@ export const authService = {
         throw new Error('Invalid or expired invitation')
       }
 
-      // Sign up the user with email confirmation enabled
+      // Sign up the user
       const { data, error } = await supabase.auth.signUp({
         email,
         password,
         options: {
-          emailRedirectTo: `${window.location.origin}/auth/callback`,
           data: {
             invitation_token: token
           }
@@ -173,7 +172,7 @@ export const authService = {
         email: userData.email,
         password,
         options: {
-          emailRedirectTo: `${window.location.origin}/auth/callback`, // Enable email confirmation
+          emailRedirectTo: undefined, // Disable email confirmation for development
           data: {
             full_name: userData.full_name,
             phone: userData.phone,
