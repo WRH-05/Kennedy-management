@@ -9,18 +9,21 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Badge } from "@/components/ui/badge"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { LogOut, DollarSign, Users, BookOpen, TrendingUp, Calendar, Search } from "lucide-react"
+import { LogOut, DollarSign, Users, BookOpen, TrendingUp, Calendar, Search, Settings } from "lucide-react"
 import { paymentService, studentService, teacherService, courseService } from "@/services/appDataService"
+import { useAuth } from "@/contexts/AuthContext"
+import AuthGuard from "@/components/auth/AuthGuard"
 import StudentsTab from "@/components/tabs/StudentsTab"
 import TeachersTab from "@/components/tabs/TeachersTab"
 import CoursesTab from "@/components/tabs/CoursesTab"
 import ArchiveTab from "@/components/tabs/ArchiveTab"
 import RevenueTab from "@/components/tabs/RevenueTab"
 import PayoutsTab from "@/components/tabs/PayoutsTab"
+import UserManagementTab from "@/components/tabs/UserManagementTab"
 
 export default function ManagerDashboard() {
   const router = useRouter()
-  const [user, setUser] = useState<any>(null)
+  const { user, signOut, hasRole } = useAuth()
   const [revenue, setRevenue] = useState<any[]>([])
   const [payouts, setPayouts] = useState<any[]>([])
   const [students, setStudents] = useState<any[]>([])
@@ -35,19 +38,10 @@ export default function ManagerDashboard() {
   const [searchResults, setSearchResults] = useState<any[]>([])
   const [showSearchResults, setShowSearchResults] = useState(false)
 
-  useEffect(() => {
-    const userData = localStorage.getItem("user")
-    if (userData) {
-      const parsedUser = JSON.parse(userData)
-      if (parsedUser.role !== "manager") {
-        router.push("/")
-        return
-      }
-      setUser(parsedUser)
-    } else {
-      router.push("/")
-    }
-  }, [router])
+  const handleSignOut = async () => {
+    await signOut()
+    router.push('/auth/login')
+  }
 
   useEffect(() => {
     const loadData = async () => {
@@ -83,14 +77,9 @@ export default function ManagerDashboard() {
     loadData()
   }, [])
 
-  const handleLogout = () => {
-    localStorage.removeItem("user")
-    router.push("/")
-  }
-
   const approvePayment = async (paymentId: string, paymentType: string) => {
     try {
-      await paymentService.updatePaymentStatus(paymentId, 'approved', user.username)
+      await paymentService.updatePaymentStatus(paymentId, 'approved', user?.profile?.full_name || 'Manager')
       // Reload payments to reflect the change
       const updatedPayments = await paymentService.getAllPayments()
       setAllPayments(updatedPayments)
@@ -156,10 +145,11 @@ export default function ManagerDashboard() {
   const totalPayouts = payouts.reduce((sum: number, payout: any) => sum + (payout.status === 'approved' && payout.amount ? payout.amount : 0), 0)
   const netProfit = totalRevenue - totalPayouts
 
-  if (!user || loading) return null
+  if (loading) return null
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <AuthGuard requiredRoles={['owner', 'manager']}>
+      <div className="min-h-screen bg-gray-50">
       {/* Header */}
       <header className="bg-white shadow-sm border-b">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -226,10 +216,13 @@ export default function ManagerDashboard() {
                 <Calendar className="h-4 w-4 mr-2" />
                 Monthly Rollover
               </Button>
-              <span className="text-sm text-gray-600">Welcome, {user.username}</span>
-              <Button variant="outline" size="sm" onClick={handleLogout}>
+              <span className="text-sm text-gray-600">Welcome, {user?.profile?.full_name || 'Manager'}</span>
+              <span className="text-xs text-gray-500 bg-gray-100 px-2 py-1 rounded">
+                {user?.profile?.schools?.name || 'School'}
+              </span>
+              <Button variant="outline" size="sm" onClick={handleSignOut}>
                 <LogOut className="h-4 w-4 mr-2" />
-                Logout
+                Sign Out
               </Button>
             </div>
           </div>
@@ -282,13 +275,19 @@ export default function ManagerDashboard() {
         </div>
 
         <Tabs defaultValue="revenue" className="space-y-6">
-          <TabsList className="grid w-full grid-cols-6">
+          <TabsList className="grid w-full grid-cols-7">
             <TabsTrigger value="revenue">Revenue</TabsTrigger>
             <TabsTrigger value="payouts">Payouts</TabsTrigger>
             <TabsTrigger value="students">Students</TabsTrigger>
             <TabsTrigger value="teachers">Teachers</TabsTrigger>
             <TabsTrigger value="courses">Courses</TabsTrigger>
             <TabsTrigger value="archive">Archive</TabsTrigger>
+            {hasRole(['owner', 'manager']) && (
+              <TabsTrigger value="users">
+                <Settings className="h-4 w-4 mr-2" />
+                Users
+              </TabsTrigger>
+            )}
           </TabsList>
 
           {/* Revenue Tab */}
@@ -357,8 +356,16 @@ export default function ManagerDashboard() {
               loadData()
             }} />
           </TabsContent>
+
+          {/* User Management Tab */}
+          {hasRole(['owner', 'manager']) && (
+            <TabsContent value="users">
+              <UserManagementTab />
+            </TabsContent>
+          )}
         </Tabs>
       </div>
     </div>
+    </AuthGuard>
   )
 }

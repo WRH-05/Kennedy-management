@@ -2,13 +2,28 @@
 // This service provides database operations using Supabase client
 
 import { supabase } from '../lib/supabase'
+import { authService } from './authService'
+
+// Helper function to get current user's school_id
+async function getCurrentUserSchoolId() {
+  try {
+    const user = await authService.getCurrentUser()
+    return user?.profile?.school_id || null
+  } catch (error) {
+    console.error('Error getting user school_id:', error)
+    return null
+  }
+}
 
 // Student Services
 export const studentService = {
   // Get all students (excluding archived unless specified)
   async getAllStudents(includeArchived = false) {
     try {
-      let query = supabase.from('students').select('*')
+      const schoolId = await getCurrentUserSchoolId()
+      if (!schoolId) throw new Error('No school access')
+
+      let query = supabase.from('students').select('*').eq('school_id', schoolId)
       
       if (!includeArchived) {
         query = query.eq('archived', false)
@@ -27,10 +42,14 @@ export const studentService = {
   // Get student by ID
   async getStudentById(id) {
     try {
+      const schoolId = await getCurrentUserSchoolId()
+      if (!schoolId) throw new Error('No school access')
+
       const { data, error } = await supabase
         .from('students')
         .select('*')
         .eq('id', id)
+        .eq('school_id', schoolId)
         .single()
       
       if (error) throw error
@@ -44,9 +63,12 @@ export const studentService = {
   // Add new student
   async addStudent(studentData) {
     try {
+      const schoolId = await getCurrentUserSchoolId()
+      if (!schoolId) throw new Error('No school access')
+
       const { data, error } = await supabase
         .from('students')
-        .insert([studentData])
+        .insert([{ ...studentData, school_id: schoolId }])
         .select()
         .single()
       
@@ -61,10 +83,14 @@ export const studentService = {
   // Update student
   async updateStudent(id, updatedData) {
     try {
+      const schoolId = await getCurrentUserSchoolId()
+      if (!schoolId) throw new Error('No school access')
+
       const { data, error } = await supabase
         .from('students')
         .update(updatedData)
         .eq('id', id)
+        .eq('school_id', schoolId)
         .select()
         .single()
       
@@ -79,10 +105,14 @@ export const studentService = {
   // Delete student
   async deleteStudent(id) {
     try {
+      const schoolId = await getCurrentUserSchoolId()
+      if (!schoolId) throw new Error('No school access')
+
       const { data, error } = await supabase
         .from('students')
         .delete()
         .eq('id', id)
+        .eq('school_id', schoolId)
         .select()
         .single()
       
@@ -97,6 +127,9 @@ export const studentService = {
   // Archive student
   async archiveStudent(id) {
     try {
+      const schoolId = await getCurrentUserSchoolId()
+      if (!schoolId) throw new Error('No school access')
+
       const { data, error } = await supabase
         .from('students')
         .update({ 
@@ -104,6 +137,7 @@ export const studentService = {
           archived_date: new Date().toISOString() 
         })
         .eq('id', id)
+        .eq('school_id', schoolId)
         .select()
         .single()
       
@@ -118,6 +152,9 @@ export const studentService = {
   // Unarchive student
   async unarchiveStudent(id) {
     try {
+      const schoolId = await getCurrentUserSchoolId()
+      if (!schoolId) throw new Error('No school access')
+
       const { data, error } = await supabase
         .from('students')
         .update({ 
@@ -125,6 +162,7 @@ export const studentService = {
           archived_date: null 
         })
         .eq('id', id)
+        .eq('school_id', schoolId)
         .select()
         .single()
       
@@ -142,7 +180,10 @@ export const teacherService = {
   // Get all teachers (excluding archived unless specified)
   async getAllTeachers(includeArchived = false) {
     try {
-      let query = supabase.from('teachers').select('*')
+      const schoolId = await getCurrentUserSchoolId()
+      if (!schoolId) throw new Error('No school access')
+
+      let query = supabase.from('teachers').select('*').eq('school_id', schoolId)
       
       if (!includeArchived) {
         query = query.eq('archived', false)
@@ -161,10 +202,14 @@ export const teacherService = {
   // Get teacher by ID
   async getTeacherById(id) {
     try {
+      const schoolId = await getCurrentUserSchoolId()
+      if (!schoolId) throw new Error('No school access')
+
       const { data, error } = await supabase
         .from('teachers')
         .select('*')
         .eq('id', id)
+        .eq('school_id', schoolId)
         .single()
       
       if (error) throw error
@@ -178,9 +223,12 @@ export const teacherService = {
   // Add new teacher
   async addTeacher(teacherData) {
     try {
+      const schoolId = await getCurrentUserSchoolId()
+      if (!schoolId) throw new Error('No school access')
+
       const { data, error } = await supabase
         .from('teachers')
-        .insert([teacherData])
+        .insert([{ ...teacherData, school_id: schoolId }])
         .select()
         .single()
       

@@ -33,8 +33,11 @@ next-env.d.ts
 
 # sql
 db.sql
+db-auth.sql
 
 # github
 /.github/
 .github/workflows
 .github/copilot-instructions.md
+
+AUTH_SETUP_GUIDE.md
