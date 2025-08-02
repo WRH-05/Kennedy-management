@@ -11,6 +11,12 @@ export default function HomePage() {
 
   useEffect(() => {
     if (!loading) {
+      // Handle users who need email confirmation
+      if (user && user.needsEmailConfirmation) {
+        router.push('/auth/confirm')
+        return
+      }
+
       if (user && user.profile) {
         // Redirect authenticated users with profiles to their dashboard
         switch (user.profile?.role) {
@@ -24,8 +30,11 @@ export default function HomePage() {
           default:
             router.push('/auth/login')
         }
+      } else if (user && !user.profile) {
+        // User is authenticated but has no profile (might need to wait for trigger or email confirmation)
+        router.push('/auth/confirm')
       } else {
-        // Redirect unauthenticated users or users without profiles to login
+        // Redirect unauthenticated users to login
         router.push('/auth/login')
       }
     }

@@ -7,8 +7,23 @@ import { authService } from './authService'
 // Helper function to get current user's school_id
 async function getCurrentUserSchoolId() {
   try {
-    const user = await authService.getCurrentUser()
-    return user?.profile?.school_id || null
+    // Use a simpler approach to avoid circular dependencies
+    const { data: { user }, error } = await supabase.auth.getUser()
+    if (error || !user) return null
+
+    // Get school_id directly from profiles table
+    const { data: profile, error: profileError } = await supabase
+      .from('profiles')
+      .select('school_id')
+      .eq('id', user.id)
+      .single()
+
+    if (profileError) {
+      console.warn('No profile found for user:', user.id)
+      return null
+    }
+
+    return profile?.school_id || null
   } catch (error) {
     console.error('Error getting user school_id:', error)
     return null

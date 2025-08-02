@@ -6,6 +6,7 @@ import { authService } from '@/services/authService'
 interface User {
   id: string
   email?: string
+  needsEmailConfirmation?: boolean
   profile: {
     id: string
     school_id: string
@@ -21,7 +22,7 @@ interface User {
       email?: string
       logo_url?: string
     }
-  }
+  } | null
 }
 
 interface AuthContextType {
@@ -60,7 +61,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   async function checkUser() {
     try {
       setLoading(true)
-      const currentUser = await authService.getCurrentUser()
+      
+      // Add timeout to prevent infinite loading
+      const timeoutPromise = new Promise((_, reject) =>
+        setTimeout(() => reject(new Error('Authentication check timeout')), 10000)
+      )
+      
+      const currentUser = await Promise.race([
+        authService.getCurrentUser(),
+        timeoutPromise
+      ])
+      
       setUser(currentUser as User | null)
     } catch (error) {
       console.error('Error checking user:', error)

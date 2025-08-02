@@ -20,6 +20,16 @@ export const authService = {
       const { data: { user }, error } = await supabase.auth.getUser()
       if (error || !user) return null
 
+      // Check if user email is confirmed first
+      if (!user.email_confirmed_at) {
+        console.log('User email not confirmed yet')
+        return {
+          ...user,
+          profile: null,
+          needsEmailConfirmation: true
+        }
+      }
+
       // Get user profile with school info - with better error handling
       const { data: profile, error: profileError } = await supabase
         .from('profiles')

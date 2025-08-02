@@ -17,6 +17,14 @@ export default function ConfirmPage() {
     const handleEmailConfirmation = async () => {
       const token_hash = searchParams.get('token_hash')
       const type = searchParams.get('type')
+      const error = searchParams.get('error')
+
+      // Handle error cases first
+      if (error) {
+        setStatus('error')
+        setMessage('Email confirmation failed. Please try again.')
+        return
+      }
 
       if (token_hash && type) {
         setStatus('loading')
@@ -32,15 +40,29 @@ export default function ConfirmPage() {
           } else {
             setStatus('success')
             setMessage('Email confirmed successfully! You can now sign in.')
-            // Redirect to login after 3 seconds
+            // Redirect to home page after 3 seconds (will redirect to appropriate dashboard)
             setTimeout(() => {
-              router.push('/auth/login')
+              router.push('/')
             }, 3000)
           }
         } catch (error: any) {
           setStatus('error')
           setMessage(error.message || 'An error occurred during confirmation')
         }
+      } else {
+        // Check if user is already signed in but just needs confirmation
+        const checkCurrentUser = async () => {
+          try {
+            const { data: { user } } = await supabase.auth.getUser()
+            if (user && user.email_confirmed_at) {
+              // User is already confirmed, redirect to home
+              router.push('/')
+            }
+          } catch (err) {
+            // Ignore errors here
+          }
+        }
+        checkCurrentUser()
       }
     }
 
