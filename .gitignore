@@ -34,6 +34,7 @@ next-env.d.ts
 # sql
 db.sql
 db-auth.sql
+db-auth-fix.sql
 
 # github
 /.github/
