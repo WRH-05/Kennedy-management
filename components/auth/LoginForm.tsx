@@ -29,8 +29,11 @@ export default function LoginForm() {
       loading 
     })
     
-    if (user?.profile?.role && !loading) {
+    if (user?.profile?.role) {
       console.log('🎉 User authenticated, redirecting based on role:', user.profile.role)
+      // Set loading to false and redirect
+      setLoading(false)
+      
       switch (user.profile.role) {
         case 'owner':
         case 'manager':
@@ -45,8 +48,9 @@ export default function LoginForm() {
           console.log('📍 Unknown role, redirecting to home')
           router.push('/')
       }
-    } else if (user && !user.profile && !loading) {
+    } else if (user && !user.profile) {
       console.log('⚠️ User found but no profile, redirecting to confirm page')
+      setLoading(false)
       router.push('/auth/confirm')
     }
   }, [user, loading, router])
