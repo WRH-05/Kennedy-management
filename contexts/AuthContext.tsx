@@ -90,7 +90,20 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       await checkUser()
       return result
     } catch (error) {
-      console.error('Sign in error:', error)
+      console.error('❌ Auth error:', error)
+      
+      // Even if signIn throws an error, check if user is actually authenticated
+      try {
+        const currentUser = await authService.getCurrentUser()
+        if (currentUser && currentUser.profile) {
+          console.log('✅ Login successful despite error - user is authenticated')
+          setUser(currentUser as User | null)
+          return { user: currentUser }
+        }
+      } catch (checkError) {
+        console.error('Error checking user after failed signin:', checkError)
+      }
+      
       throw error
     }
   }
