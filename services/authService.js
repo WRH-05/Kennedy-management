@@ -23,9 +23,7 @@ export const authService = {
         return null
       }
 
-      // For development: Skip email confirmation requirement
-      // In production, uncomment the email confirmation check below
-      /*
+      // Check email confirmation status
       if (!user.email_confirmed_at) {
         console.log('User email not confirmed yet')
         return {
@@ -34,7 +32,6 @@ export const authService = {
           needsEmailConfirmation: true
         }
       }
-      */
 
       // Get user profile with school info - with timeout and better error handling
       const profilePromise = supabase
@@ -101,11 +98,12 @@ export const authService = {
         throw new Error('Invalid or expired invitation')
       }
 
-      // Sign up the user
+      // Sign up the user with email confirmation enabled
       const { data, error } = await supabase.auth.signUp({
         email,
         password,
         options: {
+          emailRedirectTo: `${window.location.origin}/auth/callback`,
           data: {
             invitation_token: token
           }
@@ -165,7 +163,7 @@ export const authService = {
         email: userData.email,
         password,
         options: {
-          emailRedirectTo: undefined, // Disable email confirmation for development
+          emailRedirectTo: `${window.location.origin}/auth/callback`, // Enable email confirmation
           data: {
             full_name: userData.full_name,
             phone: userData.phone,

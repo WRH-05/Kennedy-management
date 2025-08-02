@@ -61,19 +61,26 @@ export default function CreateSchoolForm() {
     try {
       const result = await authService.createSchoolAndOwner(schoolData, userData, userData.password)
       
-      // Store user data in localStorage for immediate access
-      if (result.user) {
-        const userData = {
+      // For school owners, they get immediate access (no email confirmation required)
+      // The database trigger creates their profile immediately
+      
+      // Check if profile was created successfully
+      if (result.profile && result.user) {
+        // Store user data in localStorage for immediate access
+        const userStorageData = {
           id: result.user.id,
           email: result.user.email,
           role: 'owner',
           school_id: result.school.id,
           school_name: result.school.name
         }
-        localStorage.setItem('user', JSON.stringify(userData))
+        localStorage.setItem('user', JSON.stringify(userStorageData))
+        
+        router.push('/manager') // Redirect to manager dashboard
+      } else {
+        // Profile creation failed, show error
+        setError('Failed to create school profile. Please contact support.')
       }
-      
-      router.push('/manager') // Redirect to manager dashboard
     } catch (err: any) {
       console.error('School creation error:', err)
       setError(err.message || 'Failed to create school. Please try again.')
