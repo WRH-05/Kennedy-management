@@ -39,7 +39,7 @@ export default function StudentsTab({
     schoolYear: "",
     specialty: "",
     address: "",
-    birthDate: "",
+    birth_date: "",
     phone: "",
     email: "",
     school: "",
@@ -58,7 +58,7 @@ export default function StudentsTab({
         school_year: newStudent.schoolYear,
         specialty: newStudent.specialty,
         address: newStudent.address,
-        birthDate: newStudent.birthDate,
+        birth_date: newStudent.birth_date,
         phone: newStudent.phone,
         email: newStudent.email,
         school: newStudent.school,
@@ -74,7 +74,7 @@ export default function StudentsTab({
         schoolYear: "",
         specialty: "",
         address: "",
-        birthDate: "",
+        birth_date: "",
         phone: "",
         email: "",
         school: "",
@@ -189,10 +189,10 @@ export default function StudentsTab({
                     <div className="space-y-2">
                       <Label htmlFor="birthDate">Birth Date</Label>
                       <Input
-                        id="birthDate"
+                        id="birth_date"
                         type="date"
-                        value={newStudent.birthDate}
-                        onChange={(e) => setNewStudent({ ...newStudent, birthDate: e.target.value })}
+                        value={newStudent.birth_date}
+                        onChange={(e) => setNewStudent({ ...newStudent, birth_date: e.target.value })}
                         required
                       />
                     </div>

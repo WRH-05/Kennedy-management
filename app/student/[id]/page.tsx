@@ -161,7 +161,7 @@ export default function StudentDashboard() {
                     <span className="font-medium">School:</span> {student.school}
                   </p>
                   <p>
-                    <span className="font-medium">Birth Date:</span> {student.birthDate}
+                    <span className="font-medium">Birth Date:</span> {student.birth_date}
                   </p>
                   <p>
                     <span className="font-medium">Phone:</span> {student.phone}
