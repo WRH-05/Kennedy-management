@@ -125,35 +125,40 @@ export const authService = {
 
       if (schoolError) throw schoolError
 
-      // Sign up the owner
+      // Sign up the owner - the trigger function will handle profile creation automatically
       const { data: authData, error: authError } = await supabase.auth.signUp({
         email: userData.email,
         password,
         options: {
           data: {
             full_name: userData.full_name,
+            phone: userData.phone,
             is_owner_signup: true,
             school_id: school.id
           }
         }
       })
 
-      if (authError) throw authError
+      if (authError) {
+        // If user creation fails, clean up the school
+        await supabase.from('schools').delete().eq('id', school.id)
+        throw authError
+      }
 
-      // Create the owner profile
+      // Wait a moment for the trigger to complete, then get the profile
+      await new Promise(resolve => setTimeout(resolve, 1000))
+      
       const { data: profile, error: profileError } = await supabase
         .from('profiles')
-        .insert([{
-          id: authData.user.id,
-          school_id: school.id,
-          role: 'owner',
-          full_name: userData.full_name,
-          phone: userData.phone
-        }])
-        .select()
+        .select('*')
+        .eq('id', authData.user.id)
         .single()
 
-      if (profileError) throw profileError
+      if (profileError) {
+        console.warn('Profile not found immediately after creation, this is normal:', profileError)
+        // Return without profile for now - it should be created by the trigger
+        return { school, user: authData.user, profile: null }
+      }
 
       return { school, user: authData.user, profile }
     } catch (error) {

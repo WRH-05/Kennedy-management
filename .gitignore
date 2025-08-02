@@ -35,7 +35,7 @@ next-env.d.ts
 db.sql
 db-auth.sql
 db-auth-fix.sql
-
+db-auth-complete-fix.sql
 # github
 /.github/
 .github/workflows
