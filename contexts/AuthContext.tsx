@@ -62,27 +62,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     try {
       setLoading(true)
       
-      // Increased timeout to 20 seconds and better error handling
-      const timeoutPromise = new Promise((_, reject) =>
-        setTimeout(() => reject(new Error('Authentication check timeout - please check your internet connection')), 20000)
-      )
-      
-      const currentUser = await Promise.race([
-        authService.getCurrentUser(),
-        timeoutPromise
-      ])
-      
+      // Simplified approach without timeout race condition
+      const currentUser = await authService.getCurrentUser()
       setUser(currentUser as User | null)
+      
+      console.log('Auth check completed:', { 
+        hasUser: !!currentUser, 
+        hasProfile: !!currentUser?.profile,
+        userId: currentUser?.id,
+        email: currentUser?.email 
+      })
     } catch (error) {
       console.error('Error checking user:', error)
-      // If it's a timeout or network error, keep trying with exponential backoff
-      if (error instanceof Error && error.message.includes('timeout')) {
-        console.log('Authentication timeout, retrying in 3 seconds...')
-        setTimeout(() => {
-          checkUser()
-        }, 3000)
-        return
-      }
       setUser(null)
     } finally {
       setLoading(false)
@@ -90,9 +81,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }
 
   const signIn = async (email: string, password: string) => {
-    const result = await authService.signIn(email, password)
-    await checkUser()
-    return result
+    try {
+      const result = await authService.signIn(email, password)
+      
+      // Give a moment for auth state to update
+      await new Promise(resolve => setTimeout(resolve, 1000))
+      
+      await checkUser()
+      return result
+    } catch (error) {
+      console.error('Sign in error:', error)
+      throw error
+    }
   }
 
   const signUp = async (email: string, password: string, token: string) => {

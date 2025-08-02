@@ -53,9 +53,9 @@ export const authService = {
         .eq('id', user.id)
         .single()
 
-      // Add 10 second timeout for profile fetch
+      // Add 5 second timeout for profile fetch
       const timeoutPromise = new Promise((_, reject) =>
-        setTimeout(() => reject(new Error('Profile fetch timeout')), 10000)
+        setTimeout(() => reject(new Error('Profile fetch timeout')), 5000)
       )
 
       const { data: profile, error: profileError } = await Promise.race([
