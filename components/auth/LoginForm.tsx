@@ -22,19 +22,32 @@ export default function LoginForm() {
 
   // Watch for authentication changes and redirect
   useEffect(() => {
+    console.log('🔄 LoginForm useEffect - User state:', { 
+      hasUser: !!user, 
+      hasProfile: !!user?.profile, 
+      role: user?.profile?.role, 
+      loading 
+    })
+    
     if (user?.profile?.role && !loading) {
       console.log('🎉 User authenticated, redirecting based on role:', user.profile.role)
       switch (user.profile.role) {
         case 'owner':
         case 'manager':
+          console.log('📍 Redirecting to /manager')
           router.push('/manager')
           break
         case 'receptionist':
+          console.log('📍 Redirecting to /receptionist')
           router.push('/receptionist')
           break
         default:
+          console.log('📍 Unknown role, redirecting to home')
           router.push('/')
       }
+    } else if (user && !user.profile && !loading) {
+      console.log('⚠️ User found but no profile, redirecting to confirm page')
+      router.push('/auth/confirm')
     }
   }, [user, loading, router])
 
@@ -46,7 +59,19 @@ export default function LoginForm() {
     try {
       const result = await signIn(formData.email, formData.password)
       console.log('✅ Sign in completed:', result)
-      // Redirect will be handled by useEffect watching user changes
+      
+      // Add extra time for auth state to propagate
+      console.log('⏳ Waiting for auth state to update...')
+      await new Promise(resolve => setTimeout(resolve, 2000))
+      
+      // Check if we got a user back
+      if (result?.user || result?.session?.user) {
+        console.log('👤 User confirmed in result, should redirect soon')
+      } else {
+        console.log('⚠️ No user in result, auth context should handle it')
+      }
+      
+      // Don't set loading to false here - let the redirect handle it
     } catch (err: any) {
       console.error('❌ Login failed:', err)
       setError(err.message || 'Failed to sign in')
