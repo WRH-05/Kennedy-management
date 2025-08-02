@@ -1,6 +1,6 @@
 "use client"
 
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -12,7 +12,7 @@ import { useAuth } from '@/contexts/AuthContext'
 
 export default function LoginForm() {
   const router = useRouter()
-  const { signIn } = useAuth()
+  const { signIn, user } = useAuth()
   const [formData, setFormData] = useState({
     email: '',
     password: ''
@@ -20,19 +20,39 @@ export default function LoginForm() {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
+  // Watch for authentication changes and redirect
+  useEffect(() => {
+    if (user?.profile?.role && !loading) {
+      console.log('🎉 User authenticated, redirecting based on role:', user.profile.role)
+      switch (user.profile.role) {
+        case 'owner':
+        case 'manager':
+          router.push('/manager')
+          break
+        case 'receptionist':
+          router.push('/receptionist')
+          break
+        default:
+          router.push('/')
+      }
+    }
+  }, [user, loading, router])
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setLoading(true)
     setError(null)
 
     try {
-      await signIn(formData.email, formData.password)
-      // Redirect will be handled by the AuthGuard component
+      const result = await signIn(formData.email, formData.password)
+      console.log('✅ Sign in completed:', result)
+      // Redirect will be handled by useEffect watching user changes
     } catch (err: any) {
+      console.error('❌ Login failed:', err)
       setError(err.message || 'Failed to sign in')
-    } finally {
-      setLoading(false)
+      setLoading(false) // Only set loading to false on error
     }
+    // Note: Don't set loading to false on success - let the redirect handle it
   }
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
