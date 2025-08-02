@@ -46,7 +46,7 @@ export default function StudentsTab({
     photos: false,
     copyOfId: false,
     registrationForm: false,
-    registrationFeePaid: false,
+    registration_fee_paid: false,
   })
 
   const handleAddStudent = async (e: React.FormEvent) => {
@@ -62,7 +62,7 @@ export default function StudentsTab({
         phone: newStudent.phone,
         email: newStudent.email,
         school: newStudent.school,
-        registrationFeePaid: newStudent.registrationFeePaid,
+        registration_fee_paid: newStudent.registration_fee_paid,
       }
       console.log("Student object to add:", student)
       await studentService.addStudent(student)
@@ -81,7 +81,7 @@ export default function StudentsTab({
         photos: false,
         copyOfId: false,
         registrationForm: false,
-        registrationFeePaid: false,
+        registration_fee_paid: false,
       })
       setShowAddStudentDialog(false)
     } catch (error) {
@@ -264,9 +264,9 @@ export default function StudentsTab({
                   <div className="flex items-center space-x-2">
                     <Checkbox
                       id="registrationFee"
-                      checked={newStudent.registrationFeePaid}
+                      checked={newStudent.registration_fee_paid}
                       onCheckedChange={(checked) =>
-                        setNewStudent({ ...newStudent, registrationFeePaid: checked as boolean })
+                        setNewStudent({ ...newStudent, registration_fee_paid: checked as boolean })
                       }
                     />
                     <Label htmlFor="registrationFee">Registration Fee Paid</Label>
