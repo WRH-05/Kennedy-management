@@ -70,7 +70,17 @@ export default function CourseDetail() {
 
         setCourse(courseData)
         setStudents(studentsData)
+        
+        // Initialize missing structures if needed
+        if (courseData && !courseData.payments) {
+          courseData.payments = { students: {}, teacherPaid: false }
+        }
+        if (courseData && !courseData.attendance) {
+          courseData.attendance = {}
+        }
+        
       } catch (error) {
+        console.error("Error loading course data:", error)
         router.push("/receptionist")
       } finally {
         setLoading(false)
@@ -86,7 +96,7 @@ export default function CourseDetail() {
       attendance: {
         ...prev.attendance,
         [studentId]: {
-          ...prev.attendance[studentId],
+          ...prev.attendance?.[studentId],
           [week]: present,
         },
       },
@@ -94,7 +104,7 @@ export default function CourseDetail() {
   }
 
   const toggleStudentPayment = (studentId: number) => {
-    const currentStatus = course.payments.students[studentId] || false
+    const currentStatus = course?.payments?.students?.[studentId] || false
     setConfirmDialog({
       open: true,
       title: "Confirm Payment Status",
@@ -105,7 +115,7 @@ export default function CourseDetail() {
           payments: {
             ...prev.payments,
             students: {
-              ...prev.payments.students,
+              ...prev.payments?.students,
               [studentId]: !currentStatus,
             },
           },
@@ -116,7 +126,7 @@ export default function CourseDetail() {
   }
 
   const toggleTeacherPayment = () => {
-    const currentStatus = course.payments.teacherPaid
+    const currentStatus = course?.payments?.teacherPaid || false
     setConfirmDialog({
       open: true,
       title: "Confirm Teacher Payment",
@@ -151,12 +161,12 @@ export default function CourseDetail() {
 
       setCourse((prev: any) => ({
         ...prev,
-        student_ids: [...prev.student_ids, student.id],
-        studentNames: [...prev.studentNames, student.name],
+        student_ids: [...(prev.student_ids || []), student.id],
+        student_names: [...(prev.student_names || []), student.name],
         payments: {
           ...prev.payments,
           students: {
-            ...prev.payments.students,
+            ...(prev.payments?.students || {}),
             [student.id]: false,
           },
         },
@@ -177,24 +187,26 @@ export default function CourseDetail() {
   }
 
   const removeStudentFromCourse = (studentId: number) => {
-    const studentName = course.studentNames[course.student_ids.findIndex((id: number) => id === studentId)]
+    const studentName = course?.student_names?.[course?.student_ids?.findIndex((id: number) => id === studentId)] || `Student ${studentId}`
     setConfirmDialog({
       open: true,
       title: "Remove Student",
       description: `Are you sure you want to remove ${studentName} from this course?`,
       action: () => {
         setCourse((prev: any) => {
-          const studentIndex = prev.student_ids.findIndex((id: number) => id === studentId)
+          const studentIndex = prev?.student_ids?.findIndex((id: number) => id === studentId)
           if (studentIndex === -1) return prev
 
-          const newEnrolledStudents = [...prev.student_ids]
+          const newEnrolledStudents = [...(prev?.student_ids || [])]
           newEnrolledStudents.splice(studentIndex, 1)
 
-          const newStudentNames = [...prev.studentNames]
+          const newStudentNames = [...(prev?.student_names || [])]
           newStudentNames.splice(studentIndex, 1)
 
           const newPayments = { ...prev.payments }
-          delete newPayments.students[studentId]
+          if (newPayments?.students) {
+            delete newPayments.students[studentId]
+          }
 
           const newAttendance = { ...prev.attendance }
           delete newAttendance[studentId]
@@ -202,10 +214,10 @@ export default function CourseDetail() {
           return {
             ...prev,
             student_ids: newEnrolledStudents,
-            studentNames: newStudentNames,
+            student_names: newStudentNames,
             payments: {
               ...newPayments,
-              students: { ...newPayments.students },
+              students: { ...(newPayments?.students || {}) },
             },
             attendance: {
               ...newAttendance,
@@ -229,7 +241,7 @@ export default function CourseDetail() {
 
   const availableStudents = students.filter((student: any) => !course?.student_ids?.includes(student.id))
 
-  const teacherEarnings = Math.round((course.price * course.student_ids?.length * course.percentage_cut) / 100)
+  const teacherEarnings = Math.round((course?.price * (course?.student_ids?.length || 0) * (course?.percentage_cut || 0)) / 100)
 
   const filteredStudents = availableStudents.filter((student: any) =>
     student.name.toLowerCase().includes(studentSearchQuery.toLowerCase()),
@@ -264,7 +276,7 @@ export default function CourseDetail() {
               <CardContent className="space-y-4">
                 <div>
                   <h3 className="font-semibold text-lg">{course.subject}</h3>
-                  <p className="text-gray-600">{course.schoolYear}</p>
+                  <p className="text-gray-600">{course.school_year}</p>
                 </div>
                 <div className="space-y-2">
                   <p>
@@ -272,7 +284,7 @@ export default function CourseDetail() {
                     <Button
                       variant="link"
                       className="p-0 h-auto font-medium"
-                      onClick={() => router.push(`/teacher/${course.teacherId}`)}
+                      onClick={() => router.push(`/teacher/${course.teacher_id}`)}
                     >
                       {course.teacher_name}
                     </Button>
@@ -287,16 +299,16 @@ export default function CourseDetail() {
                     <span className="font-medium">Schedule:</span> {course.schedule}
                   </p>
                   <p>
-                    <span className="font-medium">Duration:</span> {course.duration}h
+                    <span className="font-medium">Duration:</span> {course.duration || 'N/A'}h
                   </p>
                   <p>
                     <span className="font-medium">
                       {course.course_type === "Group" ? "Monthly Price" : "Session Price"}:
                     </span>{" "}
-                    {course.price} DA
+                    {course.price || 0} DA
                   </p>
                   <p>
-                    <span className="font-medium">Teacher Cut:</span> {course.percentage_cut}%
+                    <span className="font-medium">Teacher Cut:</span> {course.percentage_cut || 0}%
                   </p>
                   <p>
                     <span className="font-medium">Enrolled Students:</span> {course.student_ids?.length || 0}
@@ -325,11 +337,11 @@ export default function CourseDetail() {
                 <div className="flex items-center justify-between">
                   <Label>Teacher Payment</Label>
                   <Button
-                    variant={course.payments.teacherPaid ? "default" : "destructive"}
+                    variant={course?.payments?.teacherPaid ? "default" : "destructive"}
                     size="sm"
                     onClick={toggleTeacherPayment}
                   >
-                    {course.payments.teacherPaid ? "Paid" : "Pay"}
+                    {course?.payments?.teacherPaid ? "Paid" : "Pay"}
                   </Button>
                 </div>
                 <div className="pt-4 border-t">
@@ -337,7 +349,7 @@ export default function CourseDetail() {
                     <span className="font-medium">
                       Total {course.course_type === "Group" ? "Monthly" : "Session"} Revenue:
                     </span>
-                    <span className="text-lg font-bold">{course.price * (course.student_ids?.length || 0)} DA</span>
+                    <span className="text-lg font-bold">{(course?.price || 0) * (course?.student_ids?.length || 0)} DA</span>
                   </div>
                   <div className="flex justify-between items-center">
                     <span className="font-medium">Teacher Earnings:</span>
@@ -444,14 +456,14 @@ export default function CourseDetail() {
                             className="p-0 h-auto font-medium text-left"
                             onClick={() => router.push(`/student/${studentId}`)}
                           >
-                            {course.studentNames[idx]}
+                            {course?.student_names?.[idx] || students.find(s => s.id === studentId)?.name || `Student ${studentId}`}
                           </Button>
                         </TableCell>
                         {["week1", "week2", "week3", "week4"].map((week) => (
                           <TableCell key={week}>
                             <Select
                               value={
-                                course.attendance[studentId]?.[week as keyof typeof course.attendance[typeof studentId]]
+                                course?.attendance?.[studentId]?.[week as keyof typeof course.attendance[typeof studentId]]
                                   ? "p"
                                   : "a"
                               }
@@ -469,11 +481,11 @@ export default function CourseDetail() {
                         ))}
                         <TableCell>
                           <Button
-                            variant={course.payments.students[studentId] ? "default" : "destructive"}
+                            variant={course?.payments?.students?.[studentId] ? "default" : "destructive"}
                             size="sm"
                             onClick={() => toggleStudentPayment(studentId)}
                           >
-                            {course.payments.students[studentId] ? "Paid" : "Pay"}
+                            {course?.payments?.students?.[studentId] ? "Paid" : "Pay"}
                           </Button>
                         </TableCell>
                         <TableCell>
@@ -515,7 +527,7 @@ export default function CourseDetail() {
                     <Badge variant="outline">Created</Badge>
                   </div>
 
-                  {Object.entries(course.payments.students).some(([_, paid]) => paid) && (
+                  {Object.entries(course?.payments?.students || {}).some(([_, paid]) => paid) && (
                     <div className="flex justify-between items-center p-3 bg-green-50 rounded-lg">
                       <div>
                         <p className="font-medium">Student Payments Received</p>
@@ -525,7 +537,7 @@ export default function CourseDetail() {
                     </div>
                   )}
 
-                  {course.payments.teacherPaid && (
+                  {course?.payments?.teacherPaid && (
                     <div className="flex justify-between items-center p-3 bg-blue-50 rounded-lg">
                       <div>
                         <p className="font-medium">Teacher Payment Made</p>
@@ -535,7 +547,7 @@ export default function CourseDetail() {
                     </div>
                   )}
 
-                  {course.status === "completed" && (
+                  {course?.status === "completed" && (
                     <div className="flex justify-between items-center p-3 bg-purple-50 rounded-lg">
                       <div>
                         <p className="font-medium">Course Completed</p>
