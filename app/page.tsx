@@ -11,15 +11,8 @@ export default function HomePage() {
 
   useEffect(() => {
     if (!loading) {
-      if (user) {
-        // Check if user has a profile
-        if (!user.profile) {
-          // User exists but no profile - redirect to confirm email or create school
-          router.push('/auth/confirm')
-          return
-        }
-
-        // Redirect authenticated users to their dashboard
+      if (user && user.profile) {
+        // Redirect authenticated users with profiles to their dashboard
         switch (user.profile?.role) {
           case 'owner':
           case 'manager':
@@ -32,7 +25,7 @@ export default function HomePage() {
             router.push('/auth/login')
         }
       } else {
-        // Redirect unauthenticated users to login
+        // Redirect unauthenticated users or users without profiles to login
         router.push('/auth/login')
       }
     }
