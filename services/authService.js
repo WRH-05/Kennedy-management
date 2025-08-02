@@ -17,15 +17,26 @@ export const authService = {
   // Get current user with profile and school info
   async getCurrentUser() {
     try {
-      const { data: { user }, error } = await supabase.auth.getUser()
-      if (error || !user) {
-        console.log('No authenticated user found')
+      console.log('🔍 Getting current user...')
+      
+      // Step 1: Get the authenticated user
+      const { data: { user }, error: userError } = await supabase.auth.getUser()
+      
+      if (userError) {
+        console.error('❌ Auth error:', userError)
+        return null
+      }
+      
+      if (!user) {
+        console.log('👤 No authenticated user found')
         return null
       }
 
-      // Check email confirmation status
+      console.log('✅ User found:', user.id, 'Email confirmed:', !!user.email_confirmed_at)
+
+      // Step 2: Check email confirmation status
       if (!user.email_confirmed_at) {
-        console.log('User email not confirmed yet')
+        console.log('📧 User email not confirmed yet')
         return {
           ...user,
           profile: null,
@@ -33,8 +44,10 @@ export const authService = {
         }
       }
 
-      // Get user profile with school info - with timeout and better error handling
-      const profilePromise = supabase
+      // Step 3: Get user profile - SIMPLIFIED without timeout
+      console.log('🔍 Fetching profile for user:', user.id)
+      
+      const { data: profile, error: profileError } = await supabase
         .from('profiles')
         .select(`
           *,
@@ -50,33 +63,30 @@ export const authService = {
         .eq('id', user.id)
         .single()
 
-      // Add 5 second timeout for profile fetch
-      const timeoutPromise = new Promise((_, reject) =>
-        setTimeout(() => reject(new Error('Profile fetch timeout')), 5000)
-      )
-
-      const { data: profile, error: profileError } = await Promise.race([
-        profilePromise,
-        timeoutPromise
-      ])
-
       if (profileError) {
-        console.warn('Profile not found for user:', user.id, profileError.message)
-        // Return user without profile if profile doesn't exist yet
+        console.warn('⚠️ Profile not found:', profileError.message)
+        // Return user without profile instead of failing
         return {
           ...user,
           profile: null
         }
       }
 
-      console.log('Successfully retrieved user with profile:', { userId: user.id, profileId: profile.id, schoolId: profile.school_id })
+      if (!profile) {
+        console.warn('⚠️ No profile data returned')
+        return {
+          ...user,
+          profile: null
+        }
+      }
+
+      console.log('✅ Profile found:', profile.id, 'School:', profile.school_id, 'Role:', profile.role)
       return {
         ...user,
         profile
       }
     } catch (error) {
-      console.error('Error getting current user:', error)
-      // Return null on error to prevent infinite loading
+      console.error('💥 Unexpected error in getCurrentUser:', error)
       return null
     }
   },
