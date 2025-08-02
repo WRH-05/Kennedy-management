@@ -62,9 +62,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     try {
       setLoading(true)
       
-      // Add timeout to prevent infinite loading (increased from 10s to 15s)
+      // Increased timeout to 20 seconds and better error handling
       const timeoutPromise = new Promise((_, reject) =>
-        setTimeout(() => reject(new Error('Authentication check timeout')), 15000)
+        setTimeout(() => reject(new Error('Authentication check timeout - please check your internet connection')), 20000)
       )
       
       const currentUser = await Promise.race([
@@ -75,6 +75,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setUser(currentUser as User | null)
     } catch (error) {
       console.error('Error checking user:', error)
+      // If it's a timeout or network error, keep trying with exponential backoff
+      if (error instanceof Error && error.message.includes('timeout')) {
+        console.log('Authentication timeout, retrying in 3 seconds...')
+        setTimeout(() => {
+          checkUser()
+        }, 3000)
+        return
+      }
       setUser(null)
     } finally {
       setLoading(false)

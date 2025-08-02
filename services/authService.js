@@ -18,7 +18,10 @@ export const authService = {
   async getCurrentUser() {
     try {
       const { data: { user }, error } = await supabase.auth.getUser()
-      if (error || !user) return null
+      if (error || !user) {
+        console.log('No authenticated user found')
+        return null
+      }
 
       // For development: Skip email confirmation requirement
       // In production, uncomment the email confirmation check below
@@ -33,8 +36,8 @@ export const authService = {
       }
       */
 
-      // Get user profile with school info - with better error handling
-      const { data: profile, error: profileError } = await supabase
+      // Get user profile with school info - with timeout and better error handling
+      const profilePromise = supabase
         .from('profiles')
         .select(`
           *,
@@ -50,6 +53,16 @@ export const authService = {
         .eq('id', user.id)
         .single()
 
+      // Add 10 second timeout for profile fetch
+      const timeoutPromise = new Promise((_, reject) =>
+        setTimeout(() => reject(new Error('Profile fetch timeout')), 10000)
+      )
+
+      const { data: profile, error: profileError } = await Promise.race([
+        profilePromise,
+        timeoutPromise
+      ])
+
       if (profileError) {
         console.warn('Profile not found for user:', user.id, profileError.message)
         // Return user without profile if profile doesn't exist yet
@@ -59,6 +72,7 @@ export const authService = {
         }
       }
 
+      console.log('Successfully retrieved user with profile:', { userId: user.id, profileId: profile.id, schoolId: profile.school_id })
       return {
         ...user,
         profile
