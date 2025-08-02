@@ -62,9 +62,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     try {
       setLoading(true)
       
-      // Add timeout to prevent infinite loading
+      // Add timeout to prevent infinite loading (increased from 10s to 15s)
       const timeoutPromise = new Promise((_, reject) =>
-        setTimeout(() => reject(new Error('Authentication check timeout')), 10000)
+        setTimeout(() => reject(new Error('Authentication check timeout')), 15000)
       )
       
       const currentUser = await Promise.race([

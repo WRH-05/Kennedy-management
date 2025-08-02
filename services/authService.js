@@ -20,7 +20,9 @@ export const authService = {
       const { data: { user }, error } = await supabase.auth.getUser()
       if (error || !user) return null
 
-      // Check if user email is confirmed first
+      // For development: Skip email confirmation requirement
+      // In production, uncomment the email confirmation check below
+      /*
       if (!user.email_confirmed_at) {
         console.log('User email not confirmed yet')
         return {
@@ -29,6 +31,7 @@ export const authService = {
           needsEmailConfirmation: true
         }
       }
+      */
 
       // Get user profile with school info - with better error handling
       const { data: profile, error: profileError } = await supabase
@@ -148,6 +151,7 @@ export const authService = {
         email: userData.email,
         password,
         options: {
+          emailRedirectTo: undefined, // Disable email confirmation for development
           data: {
             full_name: userData.full_name,
             phone: userData.phone,
@@ -163,21 +167,74 @@ export const authService = {
         throw authError
       }
 
-      // Wait a moment for the trigger to complete, then get the profile
-      await new Promise(resolve => setTimeout(resolve, 1000))
-      
-      const { data: profile, error: profileError } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('id', authData.user.id)
-        .single()
+      // Wait for the trigger to complete profile creation
+      let profile = null
+      let attempts = 0
+      const maxAttempts = 10
 
-      if (profileError) {
-        console.warn('Profile not found immediately after creation, this is normal:', profileError)
-        // Return without profile for now - it should be created by the trigger
-        return { school, user: authData.user, profile: null }
+      while (!profile && attempts < maxAttempts) {
+        await new Promise(resolve => setTimeout(resolve, 500))
+        
+        const { data: profileData, error: profileError } = await supabase
+          .from('profiles')
+          .select(`
+            *,
+            schools (
+              id,
+              name,
+              address,
+              phone,
+              email,
+              logo_url
+            )
+          `)
+          .eq('id', authData.user.id)
+          .single()
+
+        if (!profileError && profileData) {
+          profile = profileData
+          break
+        }
+        
+        attempts++
+        console.log(`Waiting for profile creation, attempt ${attempts}/${maxAttempts}`)
       }
 
+      if (!profile) {
+        console.warn('Profile not created by trigger, creating manually...')
+        // Create profile manually if trigger failed
+        const { data: manualProfile, error: manualError } = await supabase
+          .from('profiles')
+          .insert([{
+            id: authData.user.id,
+            school_id: school.id,
+            role: 'owner',
+            full_name: userData.full_name,
+            phone: userData.phone,
+            is_active: true
+          }])
+          .select(`
+            *,
+            schools (
+              id,
+              name,
+              address,
+              phone,
+              email,
+              logo_url
+            )
+          `)
+          .single()
+
+        if (manualError) {
+          console.error('Failed to create profile manually:', manualError)
+          throw new Error('Failed to create user profile')
+        }
+        
+        profile = manualProfile
+      }
+
+      console.log('School and owner created successfully:', { school: school.id, user: authData.user.id, profile: profile.id })
       return { school, user: authData.user, profile }
     } catch (error) {
       console.error('Error creating school and owner:', error)
