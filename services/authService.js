@@ -20,7 +20,7 @@ export const authService = {
       const { data: { user }, error } = await supabase.auth.getUser()
       if (error || !user) return null
 
-      // Get user profile with school info
+      // Get user profile with school info - with better error handling
       const { data: profile, error: profileError } = await supabase
         .from('profiles')
         .select(`
@@ -37,7 +37,14 @@ export const authService = {
         .eq('id', user.id)
         .single()
 
-      if (profileError) throw profileError
+      if (profileError) {
+        console.warn('Profile not found for user:', user.id, profileError.message)
+        // Return user without profile if profile doesn't exist yet
+        return {
+          ...user,
+          profile: null
+        }
+      }
 
       return {
         ...user,
@@ -45,6 +52,7 @@ export const authService = {
       }
     } catch (error) {
       console.error('Error getting current user:', error)
+      // Return null on error to prevent infinite loading
       return null
     }
   },

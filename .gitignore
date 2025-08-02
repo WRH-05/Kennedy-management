@@ -32,13 +32,8 @@ yarn-error.log*
 next-env.d.ts
 
 # sql
-db.sql
-db-auth.sql
-db-auth-fix.sql
-db-auth-complete-fix.sql
+db-complete-schema.sql
+
 # github
 /.github/
-.github/workflows
 .github/copilot-instructions.md
-
-AUTH_SETUP_GUIDE.md

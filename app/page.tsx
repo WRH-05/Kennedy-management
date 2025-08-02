@@ -12,6 +12,13 @@ export default function HomePage() {
   useEffect(() => {
     if (!loading) {
       if (user) {
+        // Check if user has a profile
+        if (!user.profile) {
+          // User exists but no profile - redirect to confirm email or create school
+          router.push('/auth/confirm')
+          return
+        }
+
         // Redirect authenticated users to their dashboard
         switch (user.profile?.role) {
           case 'owner':
