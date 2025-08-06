@@ -49,9 +49,17 @@ export default function LoginForm() {
           router.push('/')
       }
     } else if (user && !user.profile) {
-      console.log('⚠️ User found but no profile, redirecting to confirm page')
-      setLoading(false)
-      router.push('/auth/confirm')
+      console.log('⚠️ User found but no profile - checking if email is confirmed')
+      if (user.needsEmailConfirmation) {
+        console.log('📧 User needs email confirmation, redirecting to check-email')
+        setLoading(false)
+        router.push('/auth/check-email')
+      } else {
+        console.log('✅ User verified but no profile loaded yet - waiting for profile creation')
+        // Don't redirect immediately, give time for profile to load
+        // setLoading(false)
+        // router.push('/auth/confirm')
+      }
     }
   }, [user, loading, router])
 

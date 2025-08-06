@@ -34,9 +34,15 @@ export default function HomePage() {
             router.push('/auth/login')
         }
       } else if (user && !user.profile) {
-        // User is authenticated but has no profile (might need to wait for trigger)
-        // For development: redirect to confirm page to wait for profile creation
-        router.push('/auth/confirm')
+        // User is authenticated but has no profile 
+        if (user.needsEmailConfirmation) {
+          // User needs email confirmation
+          router.push('/auth/check-email')
+        } else {
+          // User is verified but profile hasn't loaded yet - check if it's a timing issue
+          console.log('⚠️ Verified user without profile - possible profile loading issue')
+          router.push('/auth/confirm')
+        }
       } else {
         // Redirect unauthenticated users to login
         router.push('/auth/login')

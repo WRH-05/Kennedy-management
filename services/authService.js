@@ -64,11 +64,19 @@ export const authService = {
         .single()
 
       if (profileError) {
-        console.warn('⚠️ Profile not found:', profileError.message)
+        console.error('⚠️ Profile fetch error:', {
+          message: profileError.message,
+          code: profileError.code,
+          details: profileError.details,
+          hint: profileError.hint,
+          userId: user.id
+        })
+        
         // Return user without profile instead of failing
         return {
           ...user,
-          profile: null
+          profile: null,
+          profileError: profileError.message
         }
       }
 
