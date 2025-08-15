@@ -121,6 +121,7 @@ export const authService = {
         email,
         password,
         options: {
+          emailRedirectTo: `${window.location.origin}/auth/callback`,
           data: {
             invitation_token: token
           }
@@ -180,7 +181,7 @@ export const authService = {
         email: userData.email,
         password,
         options: {
-          emailRedirectTo: undefined, // Disable email confirmation for development
+          emailRedirectTo: `${window.location.origin}/auth/callback`,
           data: {
             full_name: userData.full_name,
             phone: userData.phone,

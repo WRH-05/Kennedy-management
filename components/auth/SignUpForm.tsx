@@ -78,7 +78,8 @@ export default function SignUpForm() {
     setLoading(true)
     try {
       await signUp(formData.email, formData.password, token)
-      // Redirect will be handled by the AuthGuard component
+      // Redirect to check email page after successful signup
+      router.push(`/auth/check-email?email=${encodeURIComponent(formData.email)}`)
     } catch (err: any) {
       setError(err.message || 'Failed to create account')
     } finally {

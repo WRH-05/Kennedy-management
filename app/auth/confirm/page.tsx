@@ -39,11 +39,11 @@ export default function ConfirmPage() {
             setMessage(error.message)
           } else {
             setStatus('success')
-            setMessage('Email confirmed successfully! You can now sign in.')
-            // Redirect to home page after 3 seconds (will redirect to appropriate dashboard)
+            setMessage('Email confirmed successfully! Redirecting to your dashboard...')
+            // Redirect to home page after 2 seconds (will redirect to appropriate dashboard)
             setTimeout(() => {
               router.push('/')
-            }, 3000)
+            }, 2000)
           }
         } catch (error: any) {
           setStatus('error')
@@ -140,14 +140,14 @@ export default function ConfirmPage() {
                   {message}
                 </p>
                 <p className="text-sm text-gray-500">
-                  Redirecting to login page in 3 seconds...
+                  Redirecting to your dashboard in 2 seconds...
                 </p>
               </div>
               <Button
-                onClick={() => router.push('/auth/login')}
+                onClick={() => router.push('/')}
                 className="w-full"
               >
-                Go to Login
+                Go to Dashboard
               </Button>
             </>
           )}

@@ -61,19 +61,9 @@ export default function CreateSchoolForm() {
     try {
       const result = await authService.createSchoolAndOwner(schoolData, userData, userData.password)
       
-      // Store user data in localStorage for immediate access
-      if (result.user) {
-        const userData = {
-          id: result.user.id,
-          email: result.user.email,
-          role: 'owner',
-          school_id: result.school.id,
-          school_name: result.school.name
-        }
-        localStorage.setItem('user', JSON.stringify(userData))
-      }
-      
-      router.push('/manager') // Redirect to manager dashboard
+      // Don't store user data immediately - wait for email confirmation
+      // Redirect to check email page
+      router.push(`/auth/check-email?email=${encodeURIComponent(userData.email)}`)
     } catch (err: any) {
       console.error('School creation error:', err)
       setError(err.message || 'Failed to create school. Please try again.')

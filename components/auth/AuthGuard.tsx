@@ -26,6 +26,12 @@ export default function AuthGuard({
         return
       }
 
+      // Check if user needs email confirmation
+      if (user.needsEmailConfirmation) {
+        router.push(`/auth/check-email?email=${encodeURIComponent(user.email || '')}`)
+        return
+      }
+
       // Check role requirements
       if (requiredRoles.length > 0 && user.profile?.role) {
         if (!requiredRoles.includes(user.profile.role)) {
@@ -75,6 +81,10 @@ export default function AuthGuard({
 
   if (!user) {
     return null // Will redirect to login
+  }
+
+  if (user.needsEmailConfirmation) {
+    return null // Will redirect to check email
   }
 
   if (requiredRoles.length > 0 && (!user.profile?.role || !requiredRoles.includes(user.profile.role))) {

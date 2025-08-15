@@ -198,7 +198,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const signUp = async (email: string, password: string, token: string) => {
     const result = await authService.signUp(email, password, token)
-    await checkUser()
+    // Don't automatically check user - they need to confirm email first
     return result
   }
 

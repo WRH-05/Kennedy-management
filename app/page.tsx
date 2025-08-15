@@ -11,14 +11,11 @@ export default function HomePage() {
 
   useEffect(() => {
     if (!loading) {
-      // For development: Skip email confirmation requirement
-      // Handle users who need email confirmation (commented out for development)
-      /*
+      // Handle users who need email confirmation
       if (user && user.needsEmailConfirmation) {
-        router.push('/auth/confirm')
+        router.push(`/auth/check-email?email=${encodeURIComponent(user.email || '')}`)
         return
       }
-      */
 
       if (user && user.profile) {
         // Redirect authenticated users with profiles to their dashboard
@@ -37,10 +34,10 @@ export default function HomePage() {
         // User is authenticated but has no profile 
         if (user.needsEmailConfirmation) {
           // User needs email confirmation
-          router.push('/auth/check-email')
+          router.push(`/auth/check-email?email=${encodeURIComponent(user.email || '')}`)
         } else {
-          // User is verified but profile hasn't loaded yet - check if it's a timing issue
-          console.log('⚠️ Verified user without profile - possible profile loading issue')
+          // User is verified but profile hasn't loaded yet - wait for profile creation
+          console.log('⚠️ Verified user without profile - waiting for profile creation')
           router.push('/auth/confirm')
         }
       } else {

@@ -26,6 +26,7 @@ export default function AuthCallbackPage() {
           }
           
           // Redirect to home page (will redirect to appropriate dashboard)
+          console.log('OAuth authentication successful')
           router.push('/')
         } else if (token_hash && type) {
           // Handle email confirmation
@@ -41,6 +42,7 @@ export default function AuthCallbackPage() {
           }
 
           // Redirect to home page after successful confirmation
+          console.log('Email confirmation successful')
           router.push('/')
         } else {
           // No valid parameters, redirect to login
