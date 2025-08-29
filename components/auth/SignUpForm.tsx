@@ -28,6 +28,7 @@ export default function SignUpForm() {
   const [error, setError] = useState<string | null>(null)
   const [invitation, setInvitation] = useState<any>(null)
   const [verifyingInvite, setVerifyingInvite] = useState(false)
+  const [passwordMatch, setPasswordMatch] = useState(true)
 
   React.useEffect(() => {
     if (token && inviteEmail) {
@@ -65,16 +66,6 @@ export default function SignUpForm() {
       return
     }
 
-    if (formData.password !== formData.confirmPassword) {
-      setError('Passwords do not match')
-      return
-    }
-
-    if (formData.password.length < 6) {
-      setError('Password must be at least 6 characters')
-      return
-    }
-
     setLoading(true)
     try {
       await signUp(formData.email, formData.password, token)
@@ -88,10 +79,18 @@ export default function SignUpForm() {
   }
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const { name, value } = e.target
     setFormData(prev => ({
       ...prev,
-      [e.target.name]: e.target.value
+      [name]: value
     }))
+    
+    // Real-time password confirmation check for better UX
+    if (name === 'confirmPassword' || (name === 'password' && formData.confirmPassword)) {
+      const password = name === 'password' ? value : formData.password
+      const confirmPassword = name === 'confirmPassword' ? value : formData.confirmPassword
+      setPasswordMatch(password === confirmPassword)
+    }
   }
 
   if (verifyingInvite) {
@@ -185,6 +184,7 @@ export default function SignUpForm() {
                   value={formData.password}
                   onChange={handleChange}
                   required
+                  minLength={6}
                   disabled={loading}
                   placeholder="Create a password (min 6 characters)"
                 />
@@ -201,10 +201,14 @@ export default function SignUpForm() {
                   required
                   disabled={loading}
                   placeholder="Confirm your password"
+                  className={!passwordMatch && formData.confirmPassword ? 'border-red-500' : ''}
                 />
+                {!passwordMatch && formData.confirmPassword && (
+                  <p className="text-sm text-red-500">Passwords do not match</p>
+                )}
               </div>
               
-              <Button type="submit" className="w-full" disabled={loading}>
+              <Button type="submit" className="w-full" disabled={loading || !passwordMatch}>
                 {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                 Create Account
               </Button>
