@@ -2,6 +2,8 @@
 
 import React, { createContext, useContext, useEffect, useState } from 'react'
 import { authService } from '@/services/authService'
+import { useSessionManager } from '@/hooks/useSessionManager'
+import { LoadingManager } from '@/components/LoadingManager'
 
 interface User {
   id: string
@@ -34,164 +36,49 @@ interface AuthContextType {
   updateProfile: (updates: any) => Promise<any>
   hasRole: (roles: string | string[]) => boolean
   canAccess: (resource: string) => boolean
+  refreshSession: () => void
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined)
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
+  const { sessionData, isValidating, refreshSession } = useSessionManager()
   const [user, setUser] = useState<User | null>(null)
-  const [loading, setLoading] = useState(true)
-  const [initialized, setInitialized] = useState(false)
 
+  // Convert session data to user format
   useEffect(() => {
-    let mounted = true
-    
-    const initializeAuth = async () => {
-      try {
-        console.log('🔄 Initializing authentication...')
-        
-        // First check if there's an existing session
-        const session = await authService.getCurrentSession()
-        console.log('📊 Current session:', session ? 'exists' : 'none')
-        
-        if (session && session.user) {
-          // Session exists, get user with profile
-          await checkUser()
-        } else {
-          // No session, user is not authenticated
-          if (mounted) {
-            setUser(null)
-            setLoading(false)
-          }
-        }
-        
-        if (mounted) {
-          setInitialized(true)
-        }
-      } catch (error) {
-        console.error('Error initializing auth:', error)
-        if (mounted) {
-          setUser(null)
-          setLoading(false)
-          setInitialized(true)
+    if (sessionData?.valid && sessionData.user && sessionData.profile) {
+      const formattedUser: User = {
+        id: sessionData.user.id,
+        email: sessionData.user.email,
+        needsEmailConfirmation: !sessionData.user.email_confirmed_at,
+        profile: {
+          id: sessionData.profile.id,
+          school_id: sessionData.profile.school_id,
+          role: sessionData.profile.role,
+          full_name: sessionData.profile.full_name,
+          phone: sessionData.profile.phone,
+          avatar_url: sessionData.profile.avatar_url,
+          schools: sessionData.school
         }
       }
+      setUser(formattedUser)
+    } else if (sessionData && !sessionData.valid) {
+      setUser(null)
     }
-
-    // Initialize auth on mount
-    initializeAuth()
-
-    // Listen for auth changes with improved handling
-    const { data: { subscription } } = authService.onAuthStateChange(async (event: any, session: any) => {
-      if (!mounted) return
-      
-      console.log('🔄 Auth state change:', event, session ? 'session exists' : 'no session')
-      
-      try {
-        if (event === 'SIGNED_IN' && session) {
-          console.log('✅ User signed in, fetching profile...')
-          await checkUser()
-        } else if (event === 'SIGNED_OUT' || !session) {
-          console.log('👋 User signed out or session lost')
-          setUser(null)
-          setLoading(false)
-        } else if (event === 'TOKEN_REFRESHED' && session) {
-          console.log('🔄 Token refreshed, updating user data...')
-          await checkUser()
-        }
-      } catch (error) {
-        console.error('Error handling auth state change:', error)
-        setUser(null)
-        setLoading(false)
-      }
-    })
-
-    // Handle page visibility changes to refresh auth state
-    const handleVisibilityChange = () => {
-      if (document.visibilityState === 'visible' && initialized) {
-        console.log('👁️ Page became visible, checking auth state...')
-        // Small delay to allow any pending auth operations to complete
-        setTimeout(() => {
-          if (mounted) {
-            initializeAuth()
-          }
-        }, 500)
-      }
-    }
-
-    document.addEventListener('visibilitychange', handleVisibilityChange)
-
-    return () => {
-      mounted = false
-      subscription.unsubscribe()
-      document.removeEventListener('visibilitychange', handleVisibilityChange)
-    }
-  }, [])
-
-  async function checkUser() {
-    try {
-      setLoading(true)
-      
-      // First verify we have a valid session
-      const session = await authService.getCurrentSession()
-      if (!session || !session.user) {
-        console.log('🚫 No valid session found')
-        setUser(null)
-        return
-      }
-      
-      console.log('✅ Valid session found, getting user profile...')
-      
-      // Get current user with profile
-      const currentUser = await authService.getCurrentUser()
-      setUser(currentUser as User | null)
-      
-      console.log('Auth check completed:', { 
-        hasUser: !!currentUser, 
-        hasProfile: !!currentUser?.profile,
-        userId: currentUser?.id,
-        email: currentUser?.email 
-      })
-    } catch (error) {
-      console.error('Error checking user:', error)
-      
-      // If there's an auth error, clear the user state
-      const errorMessage = error instanceof Error ? error.message : String(error)
-      if (errorMessage.includes('Auth session missing') || 
-          errorMessage.includes('JWT expired') ||
-          errorMessage.includes('Invalid token')) {
-        console.log('🔄 Session expired or invalid, clearing user state')
-        setUser(null)
-      }
-    } finally {
-      setLoading(false)
-    }
-  }
+  }, [sessionData])
 
   const signIn = async (email: string, password: string) => {
     try {
       const result = await authService.signIn(email, password)
       
-      // Give a moment for auth state to update
+      // Give a moment for auth state to update, then refresh our session
       await new Promise(resolve => setTimeout(resolve, 1000))
+      refreshSession()
       
-      await checkUser()
       return result
     } catch (error) {
       console.error('❌ Auth error:', error)
-      
-      // Even if signIn throws an error, check if user is actually authenticated
-      try {
-        const currentUser = await authService.getCurrentUser()
-        if (currentUser && currentUser.profile) {
-          console.log('✅ Login successful despite error - user is authenticated')
-          setUser(currentUser as User | null)
-          return { user: currentUser }
-        }
-      } catch (checkError) {
-        console.error('Error checking user after failed signin:', checkError)
-      }
-      
       throw error
     }
   }
@@ -205,11 +92,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const signOut = async () => {
     await authService.signOut()
     setUser(null)
+    // Refresh session to clear state
+    setTimeout(() => refreshSession(), 500)
   }
 
   const updateProfile = async (updates: any) => {
     const result = await authService.updateProfile(updates)
-    await checkUser()
+    // Refresh session to get updated profile
+    refreshSession()
     return result
   }
 
@@ -249,18 +139,25 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const value = {
     user,
-    loading,
+    loading: isValidating,
     signIn,
     signUp,
     signOut,
     updateProfile,
     hasRole,
-    canAccess
+    canAccess,
+    refreshSession
   }
 
   return (
     <AuthContext.Provider value={value}>
-      {children}
+      <LoadingManager 
+        sessionData={sessionData}
+        isValidating={isValidating}
+        refreshSession={refreshSession}
+      >
+        {children}
+      </LoadingManager>
     </AuthContext.Provider>
   )
 }
