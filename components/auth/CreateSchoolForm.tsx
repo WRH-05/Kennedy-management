@@ -31,17 +31,31 @@ export default function CreateSchoolForm() {
     confirmPassword: ''
   })
 
-  const [passwordMatch, setPasswordMatch] = useState(true)
-
   const handleSchoolSubmit = (e: React.FormEvent) => {
     e.preventDefault()
     setError(null)
+    
+    if (!schoolData.name.trim()) {
+      setError('School name is required')
+      return
+    }
+    
     setStep(2)
   }
 
   const handleUserSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setError(null)
+    
+    if (userData.password !== userData.confirmPassword) {
+      setError('Passwords do not match')
+      return
+    }
+    
+    if (userData.password.length < 6) {
+      setError('Password must be at least 6 characters')
+      return
+    }
     
     setLoading(true)
     try {
@@ -66,18 +80,10 @@ export default function CreateSchoolForm() {
   }
 
   const handleUserChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const { name, value } = e.target
     setUserData(prev => ({
       ...prev,
-      [name]: value
+      [e.target.name]: e.target.value
     }))
-    
-    // Real-time password confirmation check for better UX
-    if (name === 'confirmPassword' || (name === 'password' && userData.confirmPassword)) {
-      const password = name === 'password' ? value : userData.password
-      const confirmPassword = name === 'confirmPassword' ? value : userData.confirmPassword
-      setPasswordMatch(password === confirmPassword)
-    }
   }
 
   return (
@@ -124,39 +130,35 @@ export default function CreateSchoolForm() {
                 </div>
                 
                 <div className="space-y-2">
-                  <Label htmlFor="address">Address *</Label>
+                  <Label htmlFor="address">Address</Label>
                   <Input
                     id="address"
                     name="address"
                     value={schoolData.address}
                     onChange={handleSchoolChange}
-                    required
                     placeholder="Enter school address"
                   />
                 </div>
                 
                 <div className="space-y-2">
-                  <Label htmlFor="phone">Phone *</Label>
+                  <Label htmlFor="phone">Phone</Label>
                   <Input
                     id="phone"
                     name="phone"
-                    type="tel"
                     value={schoolData.phone}
                     onChange={handleSchoolChange}
-                    required
                     placeholder="Enter school phone"
                   />
                 </div>
                 
                 <div className="space-y-2">
-                  <Label htmlFor="email">Email *</Label>
+                  <Label htmlFor="email">Email</Label>
                   <Input
                     id="email"
                     name="email"
                     type="email"
                     value={schoolData.email}
                     onChange={handleSchoolChange}
-                    required
                     placeholder="Enter school email"
                   />
                 </div>
@@ -195,14 +197,12 @@ export default function CreateSchoolForm() {
                 </div>
                 
                 <div className="space-y-2">
-                  <Label htmlFor="phone">Phone *</Label>
+                  <Label htmlFor="phone">Phone</Label>
                   <Input
                     id="phone"
                     name="phone"
-                    type="tel"
                     value={userData.phone}
                     onChange={handleUserChange}
-                    required
                     disabled={loading}
                     placeholder="Enter your phone"
                   />
@@ -217,7 +217,6 @@ export default function CreateSchoolForm() {
                     value={userData.password}
                     onChange={handleUserChange}
                     required
-                    minLength={6}
                     disabled={loading}
                     placeholder="Create a password (min 6 characters)"
                   />
@@ -234,11 +233,7 @@ export default function CreateSchoolForm() {
                     required
                     disabled={loading}
                     placeholder="Confirm your password"
-                    className={!passwordMatch && userData.confirmPassword ? 'border-red-500' : ''}
                   />
-                  {!passwordMatch && userData.confirmPassword && (
-                    <p className="text-sm text-red-500">Passwords do not match</p>
-                  )}
                 </div>
                 
                 <div className="flex space-x-2">
@@ -251,7 +246,7 @@ export default function CreateSchoolForm() {
                   >
                     Back
                   </Button>
-                  <Button type="submit" disabled={loading || !passwordMatch} className="flex-1">
+                  <Button type="submit" disabled={loading} className="flex-1">
                     {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                     Create School
                   </Button>
