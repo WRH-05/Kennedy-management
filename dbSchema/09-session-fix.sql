@@ -80,7 +80,7 @@ BEGIN
     END IF;
     
     -- Get school information
-    SELECT id, name, owner_id, created_at
+    SELECT id, name, created_at
     INTO user_school
     FROM schools 
     WHERE id = user_profile.school_id
