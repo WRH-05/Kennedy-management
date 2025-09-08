@@ -2,6 +2,9 @@ import { useEffect, useCallback, useState, useRef } from 'react'
 import { validateSession } from '@/utils/supabase-session'
 import { supabase } from '@/lib/supabase'
 
+// Enable debug logging in development
+const DEBUG_SESSION = process.env.NODE_ENV === 'development'
+
 interface SessionData {
   valid: boolean
   authenticated: boolean
@@ -25,16 +28,16 @@ export function useSessionManager() {
     
     // Debounce: don't validate more than once every 3 seconds unless forced
     if (!force && isValidatingRef.current) {
-      console.log('🔄 Session validation already in progress, skipping...')
+      if (DEBUG_SESSION) console.log('🔄 Session validation already in progress, skipping...')
       return
     }
     
     if (!force && (now - lastValidationRef.current) < 3000) {
-      console.log('🔄 Session validation debounced, skipping...')
+      if (DEBUG_SESSION) console.log('🔄 Session validation debounced, skipping...')
       return
     }
     
-    console.log('🔄 Starting session validation...', { force, now })
+    if (DEBUG_SESSION) console.log('🔄 Starting session validation...', { force, now })
     
     isValidatingRef.current = true
     lastValidationRef.current = now
@@ -44,20 +47,22 @@ export function useSessionManager() {
       const session = await validateSession()
       setSessionData(session)
       
-      console.log('✅ Session validation result:', {
-        valid: session.valid,
-        authenticated: session.authenticated,
-        hasProfile: !!session.profile,
-        needsSetup: session.needsProfileSetup,
-        error: session.error
-      })
+      if (DEBUG_SESSION) {
+        console.log('✅ Session validation result:', {
+          valid: session.valid,
+          authenticated: session.authenticated,
+          hasProfile: !!session.profile,
+          needsSetup: (session as any).needsProfileSetup,
+          error: session.error
+        })
+      }
       
       // Handle different session states
       if (!session.valid && session.authenticated) {
-        if (session.needsProfileSetup) {
-          console.log('👤 User needs profile setup')
-        } else if (session.profileInactive) {
-          console.warn('🚫 Account is inactive')
+        if ((session as any).needsProfileSetup) {
+          if (DEBUG_SESSION) console.log('👤 User needs profile setup')
+        } else if ((session as any).profileInactive) {
+          if (DEBUG_SESSION) console.warn('🚫 Account is inactive')
         }
       }
     } catch (error) {
@@ -78,26 +83,26 @@ export function useSessionManager() {
 
   // Supabase auth state change listener
   useEffect(() => {
-    console.log('🎯 Setting up auth state listener...')
+    if (DEBUG_SESSION) console.log('🎯 Setting up auth state listener...')
     
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
-        console.log('🔔 Auth state changed:', { event, hasSession: !!session })
+        if (DEBUG_SESSION) console.log('🔔 Auth state changed:', { event, hasSession: !!session })
         
         // Only refresh on meaningful auth changes
         if (event === 'SIGNED_IN' || event === 'SIGNED_OUT' || event === 'TOKEN_REFRESHED') {
-          console.log('🔄 Auth state change triggered session refresh')
+          if (DEBUG_SESSION) console.log('🔄 Auth state change triggered session refresh')
           await refreshSession(true)
         }
       }
     )
 
     // Initial session validation on mount
-    console.log('🚀 Running initial session validation...')
+    if (DEBUG_SESSION) console.log('🚀 Running initial session validation...')
     refreshSession(true)
 
     return () => {
-      console.log('🧹 Cleaning up auth state listener...')
+      if (DEBUG_SESSION) console.log('🧹 Cleaning up auth state listener...')
       subscription.unsubscribe()
     }
   }, [refreshSession])
@@ -112,7 +117,7 @@ export function useSessionManager() {
       
       // Only refresh if it's been more than 30 seconds since last focus
       if (now - lastFocusTime < 30000) {
-        console.log('🔄 Focus event debounced, skipping session refresh')
+        if (DEBUG_SESSION) console.log('🔄 Focus event debounced, skipping session refresh')
         return
       }
       
@@ -123,14 +128,14 @@ export function useSessionManager() {
       
       // Debounce to avoid rapid session checks
       focusTimeout = setTimeout(() => {
-        console.log('👀 Window focus detected, refreshing session...')
+        if (DEBUG_SESSION) console.log('👀 Window focus detected, refreshing session...')
         refreshSession()
       }, 1000) // Increased debounce time
     }
 
     const handleVisibilityChange = () => {
       if (!document.hidden) {
-        console.log('👁️ Page visibility change detected')
+        if (DEBUG_SESSION) console.log('👁️ Page visibility change detected')
         handleFocus()
       }
     }

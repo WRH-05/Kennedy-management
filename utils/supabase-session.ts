@@ -1,8 +1,11 @@
 import { supabase } from '@/lib/supabase'
 
+// Enable debug logging in development
+const DEBUG_SESSION = process.env.NODE_ENV === 'development'
+
 export async function validateSession() {
   try {
-    console.log('🔍 Calling supabase.rpc("get_current_user_session")...')
+    if (DEBUG_SESSION) console.log('🔍 Calling supabase.rpc("get_current_user_session")...')
     
     // Use the new database function instead of built-in session validation
     const { data, error } = await supabase.rpc('get_current_user_session')
@@ -19,7 +22,7 @@ export async function validateSession() {
       }
     }
 
-    console.log('📊 Raw session data from database:', data)
+    if (DEBUG_SESSION) console.log('📊 Raw session data from database:', data)
 
     const result = {
       valid: data?.session_valid || false,
@@ -33,7 +36,7 @@ export async function validateSession() {
       error: data?.error || null
     }
 
-    console.log('✅ Processed session result:', result)
+    if (DEBUG_SESSION) console.log('✅ Processed session result:', result)
     return result
     
   } catch (error: any) {

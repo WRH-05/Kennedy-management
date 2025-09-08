@@ -267,8 +267,24 @@ export const authService = {
       console.log('School and owner created successfully:', { school: school.id, user: authData.user.id, profile: profile.id })
       return { school, user: authData.user, profile }
     } catch (error) {
-      console.error('Error creating school and owner:', error)
-      throw error
+      // Enhanced error logging for better debugging
+      console.error('Error creating school and owner:')
+      console.error('- Error message:', error?.message || 'No message')
+      console.error('- Error details:', error?.details || 'No details')
+      console.error('- Error hint:', error?.hint || 'No hint')
+      console.error('- Error code:', error?.code || 'No code')
+      console.error('- Full error object:', {
+        message: error?.message,
+        details: error?.details,
+        hint: error?.hint,
+        code: error?.code,
+        name: error?.name,
+        stack: error?.stack?.substring(0, 200) + '...' // Truncate stack trace
+      })
+      
+      // Create a more descriptive error message
+      const errorMessage = error?.message || error?.details || 'Failed to create school and owner'
+      throw new Error(`School creation failed: ${errorMessage}`)
     }
   },
 

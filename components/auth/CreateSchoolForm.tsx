@@ -65,8 +65,21 @@ export default function CreateSchoolForm() {
       // Redirect to check email page
       router.push(`/auth/check-email?email=${encodeURIComponent(userData.email)}`)
     } catch (err: any) {
-      console.error('School creation error:', err)
-      setError(err.message || 'Failed to create school. Please try again.')
+      // Enhanced error logging for better debugging
+      console.error('School creation error details:')
+      console.error('- Error message:', err?.message || 'No message')
+      console.error('- Error name:', err?.name || 'No name')
+      console.error('- Error stack:', err?.stack?.substring(0, 300) + '...' || 'No stack')
+      console.error('- Full error object:', {
+        message: err?.message,
+        name: err?.name,
+        cause: err?.cause,
+        code: err?.code
+      })
+      
+      // Show user-friendly error message
+      const userMessage = err?.message || 'Failed to create school. Please try again.'
+      setError(userMessage)
     } finally {
       setLoading(false)
     }
