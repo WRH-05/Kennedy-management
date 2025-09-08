@@ -166,37 +166,33 @@ export const authService = {
 
   // Create a new school (owner registration)
   async createSchoolAndOwner(schoolData, userData, password) {
-    console.log('🏫 Starting school creation process...')
+    console.log('Starting school creation process...')
     console.log('School data:', schoolData)
     console.log('User data:', { email: userData.email, full_name: userData.full_name, phone: userData.phone })
     
     try {
-      // First create the school using the secure function
-      console.log('📝 Step 1: Creating school record...')
-      const { data: schoolResult, error: schoolError } = await supabase
-        .rpc('create_school_for_registration', {
-          school_name: schoolData.name,
-          school_address: schoolData.address || null,
-          school_phone: schoolData.phone || null,
-          school_email: schoolData.email || null
+      // First create the school using direct insert
+      console.log('Step 1: Creating school record...')
+      const { data: school, error: schoolError } = await supabase
+        .from('schools')
+        .insert({
+          name: schoolData.name,
+          address: schoolData.address || null,
+          phone: schoolData.phone || null,
+          email: schoolData.email || null
         })
+        .select('id')
+        .single()
 
       if (schoolError) {
-        console.error('School creation RPC failed:', schoolError)
+        console.error('School creation failed:', schoolError)
         throw schoolError
       }
 
-      // Check if the function returned an error
-      if (schoolResult?.error) {
-        console.error('School creation failed:', schoolResult.message)
-        throw new Error(schoolResult.message)
-      }
-
-      const school = schoolResult
       console.log('School created successfully:', school.id)
 
       // Sign up the owner - the trigger function will handle profile creation automatically
-      console.log('👤 Step 2: Creating user account...')
+      console.log('Step 2: Creating user account...')
       const { data: authData, error: authError } = await supabase.auth.signUp({
         email: userData.email,
         password,
@@ -221,7 +217,7 @@ export const authService = {
       console.log('User created successfully:', authData.user.id)
 
       // Wait for the trigger to complete profile creation
-      console.log('⏳ Step 3: Waiting for profile creation...')
+      console.log('Step 3: Waiting for profile creation...')
       let profile = null
       let attempts = 0
       const maxAttempts = 10
