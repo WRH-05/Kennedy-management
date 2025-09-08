@@ -23,9 +23,9 @@ export const logError = (context: string, error: any) => {
       name: error?.name,
       cause: error?.cause,
       // Include any other properties that might exist
-      ...Object.keys(error).reduce((acc, key) => {
+      ...Object.keys(error).reduce((acc: any, key) => {
         if (!['message', 'details', 'hint', 'code', 'name', 'cause', 'stack'].includes(key)) {
-          acc[key] = error[key]
+          acc[key] = (error as any)[key]
         }
         return acc
       }, {})
