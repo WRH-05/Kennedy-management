@@ -17,26 +17,26 @@ export const authService = {
   // Get current user with profile and school info
   async getCurrentUser() {
     try {
-      console.log('🔍 Getting current user...')
+      console.log('Getting current user...')
       
       // Step 1: Get the authenticated user
       const { data: { user }, error: userError } = await supabase.auth.getUser()
       
       if (userError) {
-        console.error('❌ Auth error:', userError)
+        console.error('Auth error:', userError)
         return null
       }
       
       if (!user) {
-        console.log('👤 No authenticated user found')
+        console.log('No authenticated user found')
         return null
       }
 
-      console.log('✅ User found:', user.id, 'Email confirmed:', !!user.email_confirmed_at)
+      console.log('User found:', user.id, 'Email confirmed:', !!user.email_confirmed_at)
 
       // Step 2: Check email confirmation status
       if (!user.email_confirmed_at) {
-        console.log('📧 User email not confirmed yet')
+        console.log('User email not confirmed yet')
         return {
           ...user,
           profile: null,
@@ -45,7 +45,7 @@ export const authService = {
       }
 
       // Step 3: Get user profile - SIMPLIFIED without timeout
-      console.log('🔍 Fetching profile for user:', user.id)
+      console.log('Fetching profile for user:', user.id)
       
       const { data: profile, error: profileError } = await supabase
         .from('profiles')
@@ -88,13 +88,13 @@ export const authService = {
         }
       }
 
-      console.log('✅ Profile found:', profile.id, 'School:', profile.school_id, 'Role:', profile.role)
+      console.log('Profile found:', profile.id, 'School:', profile.school_id, 'Role:', profile.role)
       return {
         ...user,
         profile
       }
     } catch (error) {
-      console.error('💥 Unexpected error in getCurrentUser:', error)
+      console.error('Unexpected error in getCurrentUser:', error)
       return null
     }
   },
@@ -182,18 +182,18 @@ export const authService = {
         })
 
       if (schoolError) {
-        console.error('❌ School creation RPC failed:', schoolError)
+        console.error('School creation RPC failed:', schoolError)
         throw schoolError
       }
 
       // Check if the function returned an error
       if (schoolResult?.error) {
-        console.error('❌ School creation failed:', schoolResult.message)
+        console.error('School creation failed:', schoolResult.message)
         throw new Error(schoolResult.message)
       }
 
       const school = schoolResult
-      console.log('✅ School created successfully:', school.id)
+      console.log('School created successfully:', school.id)
 
       // Sign up the owner - the trigger function will handle profile creation automatically
       console.log('👤 Step 2: Creating user account...')
@@ -212,13 +212,13 @@ export const authService = {
       })
 
       if (authError) {
-        console.error('❌ User signup failed:', authError)
+        console.error('User signup failed:', authError)
         // If user creation fails, clean up the school
-        console.log('🧹 Cleaning up school record...')
+        console.log('Cleaning up school record...')
         await supabase.from('schools').delete().eq('id', school.id)
         throw authError
       }
-      console.log('✅ User created successfully:', authData.user.id)
+      console.log('User created successfully:', authData.user.id)
 
       // Wait for the trigger to complete profile creation
       console.log('⏳ Step 3: Waiting for profile creation...')
@@ -229,7 +229,7 @@ export const authService = {
       while (!profile && attempts < maxAttempts) {
         await new Promise(resolve => setTimeout(resolve, 500))
         
-        console.log(`🔍 Attempt ${attempts + 1}/${maxAttempts}: Checking for profile...`)
+        console.log(`Attempt ${attempts + 1}/${maxAttempts}: Checking for profile...`)
         const { data: profileData, error: profileError } = await supabase
           .from('profiles')
           .select(`
@@ -248,7 +248,7 @@ export const authService = {
 
         if (!profileError && profileData) {
           profile = profileData
-          console.log('✅ Profile found via trigger!')
+          console.log('Profile found via trigger!')
           break
         } else if (profileError) {
           console.log('⚠️ Profile query error:', profileError.message)

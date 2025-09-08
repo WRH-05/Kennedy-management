@@ -78,7 +78,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       
       return result
     } catch (error) {
-      console.error('❌ Auth error:', error)
+      console.error('Auth error:', error)
       throw error
     }
   }

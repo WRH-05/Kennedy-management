@@ -12,24 +12,24 @@ export const tokenCleanup = {
       key.includes('supabase')
     )
     
-    console.log('🧹 Clearing Supabase tokens:', supabaseKeys)
+    console.log('Clearing Supabase tokens:', supabaseKeys)
     
     supabaseKeys.forEach(key => {
       localStorage.removeItem(key)
     })
     
-    console.log('✅ Supabase tokens cleared. Please refresh the page.')
+    console.log('Supabase tokens cleared. Please refresh the page.')
   },
 
   // Clear all storage and reload page
   fullReset() {
     if (typeof window === 'undefined') return
     
-    console.log('🔄 Performing full storage reset...')
+    console.log('Performing full storage reset...')
     localStorage.clear()
     sessionStorage.clear()
     
-    console.log('✅ Storage cleared. Reloading page...')
+    console.log('Storage cleared. Reloading page...')
     window.location.reload()
   }
 }

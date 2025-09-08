@@ -30,10 +30,3 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
-
-# sql
-db-complete-schema.sql
-
-# github
-/.github/
-.github/copilot-instructions.md

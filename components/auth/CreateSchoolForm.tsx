@@ -56,7 +56,7 @@ export default function CreateSchoolForm() {
       setError('Password must be at least 6 characters')
       return
     }
-    
+
     setLoading(true)
     try {
       const result = await authService.createSchoolAndOwner(schoolData, userData, userData.password)

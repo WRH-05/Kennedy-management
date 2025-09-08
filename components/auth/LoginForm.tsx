@@ -22,7 +22,7 @@ export default function LoginForm() {
 
   // Watch for authentication changes and redirect
   useEffect(() => {
-    console.log('🔄 LoginForm useEffect - User state:', { 
+    console.log('LoginForm useEffect - User state:', { 
       hasUser: !!user, 
       hasProfile: !!user?.profile, 
       role: user?.profile?.role, 
@@ -30,22 +30,22 @@ export default function LoginForm() {
     })
     
     if (user?.profile?.role) {
-      console.log('🎉 User authenticated, redirecting based on role:', user.profile.role)
+      console.log('User authenticated, redirecting based on role:', user.profile.role)
       // Set loading to false and redirect
       setLoading(false)
       
       switch (user.profile.role) {
         case 'owner':
         case 'manager':
-          console.log('📍 Redirecting to /manager')
+          console.log('Redirecting to /manager')
           router.push('/manager')
           break
         case 'receptionist':
-          console.log('📍 Redirecting to /receptionist')
+          console.log('Redirecting to /receptionist')
           router.push('/receptionist')
           break
         default:
-          console.log('📍 Unknown role, redirecting to home')
+          console.log('Unknown role, redirecting to home')
           router.push('/')
       }
     } else if (user && !user.profile) {
@@ -55,7 +55,7 @@ export default function LoginForm() {
         setLoading(false)
         router.push('/auth/check-email')
       } else {
-        console.log('✅ User verified but no profile loaded yet - waiting for profile creation')
+        console.log('User verified but no profile loaded yet - waiting for profile creation')
         // Don't redirect immediately, give time for profile to load
         // setLoading(false)
         // router.push('/auth/confirm')
@@ -70,7 +70,7 @@ export default function LoginForm() {
 
     try {
       const result = await signIn(formData.email, formData.password)
-      console.log('✅ Sign in completed:', result)
+      console.log('Sign in completed:', result)
       
       // Add extra time for auth state to propagate
       console.log('⏳ Waiting for auth state to update...')
@@ -85,7 +85,7 @@ export default function LoginForm() {
       
       // Don't set loading to false here - let the redirect handle it
     } catch (err: any) {
-      console.error('❌ Login failed:', err)
+      console.error('Login failed:', err)
       setError(err.message || 'Failed to sign in')
       setLoading(false) // Only set loading to false on error
     }

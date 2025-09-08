@@ -1,30 +1,47 @@
-# Minimalistic cram website
+# Kennedy Management System
 
-*Automatically synced with your [v0.dev](https://v0.dev) deployments*
+A comprehensive school management platform built with Next.js, TypeScript, and Supabase.
 
-[![Deployed on Vercel](https://img.shields.io/badge/Deployed%20on-Vercel-black?style=for-the-badge&logo=vercel)](https://vercel.com/wassims-projects-6a112005/v0-minimalistic-cram-website)
-[![Built with v0](https://img.shields.io/badge/Built%20with-v0.dev-black?style=for-the-badge)](https://v0.dev/chat/projects/SzfBnJ786mI)
+## Features
 
-## Overview
+- **Authentication System**: Secure login/signup with Supabase Auth
+- **Role-based Access**: Different interfaces for managers, teachers, receptionists, and students
+- **School Management**: Complete school administration and management tools
+- **Student Portal**: Dedicated interface for student activities
+- **Teacher Dashboard**: Tools for educators to manage their courses and students
+- **Course Management**: Create and manage educational courses
 
-This repository will stay in sync with your deployed chats on [v0.dev](https://v0.dev).
-Any changes you make to your deployed app will be automatically pushed to this repository from [v0.dev](https://v0.dev).
+## Tech Stack
 
-## Deployment
+- **Frontend**: Next.js 14, TypeScript, Tailwind CSS
+- **Backend**: Supabase (PostgreSQL, Auth, RLS)
+- **UI Components**: shadcn/ui
+- **State Management**: React Context API
 
-Your project is live at:
+## Getting Started
 
-**[https://vercel.com/wassims-projects-6a112005/v0-minimalistic-cram-website](https://vercel.com/wassims-projects-6a112005/v0-minimalistic-cram-website)**
+1. Clone the repository
+2. Install dependencies:
+   ```bash
+   npm install
+   ```
+3. Set up your environment variables in `.env.local`:
+   ```env
+   NEXT_PUBLIC_SUPABASE_URL=your_supabase_url
+   NEXT_PUBLIC_SUPABASE_ANON_KEY=your_anon_key
+   ```
+4. Run the development server:
+   ```bash
+   npm run dev
+   ```
 
-## Build your app
+## Project Structure
 
-Continue building your app on:
-
-**[https://v0.dev/chat/projects/SzfBnJ786mI](https://v0.dev/chat/projects/SzfBnJ786mI)**
-
-## How It Works
-
-1. Create and modify your project using [v0.dev](https://v0.dev)
-2. Deploy your chats from the v0 interface
-3. Changes are automatically pushed to this repository
-4. Vercel deploys the latest version from this repository
+- `/app` - Next.js 14 app router pages
+- `/components` - Reusable UI components
+- `/contexts` - React context providers
+- `/hooks` - Custom React hooks
+- `/lib` - Utility libraries and configurations
+- `/services` - API service functions
+- `/types` - TypeScript type definitions
+- `/utils` - Utility functions
