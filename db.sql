@@ -508,10 +508,10 @@ ALTER TABLE invitations ENABLE ROW LEVEL SECURITY;
 -- ============================================================================
 
 -- SCHOOLS TABLE POLICIES
--- Allow anonymous users to create schools during signup
+-- Allow anonymous and authenticated users to create schools during signup
 CREATE POLICY "schools_allow_signup_creation" ON schools
     FOR INSERT 
-    TO anon
+    TO anon, authenticated
     WITH CHECK (true);
 
 -- Allow authenticated users to view their own school
