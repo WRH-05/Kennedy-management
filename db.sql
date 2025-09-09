@@ -40,7 +40,9 @@ CREATE TABLE schools (
     -- Constraints
     CONSTRAINT schools_name_not_empty CHECK (trim(name) <> ''),
     CONSTRAINT schools_address_not_empty CHECK (trim(address) <> ''),
+    CONSTRAINT schools_address_meaningful CHECK (length(trim(address)) >= 10),
     CONSTRAINT schools_phone_not_empty CHECK (trim(phone) <> ''),
+    CONSTRAINT schools_phone_meaningful CHECK (length(trim(phone)) >= 10),
     CONSTRAINT schools_email_valid CHECK (email ~ '^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$')
 );
 
@@ -50,7 +52,7 @@ CREATE TABLE profiles (
     school_id UUID NOT NULL REFERENCES schools(id) ON DELETE CASCADE,
     role user_role NOT NULL DEFAULT 'receptionist',
     full_name TEXT NOT NULL,
-    phone TEXT NOT NULL,
+    phone TEXT NOT NULL,  -- Made mandatory
     avatar_url TEXT,
     invited_by UUID REFERENCES profiles(id) ON DELETE SET NULL,
     is_active BOOLEAN DEFAULT true,
@@ -59,7 +61,7 @@ CREATE TABLE profiles (
     
     -- Constraints
     CONSTRAINT profiles_full_name_not_empty CHECK (trim(full_name) <> ''),
-    CONSTRAINT profiles_phone_format CHECK (phone IS NULL OR phone ~ '^[\+\d\s\-\(\)]+$')
+    CONSTRAINT profiles_phone_meaningful CHECK (length(trim(phone)) >= 10 AND phone ~ '^[\+\d\s\-\(\)]+$')
 );
 
 -- Invitations table - Secure token-based invitations
@@ -167,6 +169,11 @@ BEGIN
             );
             user_phone := NEW.raw_user_meta_data->>'phone';
             
+            -- Validate required fields for owner signup
+            IF user_phone IS NULL OR trim(user_phone) = '' THEN
+                RAISE EXCEPTION 'Phone number is required for owner signup';
+            END IF;
+            
             -- Validate school exists
             IF NOT EXISTS (SELECT 1 FROM schools WHERE id = school_id_val) THEN
                 RAISE WARNING 'School % not found for owner signup', school_id_val;
@@ -208,7 +215,7 @@ BEGIN
                     id, school_id, role, full_name, phone, invited_by, is_active
                 ) VALUES (
                     NEW.id, invitation_record.school_id, invitation_record.role,
-                    user_full_name, user_phone, invitation_record.invited_by, true
+                    user_full_name, NULLIF(trim(user_phone), ''), invitation_record.invited_by, true
                 );
                 
                 -- Mark invitation as accepted
@@ -527,11 +534,21 @@ CREATE POLICY "schools_owner_update" ON schools
     );
 
 -- PROFILES TABLE POLICIES
--- Allow system to create profiles during signup (for triggers)
+-- Allow system to create profiles during signup with restrictions
 CREATE POLICY "profiles_system_creation" ON profiles
     FOR INSERT 
     TO authenticated, anon
-    WITH CHECK (true);
+    WITH CHECK (
+        -- Only allow during specific signup flows
+        EXISTS (
+            SELECT 1 FROM auth.users 
+            WHERE id = profiles.id 
+            AND (
+                raw_user_meta_data->>'is_owner_signup' = 'true' OR
+                raw_user_meta_data->>'invitation_token' IS NOT NULL
+            )
+        )
+    );
 
 -- Users can view their own profile
 CREATE POLICY "profiles_view_own" ON profiles
@@ -661,7 +678,7 @@ BEGIN
         'get_current_user_school_id',
         'user_has_role',
         'user_has_any_role',
-        'handle_new_user_working',
+        'handle_new_user_registration',  -- Fixed function name
         'create_invitation',
         'create_user_invitation',
         'get_current_user_session',
@@ -766,7 +783,7 @@ BEGIN
         'get_current_user_school_id',
         'user_has_role', 
         'user_has_any_role',
-        'handle_new_user_working',
+        'handle_new_user_registration',  -- Fixed function name
         'create_invitation',
         'create_user_invitation',
         'get_current_user_session',
