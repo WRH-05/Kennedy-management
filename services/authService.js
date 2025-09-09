@@ -242,12 +242,14 @@ export const authService = {
       console.log('Step 3: Waiting for profile creation...')
       let profile = null
       let attempts = 0
-      const maxAttempts = 10
+      const maxAttempts = 8
 
       while (!profile && attempts < maxAttempts) {
-        await new Promise(resolve => setTimeout(resolve, 500))
+        // Exponential backoff: 100ms, 200ms, 400ms, 800ms, 1600ms, etc.
+        const delay = Math.min(100 * Math.pow(2, attempts), 2000)
+        await new Promise(resolve => setTimeout(resolve, delay))
         
-        console.log(`Attempt ${attempts + 1}/${maxAttempts}: Checking for profile...`)
+        console.log(`Attempt ${attempts + 1}/${maxAttempts}: Checking for profile... (waiting ${delay}ms)`)
         const { data: profileData, error: profileError } = await supabase
           .from('profiles')
           .select(`
@@ -278,36 +280,90 @@ export const authService = {
 
       if (!profile) {
         console.warn('Profile not created by trigger, creating manually...')
-        // Create profile manually if trigger failed
-        const { data: manualProfile, error: manualError } = await supabase
-          .from('profiles')
-          .insert([{
-            id: authData.user.id,
-            school_id: school.id,
-            role: 'owner',
-            full_name: userData.full_name,
-            phone: userData.phone,
-            is_active: true
-          }])
-          .select(`
-            *,
-            schools (
-              id,
-              name,
-              address,
-              phone,
-              email,
-              logo_url
-            )
-          `)
-          .single()
+        // Use the helper function to create profile manually (bypasses RLS)
+        const { data: manualResult, error: manualError } = await supabase
+          .rpc('create_owner_profile_manual', {
+            p_user_id: authData.user.id,
+            p_school_id: school.id,
+            p_full_name: userData.full_name,
+            p_phone: userData.phone
+          })
 
         if (manualError) {
-          console.error('Failed to create profile manually:', manualError)
-          throw new Error('Failed to create user profile')
+          console.error('Failed to create profile manually via RPC:', manualError)
+          
+          // Ultimate fallback: Direct profile insertion
+          console.warn('Attempting direct profile creation as final fallback...')
+          try {
+            const { data: directProfile, error: directError } = await supabase
+              .from('profiles')
+              .insert({
+                id: authData.user.id,
+                full_name: userData.full_name,
+                phone: userData.phone || null,
+                role: 'owner',
+                school_id: school.id,
+                is_active: true
+              })
+              .select(`
+                *,
+                schools (
+                  id,
+                  name,
+                  address,
+                  phone,
+                  email,
+                  logo_url
+                )
+              `)
+              .single()
+              
+            if (directError) {
+              console.error('Direct profile creation also failed:', directError)
+              throw new Error('All profile creation methods failed')
+            }
+            
+            console.log('Profile created via direct insertion')
+            profile = directProfile
+          } catch (directInsertError) {
+            console.error('Direct profile insertion failed:', directInsertError)
+            throw new Error('Failed to create user profile after multiple attempts')
+          }
         }
         
-        profile = manualProfile
+        // If we used RPC method and it succeeded, get the profile data and fetch complete info
+        if (!profile && manualResult && manualResult.success) {
+          console.log('Profile created manually via RPC:', manualResult.profile)
+          
+          // Fetch the complete profile with school data
+          const { data: profileData, error: profileError } = await supabase
+            .from('profiles')
+            .select(`
+              *,
+              schools (
+                id,
+                name,
+                address,
+                phone,
+                email,
+                logo_url
+              )
+            `)
+            .eq('id', authData.user.id)
+            .single()
+            
+          if (profileError) {
+            console.error('Failed to fetch created profile:', profileError)
+            throw new Error('Failed to retrieve user profile after creation')
+          }
+          
+          profile = profileData
+        }
+        
+        // Final check - if we still don't have a profile, something went very wrong
+        if (!profile) {
+          throw new Error('Profile creation failed through all methods')
+        }
       }
 
       console.log('School and owner created successfully:', { school: school.id, user: authData.user.id, profile: profile.id })

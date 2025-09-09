@@ -397,6 +397,78 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 
+-- Manual profile creation for race condition fallback
+CREATE OR REPLACE FUNCTION create_owner_profile_manual(
+    p_user_id UUID,
+    p_school_id UUID,
+    p_full_name TEXT,
+    p_phone TEXT DEFAULT NULL
+)
+RETURNS jsonb AS $$
+DECLARE
+    new_profile RECORD;
+BEGIN
+    -- Validate inputs
+    IF p_user_id IS NULL OR p_school_id IS NULL OR p_full_name IS NULL THEN
+        RETURN jsonb_build_object(
+            'success', false,
+            'error', 'Missing required parameters'
+        );
+    END IF;
+    
+    -- Check if profile already exists
+    IF EXISTS (SELECT 1 FROM profiles WHERE id = p_user_id) THEN
+        SELECT * INTO new_profile FROM profiles WHERE id = p_user_id;
+        RETURN jsonb_build_object(
+            'success', true,
+            'profile', row_to_json(new_profile),
+            'message', 'Profile already exists'
+        );
+    END IF;
+    
+    -- Check if school exists
+    IF NOT EXISTS (SELECT 1 FROM schools WHERE id = p_school_id) THEN
+        RETURN jsonb_build_object(
+            'success', false,
+            'error', 'School not found'
+        );
+    END IF;
+    
+    -- Create the profile
+    INSERT INTO profiles (
+        id,
+        full_name,
+        phone,
+        role,
+        school_id,
+        is_active,
+        created_at,
+        updated_at
+    ) VALUES (
+        p_user_id,
+        trim(p_full_name),
+        CASE WHEN p_phone IS NOT NULL AND trim(p_phone) != '' THEN trim(p_phone) ELSE NULL END,
+        'owner',
+        p_school_id,
+        true,
+        now(),
+        now()
+    )
+    RETURNING * INTO new_profile;
+    
+    RETURN jsonb_build_object(
+        'success', true,
+        'profile', row_to_json(new_profile)
+    );
+EXCEPTION
+    WHEN OTHERS THEN
+        RETURN jsonb_build_object(
+            'success', false,
+            'error', SQLERRM
+        );
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
 -- Helper function for frontend signup validation
 CREATE OR REPLACE FUNCTION validate_signup_data(
     p_email TEXT,
