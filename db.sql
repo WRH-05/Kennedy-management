@@ -701,7 +701,13 @@ BEGIN
     
     -- Test 2: Anonymous school creation
     BEGIN
-        INSERT INTO schools (name) VALUES ('Test School System') RETURNING id INTO test_school_id;
+        INSERT INTO schools (name, address, phone, email) 
+        VALUES (
+            'Test School System', 
+            '123 Test Street, Test City, TC 12345',
+            '1234567890', 
+            'test@testschool.edu'
+        ) RETURNING id INTO test_school_id;
         test_results := test_results || jsonb_build_object(
             'school_creation', jsonb_build_object(
                 'success', true,
