@@ -165,21 +165,43 @@ export const authService = {
   },
 
   // Create a new school (owner registration)
+  // Expected schoolData: { name, address, phone, email } - all required by database
+  // Expected userData: { email, full_name, phone } - all required
   async createSchoolAndOwner(schoolData, userData, password) {
     console.log('Starting school creation process...')
     console.log('School data:', schoolData)
     console.log('User data:', { email: userData.email, full_name: userData.full_name, phone: userData.phone })
     
     try {
-      // First create the school using direct insert
+      // Validate required school fields (per database schema requirements)
+      const requiredSchoolFields = ['name', 'address', 'phone', 'email']
+      const missingFields = requiredSchoolFields.filter(field => 
+        !schoolData[field] || schoolData[field].trim() === ''
+      )
+      
+      if (missingFields.length > 0) {
+        throw new Error(`Missing required school fields: ${missingFields.join(', ')}`)
+      }
+
+      // Validate required user fields
+      const requiredUserFields = ['email', 'full_name', 'phone']
+      const missingUserFields = requiredUserFields.filter(field => 
+        !userData[field] || userData[field].trim() === ''
+      )
+      
+      if (missingUserFields.length > 0) {
+        throw new Error(`Missing required user fields: ${missingUserFields.join(', ')}`)
+      }
+
+      // First create the school using direct insert with all required fields
       console.log('Step 1: Creating school record...')
       const { data: school, error: schoolError } = await supabase
         .from('schools')
         .insert({
-          name: schoolData.name,
-          address: schoolData.address || null,
-          phone: schoolData.phone || null,
-          email: schoolData.email || null
+          name: schoolData.name.trim(),
+          address: schoolData.address.trim(),
+          phone: schoolData.phone.trim(),
+          email: schoolData.email.trim()
         })
         .select('id')
         .single()
