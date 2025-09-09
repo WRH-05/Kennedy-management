@@ -728,8 +728,8 @@ BEGIN
     IF test_school_id IS NOT NULL THEN
         BEGIN
             SET LOCAL row_security = off;
-            INSERT INTO profiles (id, school_id, role, full_name)
-            VALUES (test_user_id, test_school_id, 'owner', 'Test Owner');
+            INSERT INTO profiles (id, school_id, role, full_name, phone)
+            VALUES (test_user_id, test_school_id, 'owner', 'Test Owner', '+1234567890');
             
             test_results := test_results || jsonb_build_object(
                 'profile_creation', jsonb_build_object(
