@@ -37,4 +37,4 @@ next-env.d.ts
 ./github/
 
 # logs
-browerConsole.logs
+browerConsole.log
