@@ -1,0 +1,23 @@
+content-scripts.js:1 Content Script Bridge: Sending response back to page context: Object
+page-133d18244fb32db0.js:1 LoginForm useEffect - User state: Object
+pgmjwmxslbrafalpqfjb.supabase.co/rest/v1/profiles?select=*%2Cschools%28id%2Cname%2Caddress%2Cphone%2Cemail%2Clogo_url%29&id=eq.61ff7bec-6b17-40d2-b97e-06490613e708:1  Failed to load resource: the server responded with a status of 400 ()
+pgmjwmxslbrafalpqfjb.supabase.co/rest/v1/profiles?select=*%2Cschools%28id%2Cname%2Caddress%2Cphone%2Cemail%2Clogo_url%29&id=eq.61ff7bec-6b17-40d2-b97e-06490613e708:1  Failed to load resource: the server responded with a status of 400 ()
+pgmjwmxslbrafalpqfjb.supabase.co/rest/v1/profiles?select=*%2Cschools%28id%2Cname%2Caddress%2Cphone%2Cemail%2Clogo_url%29&id=eq.61ff7bec-6b17-40d2-b97e-06490613e708:1  Failed to load resource: the server responded with a status of 400 ()
+pgmjwmxslbrafalpqfjb.supabase.co/rest/v1/profiles?select=*%2Cschools%28id%2Cname%2Caddress%2Cphone%2Cemail%2Clogo_url%29&id=eq.61ff7bec-6b17-40d2-b97e-06490613e708:1  Failed to load resource: the server responded with a status of 400 ()
+pgmjwmxslbrafalpqfjb.supabase.co/rest/v1/profiles?select=*%2Cschools%28id%2Cname%2Caddress%2Cphone%2Cemail%2Clogo_url%29&id=eq.61ff7bec-6b17-40d2-b97e-06490613e708:1  Failed to load resource: the server responded with a status of 400 ()
+pgmjwmxslbrafalpqfjb.supabase.co/rest/v1/profiles?select=*%2Cschools%28id%2Cname%2Caddress%2Cphone%2Cemail%2Clogo_url%29&id=eq.61ff7bec-6b17-40d2-b97e-06490613e708:1  Failed to load resource: the server responded with a status of 400 ()
+pgmjwmxslbrafalpqfjb.supabase.co/rest/v1/profiles?select=*%2Cschools%28id%2Cname%2Caddress%2Cphone%2Cemail%2Clogo_url%29&id=eq.61ff7bec-6b17-40d2-b97e-06490613e708:1  Failed to load resource: the server responded with a status of 400 ()
+pgmjwmxslbrafalpqfjb.supabase.co/rest/v1/profiles?select=*%2Cschools%28id%2Cname%2Caddress%2Cphone%2Cemail%2Clogo_url%29&id=eq.61ff7bec-6b17-40d2-b97e-06490613e708:1  Failed to load resource: the server responded with a status of 400 ()
+pgmjwmxslbrafalpqfjb.supabase.co/rest/v1/profiles?select=*%2Cschools%28id%2Cname%2Caddress%2Cphone%2Cemail%2Clogo_url%29&id=eq.61ff7bec-6b17-40d2-b97e-06490613e708:1  Failed to load resource: the server responded with a status of 400 ()
+page-19de4b27df737276.js:1 School creation error details:
+b @ page-19de4b27df737276.js:1
+page-19de4b27df737276.js:1 - Error message: School creation failed: Failed to retrieve user profile after creation
+b @ page-19de4b27df737276.js:1
+page-19de4b27df737276.js:1 - Error name: Error
+b @ page-19de4b27df737276.js:1
+page-19de4b27df737276.js:1 - Error stack: Error: School creation failed: Failed to retrieve user profile after creation
+    at Object.createSchoolAndOwner (https://kennedyerp.vercel.app/_next/static/chunks/app/page-31d2d4a17d1efa2c.js:1:12986)
+    at async b (https://kennedyerp.vercel.app/_next/static/chunks/app/auth/create-school/page-19de...
+b @ page-19de4b27df737276.js:1
+page-19de4b27df737276.js:1 - Full error object: Object
+b @ page-19de4b27df737276.js:1
