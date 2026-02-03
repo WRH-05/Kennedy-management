@@ -143,9 +143,7 @@ export const authService = {
   // Expected schoolData: { name, address, phone, email } - all required by database
   // Expected userData: { email, full_name, phone } - all required
   async createSchoolAndOwner(schoolData, userData, password) {
-    console.log('Starting school creation process...')
-    console.log('School data:', schoolData)
-    console.log('User data:', { email: userData.email, full_name: userData.full_name, phone: userData.phone })
+    log('Starting school creation process...')
     
     try {
       // Validate required school fields (per database schema requirements)
@@ -168,24 +166,51 @@ export const authService = {
         throw new Error(`Missing required user fields: ${missingUserFields.join(', ')}`)
       }
 
-      // First create the school using direct insert with all required fields
-      log('Creating school record...')
-      const { data: school, error: schoolError } = await supabase
-        .from('schools')
-        .insert({
-          name: schoolData.name.trim(),
-          address: schoolData.address.trim(),
-          phone: schoolData.phone.trim(),
-          email: schoolData.email.trim()
+      // Use the SECURITY DEFINER function to create school (bypasses RLS)
+      log('Creating school via RPC function...')
+      const { data: schoolId, error: schoolError } = await supabase
+        .rpc('create_school_for_owner', {
+          p_school_name: schoolData.name.trim(),
+          p_school_address: schoolData.address.trim(),
+          p_school_phone: schoolData.phone.trim(),
+          p_school_email: schoolData.email.trim()
         })
-        .select('id')
-        .single()
 
       if (schoolError) {
+        console.error('School creation failed:', schoolError)
         throw schoolError
       }
 
-      log('School created:', school.id)
+      if (!schoolId) {
+        throw new Error('School creation returned no ID')
+      }
+
+      log('School created:', schoolId)
+
+      // Now sign up the user with school_id in metadata
+      log('Creating user account...')
+      const { data: authData, error: authError } = await supabase.auth.signUp({
+        email: userData.email,
+        password,
+        options: {
+          emailRedirectTo: `${window.location.origin}/auth/callback`,
+          data: {
+            is_owner_signup: 'true',
+            school_id: schoolId,
+            full_name: userData.full_name,
+            phone: userData.phone
+          }
+        }
+      })
+
+      if (authError) {
+        // If user creation fails, we should clean up the school
+        // But since we might not have permissions, just throw the error
+        console.error('User signup failed:', authError)
+        throw authError
+      }
+
+      log('User created:', authData.user?.id)
 
       // Wait for the trigger to complete profile creation
       let profile = null
@@ -193,7 +218,6 @@ export const authService = {
       const maxAttempts = 8
 
       while (!profile && attempts < maxAttempts) {
-        // Exponential backoff: 100ms, 200ms, 400ms, 800ms, 1600ms, etc.
         const delay = Math.min(100 * Math.pow(2, attempts), 2000)
         await new Promise(resolve => setTimeout(resolve, delay))
         
@@ -227,7 +251,7 @@ export const authService = {
         const { data: manualResult, error: manualError } = await supabase
           .rpc('create_owner_profile_manual', {
             p_user_id: authData.user.id,
-            p_school_id: school.id,
+            p_school_id: schoolId,
             p_full_name: userData.full_name,
             p_phone: userData.phone
           })
@@ -242,7 +266,7 @@ export const authService = {
                 full_name: userData.full_name,
                 phone: userData.phone || null,
                 role: 'owner',
-                school_id: school.id,
+                school_id: schoolId,
                 is_active: true
               })
               .select(`
@@ -298,8 +322,8 @@ export const authService = {
         }
       }
 
-      log('School and owner created:', school.id)
-      return { school, user: authData.user, profile }
+      log('School and owner created:', schoolId)
+      return { school: { id: schoolId }, user: authData.user, profile }
     } catch (error) {
       const errorMessage = error?.message || error?.details || 'Failed to create school and owner'
       throw new Error(`School creation failed: ${errorMessage}`)
