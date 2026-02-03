@@ -3,107 +3,133 @@
 ## System Overview
 Multi-tenant SaaS platform for educational institutions. Each school operates as isolated tenant with complete data separation and role-based access control.
 
-**Technology Stack:** Next.js 15.2.4, React 19, TypeScript, Supabase PostgreSQL, shadcn/ui
-**Authentication:** Email confirmation required, invitation-based registration, role hierarchy: `owner > manager > receptionist`
+**Stack:** Next.js 15.2.4, React 19, TypeScript, Supabase PostgreSQL, shadcn/ui  
+**Roles:** `owner > manager > receptionist` (hierarchical permissions)
 
-## Critical Architecture
+## Architecture - Three-Layer Service Pattern
 
-**Service Layer (NEVER bypass):**
+```
+Components → appDataService.js → databaseService.js → Supabase
+     ↑              ↑                    ↑
+  useAuth()    Service exports    getCurrentUserSchoolId()
+```
+
+**CRITICAL: Components must NEVER import Supabase directly.**
+
 ```javascript
-// Components: Use appDataService only
-import { studentService } from "@/services/appDataService"  
+// CORRECT - Components use appDataService
+import { studentService } from "@/services/appDataService"
+const students = await studentService.getAllStudents()
 
-// Services: Use relative paths to Supabase
-import { supabase } from '../lib/supabase'
-
-// Multi-tenant security: Every operation auto-injects school_id
-const schoolId = await getCurrentUserSchoolId()
-return data || []  // Always defensive programming
+// WRONG - Never do this in components
+import { supabase } from "@/lib/supabase"  // FORBIDDEN
 ```
 
-**Database Schema:**
-- `db.sql` - Production-ready, consolidated system (DO NOT MODIFY - 855 lines, complete multi-tenant setup)
-- Core tables: `schools`, `profiles`, `invitations` (auth), `students`, `teachers`, `courses` (business)
-- RLS policies enforce `school_id` filtering automatically - never bypass service layer
-- Extensions: `uuid-ossp`, role enum: `owner > manager > receptionist`
+**Multi-tenant security is automatic:**
+- `databaseService.js` injects `school_id` into ALL queries via `getCurrentUserSchoolId()`
+- Database RLS policies provide secondary enforcement
+- `db.sql` contains production-ready schema (965 lines) - DO NOT MODIFY
 
-**Authentication Flow:**
-1. Owner: `/auth/create-school` → email confirmation → `/manager`
-2. Invitations: `/auth/signup?token=X&email=Y` → email confirmation → role-based redirect  
-3. Auto-redirects: `owner/manager` → `/manager`, `receptionist` → `/receptionist`
-4. Session managed by `useSessionManager` hook with 3s debouncing
+## Authentication Flow
 
-**Key Service Boundaries:**
+**Owner Registration:** `/auth/create-school`
+1. Create school via `supabase.rpc('create_school_for_owner', {...})` - bypasses RLS
+2. Sign up user with `is_owner_signup: 'true'` in metadata
+3. Database trigger creates profile automatically
+4. Redirect to email confirmation → `/manager`
+
+**Invited User:** `/auth/signup?token=X&email=Y`
+1. Validate invitation token
+2. Sign up with `invitation_token` in metadata
+3. Trigger assigns role from invitation → role-based redirect
+
+**Session Management:**
 ```typescript
-// appDataService.js - Main API (components import from here)
-export const { studentService, teacherService, courseService } = appDataService
+// useSessionManager.ts - Centralized session with debouncing
+const { sessionData, isValidating, refreshSession } = useSessionManager()
 
-// databaseService.js - Direct Supabase operations (services use this)
-async function getCurrentUserSchoolId() // Multi-tenant security
-
-// authService.js - Authentication operations
-await authService.getCurrentUser() // Returns user + profile + school
+// AuthContext.tsx - Components use this
+const { user, hasRole, canAccess, signIn, signOut } = useAuth()
 ```
 
-## Development Patterns
+## Required Patterns
 
-**Required Patterns:**
-```typescript
-// Role-based access with useAuth hook
-const { user, hasRole, canAccess } = useAuth()
-if (!hasRole(['owner', 'manager'])) return null
-
-// AuthGuard wrapper for page protection
+**Page Protection:**
+```tsx
+// Wrap protected pages with AuthGuard
 <AuthGuard requiredRoles={['owner', 'manager']}>
-  <FinancialComponent />
+  <ManagerDashboard />
 </AuthGuard>
+```
 
-// Multi-parallel loading pattern (see StudentsTab.tsx)
-const [students, teachers] = await Promise.all([
+**Role Checking:**
+```typescript
+const { hasRole, canAccess } = useAuth()
+if (!hasRole(['owner', 'manager'])) return null
+if (!canAccess('payments')) return <AccessDenied />
+```
+
+**Parallel Data Loading (see StudentsTab.tsx):**
+```typescript
+const [students, teachers, courses] = await Promise.all([
   studentService.getAllStudents(),
-  teacherService.getAllTeachers()
+  teacherService.getAllTeachers(),
+  courseService.getAllCourseInstances()
 ])
 ```
 
-**Session Management Pattern:**
+**Defensive Programming:**
 ```typescript
-// useSessionManager.ts - Global session with validation debouncing
-const { sessionData, isValidating, refreshSession } = useSessionManager()
-// AuthContext.tsx wraps this for components
-const { user, loading, signIn, signOut } = useAuth()
+return data || []           // Never return null from services
+user?.profile?.role         // Always use optional chaining
+const items = data ?? []    // Nullish coalescing for defaults
 ```
 
-**Critical Rules:**
-- NEVER import Supabase directly in components - use appDataService
-- NEVER modify `db.sql` (production-ready with RLS policies)
-- ALL operations auto-filter by `school_id` via getCurrentUserSchoolId()
-- ALL auth flows require email confirmation before profile access
-- USE defensive programming: `data || []`, `user?.profile?.role`
-- Token cleanup utility runs in development for debugging
+## Project Structure
 
-**Build Configuration:**
-- `next.config.mjs`: TS/ESLint errors ignored for rapid iteration
-- Images unoptimized, development-focused configuration
-- Development session debugging enabled via DEBUG_SESSION
+```
+/app                    - Next.js App Router (role-based routing)
+  /auth/*               - Authentication pages
+  /manager/page.tsx     - Owner/Manager dashboard  
+  /receptionist/page.tsx - Receptionist dashboard
+  /student/[id]/        - Student detail pages
+/components
+  /auth/AuthGuard.tsx   - Route protection component
+  /tabs/*               - Feature tab components (StudentsTab, etc.)
+  /ui/*                 - shadcn/ui components
+/services
+  appDataService.js     - Public API (components import from here)
+  databaseService.js    - Supabase operations with school_id injection
+  authService.js        - Authentication (signIn, signUp, createSchool)
+/contexts/AuthContext.tsx - Global auth state
+/hooks/useSessionManager.ts - Session validation with debouncing
+/utils/api-error-handler.ts - Standardized error handling
+```
 
-**Project Structure Patterns:**
-- `/app` - Next.js 14 App Router (role-based page routing)
-- `/components/tabs/` - Feature components (StudentsTab, TeachersTab, etc.)
-- `/components/auth/` - Auth-related components (AuthGuard, forms)
-- `/services/` - 3-layer service architecture (app → database → supabase)
-- `/contexts/AuthContext.tsx` - Global auth state with session management
+## Database Functions (use via RPC)
 
-**Quick Start:**
+```typescript
+// School creation (bypasses RLS for anonymous users)
+supabase.rpc('create_school_for_owner', { p_school_name, p_school_address, p_school_phone, p_school_email })
+
+// Session validation
+supabase.rpc('get_current_user_session')  // Returns { authenticated, profile, school, permissions }
+
+// Profile fallback creation
+supabase.rpc('create_owner_profile_manual', { p_user_id, p_school_id, p_full_name, p_phone })
+```
+
+## Commands
+
 ```powershell
-npm install
-# Set NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY in .env.local
-npm run dev    # Port 3000, session debugging enabled
-npm run build  # TS/ESLint errors ignored for rapid iteration
+npm install             # Install dependencies
+npm run dev             # Development server (port 3000)
+npm run build           # Production build (TS/ESLint errors ignored)
 ```
-
-System is production-ready with secure multi-tenant architecture, comprehensive RLS policies, and automatic role-based access control. Focus on frontend validation and UX - database security is handled automatically.
 
 ## Code Standards
-- Never use emojis in code or commit messages - remove if found
-- Use defensive programming patterns throughout
-- All async operations should handle errors gracefully
+
+- No emojis in code or commit messages
+- Use `getErrorMessage()` from `/utils/api-error-handler.ts` for user-facing errors
+- Conditional logging only: `const DEBUG = process.env.NODE_ENV === 'development'`
+- All async operations wrapped in try/catch with graceful fallbacks
