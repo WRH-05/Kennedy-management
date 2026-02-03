@@ -1,6 +1,11 @@
 // Authentication Service for Kennedy Management System
 import { supabase } from '../lib/supabase'
 
+// Conditional debug logging
+const DEBUG = process.env.NODE_ENV === 'development'
+const log = (...args) => DEBUG && console.log(...args)
+const warn = (...args) => DEBUG && console.warn(...args)
+
 export const authService = {
   // Get current user session
   async getCurrentSession() {
@@ -9,7 +14,6 @@ export const authService = {
       if (error) throw error
       return session
     } catch (error) {
-      console.error('Error getting session:', error)
       return null
     }
   },
@@ -17,26 +21,14 @@ export const authService = {
   // Get current user with profile and school info
   async getCurrentUser() {
     try {
-      console.log('Getting current user...')
-      
-      // Step 1: Get the authenticated user
       const { data: { user }, error: userError } = await supabase.auth.getUser()
       
-      if (userError) {
-        console.error('Auth error:', userError)
-        return null
-      }
-      
-      if (!user) {
-        console.log('No authenticated user found')
+      if (userError || !user) {
         return null
       }
 
-      console.log('User found:', user.id, 'Email confirmed:', !!user.email_confirmed_at)
-
-      // Step 2: Check email confirmation status
+      // Check email confirmation status
       if (!user.email_confirmed_at) {
-        console.log('User email not confirmed yet')
         return {
           ...user,
           profile: null,
@@ -44,9 +36,7 @@ export const authService = {
         }
       }
 
-      // Step 3: Get user profile - SIMPLIFIED without timeout
-      console.log('Fetching profile for user:', user.id)
-      
+      // Get user profile
       const { data: profile, error: profileError } = await supabase
         .from('profiles')
         .select(`
@@ -64,15 +54,6 @@ export const authService = {
         .single()
 
       if (profileError) {
-        console.error('⚠️ Profile fetch error:', {
-          message: profileError.message,
-          code: profileError.code,
-          details: profileError.details,
-          hint: profileError.hint,
-          userId: user.id
-        })
-        
-        // Return user without profile instead of failing
         return {
           ...user,
           profile: null,
@@ -81,20 +62,17 @@ export const authService = {
       }
 
       if (!profile) {
-        console.warn('⚠️ No profile data returned')
         return {
           ...user,
           profile: null
         }
       }
 
-      console.log('Profile found:', profile.id, 'School:', profile.school_id, 'Role:', profile.role)
       return {
         ...user,
         profile
       }
     } catch (error) {
-      console.error('Unexpected error in getCurrentUser:', error)
       return null
     }
   },
@@ -131,7 +109,6 @@ export const authService = {
       if (error) throw error
       return { data, invitation }
     } catch (error) {
-      console.error('Error signing up:', error)
       throw error
     }
   },
@@ -147,7 +124,6 @@ export const authService = {
       if (error) throw error
       return data
     } catch (error) {
-      console.error('Error signing in:', error)
       throw error
     }
   },
@@ -159,7 +135,6 @@ export const authService = {
       if (error) throw error
       return true
     } catch (error) {
-      console.error('Error signing out:', error)
       throw error
     }
   },
@@ -194,7 +169,7 @@ export const authService = {
       }
 
       // First create the school using direct insert with all required fields
-      console.log('Step 1: Creating school record...')
+      log('Creating school record...')
       const { data: school, error: schoolError } = await supabase
         .from('schools')
         .insert({
@@ -207,39 +182,12 @@ export const authService = {
         .single()
 
       if (schoolError) {
-        console.error('School creation failed:', schoolError)
         throw schoolError
       }
 
-      console.log('School created successfully:', school.id)
-
-      // Sign up the owner - the trigger function will handle profile creation automatically
-      console.log('Step 2: Creating user account...')
-      const { data: authData, error: authError } = await supabase.auth.signUp({
-        email: userData.email,
-        password,
-        options: {
-          emailRedirectTo: `${window.location.origin}/auth/callback`,
-          data: {
-            full_name: userData.full_name,
-            phone: userData.phone,
-            is_owner_signup: true,
-            school_id: school.id
-          }
-        }
-      })
-
-      if (authError) {
-        console.error('User signup failed:', authError)
-        // If user creation fails, clean up the school
-        console.log('Cleaning up school record...')
-        await supabase.from('schools').delete().eq('id', school.id)
-        throw authError
-      }
-      console.log('User created successfully:', authData.user.id)
+      log('School created:', school.id)
 
       // Wait for the trigger to complete profile creation
-      console.log('Step 3: Waiting for profile creation...')
       let profile = null
       let attempts = 0
       const maxAttempts = 8
@@ -249,7 +197,6 @@ export const authService = {
         const delay = Math.min(100 * Math.pow(2, attempts), 2000)
         await new Promise(resolve => setTimeout(resolve, delay))
         
-        console.log(`Attempt ${attempts + 1}/${maxAttempts}: Checking for profile... (waiting ${delay}ms)`)
         const { data: profileData, error: profileError } = await supabase
           .from('profiles')
           .select(`
@@ -268,18 +215,14 @@ export const authService = {
 
         if (!profileError && profileData) {
           profile = profileData
-          console.log('Profile found via trigger!')
           break
-        } else if (profileError) {
-          console.log('⚠️ Profile query error:', profileError.message)
         }
         
         attempts++
-        console.log(`Waiting for profile creation, attempt ${attempts}/${maxAttempts}`)
       }
 
       if (!profile) {
-        console.warn('Profile not created by trigger, creating manually...')
+        warn('Profile not created by trigger, creating manually...')
         // Use the helper function to create profile manually (bypasses RLS)
         const { data: manualResult, error: manualError } = await supabase
           .rpc('create_owner_profile_manual', {
@@ -290,10 +233,7 @@ export const authService = {
           })
 
         if (manualError) {
-          console.error('Failed to create profile manually via RPC:', manualError)
-          
           // Ultimate fallback: Direct profile insertion
-          console.warn('Attempting direct profile creation as final fallback...')
           try {
             const { data: directProfile, error: directError } = await supabase
               .from('profiles')
@@ -319,23 +259,17 @@ export const authService = {
               .single()
               
             if (directError) {
-              console.error('Direct profile creation also failed:', directError)
               throw new Error('All profile creation methods failed')
             }
             
-            console.log('Profile created via direct insertion')
             profile = directProfile
           } catch (directInsertError) {
-            console.error('Direct profile insertion failed:', directInsertError)
             throw new Error('Failed to create user profile after multiple attempts')
           }
         }
         
-        // If we used RPC method and it succeeded, get the profile data and fetch complete info
+        // If we used RPC method and it succeeded, get the profile data
         if (!profile && manualResult && manualResult.success) {
-          console.log('Profile created manually via RPC:', manualResult.profile)
-          
-          // Fetch the complete profile with school data
           const { data: profileData, error: profileError } = await supabase
             .from('profiles')
             .select(`
@@ -353,38 +287,20 @@ export const authService = {
             .single()
             
           if (profileError) {
-            console.error('Failed to fetch created profile:', profileError)
             throw new Error('Failed to retrieve user profile after creation')
           }
           
           profile = profileData
         }
         
-        // Final check - if we still don't have a profile, something went very wrong
         if (!profile) {
           throw new Error('Profile creation failed through all methods')
         }
       }
 
-      console.log('School and owner created successfully:', { school: school.id, user: authData.user.id, profile: profile.id })
+      log('School and owner created:', school.id)
       return { school, user: authData.user, profile }
     } catch (error) {
-      // Enhanced error logging for better debugging
-      console.error('Error creating school and owner:')
-      console.error('- Error message:', error?.message || 'No message')
-      console.error('- Error details:', error?.details || 'No details')
-      console.error('- Error hint:', error?.hint || 'No hint')
-      console.error('- Error code:', error?.code || 'No code')
-      console.error('- Full error object:', {
-        message: error?.message,
-        details: error?.details,
-        hint: error?.hint,
-        code: error?.code,
-        name: error?.name,
-        stack: error?.stack?.substring(0, 200) + '...' // Truncate stack trace
-      })
-      
-      // Create a more descriptive error message
       const errorMessage = error?.message || error?.details || 'Failed to create school and owner'
       throw new Error(`School creation failed: ${errorMessage}`)
     }
@@ -438,7 +354,6 @@ export const authService = {
       
       return { invitation, inviteLink }
     } catch (error) {
-      console.error('Error sending invitation:', error)
       throw error
     }
   },
@@ -463,7 +378,6 @@ export const authService = {
       if (error) throw error
       return data || []
     } catch (error) {
-      console.error('Error getting invitations:', error)
       return []
     }
   },
@@ -489,7 +403,6 @@ export const authService = {
       if (error) throw error
       return data
     } catch (error) {
-      console.error('Error verifying invitation:', error)
       return null
     }
   },
@@ -510,7 +423,6 @@ export const authService = {
       if (error) throw error
       return data
     } catch (error) {
-      console.error('Error updating profile:', error)
       throw error
     }
   },
@@ -535,7 +447,6 @@ export const authService = {
       if (error) throw error
       return data || []
     } catch (error) {
-      console.error('Error getting school users:', error)
       return []
     }
   },
@@ -559,7 +470,6 @@ export const authService = {
       if (error) throw error
       return data
     } catch (error) {
-      console.error('Error updating user role:', error)
       throw error
     }
   },
@@ -583,7 +493,6 @@ export const authService = {
       if (error) throw error
       return data
     } catch (error) {
-      console.error('Error deactivating user:', error)
       throw error
     }
   },

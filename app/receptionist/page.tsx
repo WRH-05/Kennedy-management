@@ -10,14 +10,16 @@ import { Badge } from "@/components/ui/badge"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { LogOut, Search } from "lucide-react"
 import { studentService, teacherService, courseService } from "@/services/appDataService"
+import { useAuth } from "@/contexts/AuthContext"
+import AuthGuard from "@/components/auth/AuthGuard"
 import StudentsTab from "@/components/tabs/StudentsTab"
 import TeachersTab from "@/components/tabs/TeachersTab"
 import CoursesTab from "@/components/tabs/CoursesTab"
 import ArchiveTab from "@/components/tabs/ArchiveTab"
 
-export default function ReceptionistDashboard() {
+function ReceptionistDashboardContent() {
   const router = useRouter()
-  const [user, setUser] = useState<any>(null)
+  const { user, signOut } = useAuth()
   const [students, setStudents] = useState<any[]>([])
   const [teachers, setTeachers] = useState<any[]>([])
   const [courses, setCourses] = useState<any[]>([])
@@ -25,20 +27,6 @@ export default function ReceptionistDashboard() {
   const [searchResults, setSearchResults] = useState<any[]>([])
   const [showSearchResults, setShowSearchResults] = useState(false)
   const [loading, setLoading] = useState(true)
-
-  useEffect(() => {
-    const userData = localStorage.getItem("user")
-    if (userData) {
-      const parsedUser = JSON.parse(userData)
-      if (parsedUser.role !== "receptionist") {
-        router.push("/")
-        return
-      }
-      setUser(parsedUser)
-    } else {
-      router.push("/")
-    }
-  }, [router])
 
   useEffect(() => {
     const loadData = async () => {
@@ -96,11 +84,6 @@ export default function ReceptionistDashboard() {
     }
   }, [searchQuery, students, teachers, courses])
 
-  const handleLogout = () => {
-    localStorage.removeItem("user")
-    router.push("/")
-  }
-
   const handleSearchResultClick = (result: any) => {
     if (result.type === "student") {
       router.push(`/student/${result.id}`)
@@ -113,7 +96,12 @@ export default function ReceptionistDashboard() {
     setShowSearchResults(false)
   }
 
-  if (!user || loading) return null
+  const handleSignOut = async () => {
+    await signOut()
+    router.push('/auth/login')
+  }
+
+  if (loading) return null
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -174,8 +162,8 @@ export default function ReceptionistDashboard() {
             </div>
 
             <div className="flex items-center space-x-4">
-              <span className="text-sm text-gray-600">Welcome, {user.username}</span>
-              <Button variant="outline" size="sm" onClick={handleLogout}>
+              <span className="text-sm text-gray-600">Welcome, {user?.profile?.full_name || 'User'}</span>
+              <Button variant="outline" size="sm" onClick={handleSignOut}>
                 <LogOut className="h-4 w-4 mr-2" />
                 Logout
               </Button>
@@ -235,5 +223,14 @@ export default function ReceptionistDashboard() {
         </Tabs>
       </div>
     </div>
+  )
+}
+
+// Wrap with AuthGuard for proper authentication
+export default function ReceptionistDashboard() {
+  return (
+    <AuthGuard requiredRoles={['receptionist']}>
+      <ReceptionistDashboardContent />
+    </AuthGuard>
   )
 }

@@ -103,6 +103,37 @@ CREATE INDEX idx_invitations_expires ON invitations(expires_at) WHERE accepted_a
 -- STEP 4: CORE AUTHENTICATION FUNCTIONS
 -- ============================================================================
 
+-- Function to create a new school (called during owner registration)
+-- This function runs with elevated privileges to bypass RLS during school creation
+CREATE OR REPLACE FUNCTION create_school_for_owner(
+    p_school_name TEXT,
+    p_school_address TEXT,
+    p_school_phone TEXT,
+    p_school_email TEXT
+) RETURNS UUID
+SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE
+    new_school_id UUID;
+BEGIN
+    -- Insert school record with elevated privileges (bypasses RLS)
+    INSERT INTO schools (name, address, phone, email)
+    VALUES (p_school_name, p_school_address, p_school_phone, p_school_email)
+    RETURNING id INTO new_school_id;
+    
+    RETURN new_school_id;
+EXCEPTION
+    WHEN OTHERS THEN
+        -- Log the error and re-raise
+        RAISE LOG 'Error creating school for owner: %', SQLERRM;
+        RAISE;
+END;
+$$ LANGUAGE plpgsql;
+
+-- Grant execute permissions to anon and authenticated roles
+GRANT EXECUTE ON FUNCTION create_school_for_owner(TEXT, TEXT, TEXT, TEXT) TO anon, authenticated;
+
 -- Get current user's school_id (used in RLS policies) - descriptive name for clarity
 CREATE OR REPLACE FUNCTION get_current_user_school_id()
 RETURNS UUID AS $$
@@ -858,6 +889,7 @@ BEGIN
     SELECT COUNT(*) INTO functions_count
     FROM pg_proc 
     WHERE proname IN (
+        'create_school_for_owner',
         'get_current_user_school_id',
         'user_has_role', 
         'user_has_any_role',
@@ -896,7 +928,7 @@ BEGIN
     RAISE NOTICE '';
     
     IF (test_results->'components_check'->>'policies_created')::INTEGER >= 10 AND
-       (test_results->'components_check'->>'functions_created')::INTEGER >= 8 THEN
+       (test_results->'components_check'->>'functions_created')::INTEGER >= 9 THEN
         RAISE NOTICE 'SYSTEM STATUS: ✅ ALL TESTS PASSED - READY FOR PRODUCTION';
     ELSE
         RAISE NOTICE 'SYSTEM STATUS: ⚠️  Some components may be missing - check manually';

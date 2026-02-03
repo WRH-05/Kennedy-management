@@ -3,7 +3,7 @@
 import React, { createContext, useContext, useEffect, useState } from 'react'
 import { authService } from '@/services/authService'
 import { useSessionManager } from '@/hooks/useSessionManager'
-import { LoadingManager } from '@/components/LoadingManager'
+import { SessionResult } from '@/utils/supabase-session'
 
 interface User {
   id: string
@@ -41,6 +41,13 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined)
 
+// Permission map for role-based access
+const ROLE_PERMISSIONS: Record<string, string[]> = {
+  owner: ['*'],
+  manager: ['students', 'teachers', 'courses', 'payments', 'attendance', 'revenue', 'archives'],
+  receptionist: ['students', 'teachers', 'courses', 'attendance']
+}
+
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const { sessionData, isValidating, refreshSession } = useSessionManager()
   const [user, setUser] = useState<User | null>(null)
@@ -48,7 +55,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   // Convert session data to user format
   useEffect(() => {
     if (sessionData?.valid && sessionData.user && sessionData.profile) {
-      const formattedUser: User = {
+      setUser({
         id: sessionData.user.id,
         email: sessionData.user.email,
         needsEmailConfirmation: !sessionData.user.email_confirmed_at,
@@ -61,44 +68,32 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           avatar_url: sessionData.profile.avatar_url,
           schools: sessionData.school
         }
-      }
-      setUser(formattedUser)
+      })
     } else if (sessionData && !sessionData.valid) {
       setUser(null)
     }
   }, [sessionData])
 
   const signIn = async (email: string, password: string) => {
-    try {
-      const result = await authService.signIn(email, password)
-      
-      // Give a moment for auth state to update, then refresh our session
-      await new Promise(resolve => setTimeout(resolve, 1000))
-      refreshSession()
-      
-      return result
-    } catch (error) {
-      console.error('Auth error:', error)
-      throw error
-    }
+    const result = await authService.signIn(email, password)
+    // Wait briefly for auth state to update, then refresh
+    await new Promise(resolve => setTimeout(resolve, 500))
+    refreshSession()
+    return result
   }
 
   const signUp = async (email: string, password: string, token: string) => {
-    const result = await authService.signUp(email, password, token)
-    // Don't automatically check user - they need to confirm email first
-    return result
+    return await authService.signUp(email, password, token)
   }
 
   const signOut = async () => {
     await authService.signOut()
     setUser(null)
-    // Refresh session to clear state
-    setTimeout(() => refreshSession(), 500)
+    refreshSession()
   }
 
   const updateProfile = async (updates: any) => {
     const result = await authService.updateProfile(updates)
-    // Refresh session to get updated profile
     refreshSession()
     return result
   }
@@ -111,55 +106,102 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const canAccess = (resource: string): boolean => {
     if (!user?.profile?.role) return false
-    
-    const { role } = user.profile
-    
-    // Define access control rules
-    const permissions = {
-      // Owners can access everything
-      owner: ['*'],
-      
-      // Managers can access most things except user management
-      manager: [
-        'students', 'teachers', 'courses', 'payments', 
-        'attendance', 'revenue', 'archives'
-      ],
-      
-      // Receptionists have limited access
-      receptionist: [
-        'students', 'teachers', 'courses', 'attendance'
-      ]
-    }
-
-    const userPermissions = permissions[role] || []
-    
-    // Check if user has access to all resources or specific resource
-    return userPermissions.includes('*') || userPermissions.includes(resource)
+    const permissions = ROLE_PERMISSIONS[user.profile.role] || []
+    return permissions.includes('*') || permissions.includes(resource)
   }
 
-  const value = {
-    user,
-    loading: isValidating,
-    signIn,
-    signUp,
-    signOut,
-    updateProfile,
-    hasRole,
-    canAccess,
-    refreshSession
-  }
+  // Simplified loading state - only show loading on initial load
+  const isLoading = isValidating && sessionData === null
 
   return (
-    <AuthContext.Provider value={value}>
-      <LoadingManager 
-        sessionData={sessionData}
-        isValidating={isValidating}
-        refreshSession={refreshSession}
-      >
-        {children}
-      </LoadingManager>
+    <AuthContext.Provider value={{
+      user,
+      loading: isLoading,
+      signIn,
+      signUp,
+      signOut,
+      updateProfile,
+      hasRole,
+      canAccess,
+      refreshSession
+    }}>
+      {renderContent(sessionData, isLoading, refreshSession, children)}
     </AuthContext.Provider>
   )
+}
+
+// Render content based on session state
+function renderContent(
+  sessionData: SessionResult | null, 
+  isLoading: boolean,
+  refreshSession: () => void,
+  children: React.ReactNode
+) {
+  // Initial loading
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent mx-auto mb-4" />
+          <p className="text-gray-600">Loading...</p>
+        </div>
+      </div>
+    )
+  }
+
+  // Session error
+  if (sessionData?.error) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
+        <div className="max-w-md w-full text-center">
+          <p className="text-red-600 mb-4">Session error: {sessionData.error}</p>
+          <button 
+            onClick={() => refreshSession()}
+            className="px-4 py-2 bg-primary text-white rounded hover:bg-primary/90"
+          >
+            Retry
+          </button>
+        </div>
+      </div>
+    )
+  }
+
+  // Profile setup needed
+  if (sessionData?.needsProfileSetup) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
+        <div className="max-w-md w-full text-center">
+          <h2 className="text-2xl font-bold mb-4">Profile Setup Required</h2>
+          <p className="text-gray-600 mb-4">
+            Your account needs to be set up. Please contact your administrator.
+          </p>
+          <a href="/auth/login" className="text-primary hover:underline">
+            Back to Login
+          </a>
+        </div>
+      </div>
+    )
+  }
+
+  // Inactive profile
+  if (sessionData?.profileInactive) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
+        <div className="max-w-md w-full text-center">
+          <h2 className="text-2xl font-bold mb-4">Account Inactive</h2>
+          <p className="text-gray-600 mb-4">
+            Your account has been deactivated. Please contact your administrator.
+          </p>
+          <a href="/auth/login" className="text-primary hover:underline">
+            Back to Login
+          </a>
+        </div>
+      </div>
+    )
+  }
+
+  // Normal rendering
+  return <>{children}</>
 }
 
 export function useAuth() {

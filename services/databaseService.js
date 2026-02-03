@@ -258,17 +258,20 @@ export const teacherService = {
   // Update teacher
   async updateTeacher(id, updatedData) {
     try {
+      const schoolId = await getCurrentUserSchoolId()
+      if (!schoolId) throw new Error('No school access')
+
       const { data, error } = await supabase
         .from('teachers')
         .update(updatedData)
         .eq('id', id)
+        .eq('school_id', schoolId)
         .select()
         .single()
       
       if (error) throw error
       return data
     } catch (error) {
-      // Error handled
       throw error
     }
   },
@@ -276,17 +279,20 @@ export const teacherService = {
   // Delete teacher
   async deleteTeacher(id) {
     try {
+      const schoolId = await getCurrentUserSchoolId()
+      if (!schoolId) throw new Error('No school access')
+
       const { data, error } = await supabase
         .from('teachers')
         .delete()
         .eq('id', id)
+        .eq('school_id', schoolId)
         .select()
         .single()
       
       if (error) throw error
       return data
     } catch (error) {
-      // Error handled
       throw error
     }
   },
@@ -294,6 +300,9 @@ export const teacherService = {
   // Archive teacher
   async archiveTeacher(id) {
     try {
+      const schoolId = await getCurrentUserSchoolId()
+      if (!schoolId) throw new Error('No school access')
+
       const { data, error } = await supabase
         .from('teachers')
         .update({ 
@@ -301,13 +310,13 @@ export const teacherService = {
           archived_date: new Date().toISOString() 
         })
         .eq('id', id)
+        .eq('school_id', schoolId)
         .select()
         .single()
       
       if (error) throw error
       return data
     } catch (error) {
-      // Error handled
       throw error
     }
   },
@@ -315,6 +324,9 @@ export const teacherService = {
   // Unarchive teacher
   async unarchiveTeacher(id) {
     try {
+      const schoolId = await getCurrentUserSchoolId()
+      if (!schoolId) throw new Error('No school access')
+
       const { data, error } = await supabase
         .from('teachers')
         .update({ 
@@ -322,13 +334,13 @@ export const teacherService = {
           archived_date: null 
         })
         .eq('id', id)
+        .eq('school_id', schoolId)
         .select()
         .single()
       
       if (error) throw error
       return data
     } catch (error) {
-      // Error handled
       throw error
     }
   },
@@ -339,7 +351,10 @@ export const courseService = {
   // Get all course instances (excluding archived unless specified)
   async getAllCourseInstances(includeArchived = false) {
     try {
-      let query = supabase.from('course_instances').select('*')
+      const schoolId = await getCurrentUserSchoolId()
+      if (!schoolId) throw new Error('No school access')
+
+      let query = supabase.from('course_instances').select('*').eq('school_id', schoolId)
       
       if (!includeArchived) {
         query = query.eq('archived', false)
@@ -350,7 +365,6 @@ export const courseService = {
       if (error) throw error
       return data || []
     } catch (error) {
-      // Error handled
       throw error
     }
   },
@@ -358,16 +372,19 @@ export const courseService = {
   // Get course instance by ID
   async getCourseInstanceById(id) {
     try {
+      const schoolId = await getCurrentUserSchoolId()
+      if (!schoolId) throw new Error('No school access')
+
       const { data, error } = await supabase
         .from('course_instances')
         .select('*')
         .eq('id', id)
+        .eq('school_id', schoolId)
         .single()
       
       if (error) throw error
       return data
     } catch (error) {
-      // Error handled
       throw error
     }
   },
@@ -375,17 +392,20 @@ export const courseService = {
   // Get courses by teacher ID
   async getCoursesByTeacherId(teacherId) {
     try {
+      const schoolId = await getCurrentUserSchoolId()
+      if (!schoolId) throw new Error('No school access')
+
       const { data, error } = await supabase
         .from('course_instances')
         .select('*')
         .eq('teacher_id', teacherId)
+        .eq('school_id', schoolId)
         .eq('archived', false)
         .order('created_at', { ascending: false })
       
       if (error) throw error
       return data || []
     } catch (error) {
-      // Error handled
       throw error
     }
   },
@@ -393,9 +413,13 @@ export const courseService = {
   // Get courses by student ID
   async getCoursesByStudentId(studentId) {
     try {
+      const schoolId = await getCurrentUserSchoolId()
+      if (!schoolId) throw new Error('No school access')
+
       const { data, error } = await supabase
         .from('course_instances')
         .select('*')
+        .eq('school_id', schoolId)
         .contains('student_ids', [studentId])
         .eq('archived', false)
         .order('created_at', { ascending: false })
@@ -411,16 +435,18 @@ export const courseService = {
   // Add new course instance
   async addCourseInstance(instanceData) {
     try {
+      const schoolId = await getCurrentUserSchoolId()
+      if (!schoolId) throw new Error('No school access')
+
       const { data, error } = await supabase
         .from('course_instances')
-        .insert([instanceData])
+        .insert([{ ...instanceData, school_id: schoolId }])
         .select()
         .single()
       
       if (error) throw error
       return data
     } catch (error) {
-      // Error handled
       throw error
     }
   },
@@ -428,17 +454,20 @@ export const courseService = {
   // Update course instance
   async updateCourseInstance(id, updatedData) {
     try {
+      const schoolId = await getCurrentUserSchoolId()
+      if (!schoolId) throw new Error('No school access')
+
       const { data, error } = await supabase
         .from('course_instances')
         .update(updatedData)
         .eq('id', id)
+        .eq('school_id', schoolId)
         .select()
         .single()
       
       if (error) throw error
       return data
     } catch (error) {
-      // Error handled
       throw error
     }
   },
@@ -446,6 +475,9 @@ export const courseService = {
   // Archive course
   async archiveCourse(id) {
     try {
+      const schoolId = await getCurrentUserSchoolId()
+      if (!schoolId) throw new Error('No school access')
+
       const { data, error } = await supabase
         .from('course_instances')
         .update({ 
@@ -453,13 +485,13 @@ export const courseService = {
           archived_date: new Date().toISOString() 
         })
         .eq('id', id)
+        .eq('school_id', schoolId)
         .select()
         .single()
       
       if (error) throw error
       return data
     } catch (error) {
-      // Error handled
       throw error
     }
   },
@@ -467,6 +499,9 @@ export const courseService = {
   // Unarchive course
   async unarchiveCourse(id) {
     try {
+      const schoolId = await getCurrentUserSchoolId()
+      if (!schoolId) throw new Error('No school access')
+
       const { data, error } = await supabase
         .from('course_instances')
         .update({ 
@@ -474,13 +509,13 @@ export const courseService = {
           archived_date: null 
         })
         .eq('id', id)
+        .eq('school_id', schoolId)
         .select()
         .single()
       
       if (error) throw error
       return data
     } catch (error) {
-      // Error handled
       throw error
     }
   },
@@ -491,15 +526,18 @@ export const archiveService = {
   // Get all archive requests
   async getAllArchiveRequests() {
     try {
+      const schoolId = await getCurrentUserSchoolId()
+      if (!schoolId) throw new Error('No school access')
+
       const { data, error } = await supabase
         .from('archive_requests')
         .select('*')
+        .eq('school_id', schoolId)
         .order('created_at', { ascending: false })
       
       if (error) throw error
       return data || []
     } catch (error) {
-      // Error handled
       throw error
     }
   },
@@ -507,16 +545,18 @@ export const archiveService = {
   // Create archive request
   async createArchiveRequest(requestData) {
     try {
+      const schoolId = await getCurrentUserSchoolId()
+      if (!schoolId) throw new Error('No school access')
+
       const { data, error } = await supabase
         .from('archive_requests')
-        .insert([requestData])
+        .insert([{ ...requestData, school_id: schoolId }])
         .select()
         .single()
       
       if (error) throw error
       return data
     } catch (error) {
-      // Error handled
       throw error
     }
   },
@@ -524,6 +564,9 @@ export const archiveService = {
   // Update archive request status
   async updateArchiveRequestStatus(id, status, approverName = null) {
     try {
+      const schoolId = await getCurrentUserSchoolId()
+      if (!schoolId) throw new Error('No school access')
+
       const updateData = {
         status,
         ...(approverName && status === 'approved' && {
@@ -536,13 +579,13 @@ export const archiveService = {
         .from('archive_requests')
         .update(updateData)
         .eq('id', id)
+        .eq('school_id', schoolId)
         .select()
         .single()
       
       if (error) throw error
       return data
     } catch (error) {
-      // Error handled
       throw error
     }
   },
@@ -553,15 +596,18 @@ export const paymentService = {
   // Get all teacher payouts
   async getAllPayouts() {
     try {
+      const schoolId = await getCurrentUserSchoolId()
+      if (!schoolId) throw new Error('No school access')
+
       const { data, error } = await supabase
         .from('teacher_payouts')
         .select('*')
+        .eq('school_id', schoolId)
         .order('created_at', { ascending: false })
       
       if (error) throw error
       return data || []
     } catch (error) {
-      // Error handled
       throw error
     }
   },
@@ -569,6 +615,9 @@ export const paymentService = {
   // Update payout status
   async updatePayoutStatus(id, status, approverName = null) {
     try {
+      const schoolId = await getCurrentUserSchoolId()
+      if (!schoolId) throw new Error('No school access')
+
       const updateData = {
         status,
         ...(approverName && status === 'approved' && {
@@ -581,13 +630,13 @@ export const paymentService = {
         .from('teacher_payouts')
         .update(updateData)
         .eq('id', id)
+        .eq('school_id', schoolId)
         .select()
         .single()
       
       if (error) throw error
       return data
     } catch (error) {
-      // Error handled
       throw error
     }
   },
@@ -595,15 +644,18 @@ export const paymentService = {
   // Get revenue data
   async getRevenueData() {
     try {
+      const schoolId = await getCurrentUserSchoolId()
+      if (!schoolId) throw new Error('No school access')
+
       const { data, error } = await supabase
         .from('revenue')
         .select('*')
+        .eq('school_id', schoolId)
         .order('created_at', { ascending: false })
       
       if (error) throw error
       return data || []
     } catch (error) {
-      // Error handled
       throw error
     }
   },
@@ -611,16 +663,19 @@ export const paymentService = {
   // Get pending payouts
   async getPendingPayouts() {
     try {
+      const schoolId = await getCurrentUserSchoolId()
+      if (!schoolId) throw new Error('No school access')
+
       const { data, error } = await supabase
         .from('teacher_payouts')
         .select('*')
+        .eq('school_id', schoolId)
         .eq('status', 'pending')
         .order('created_at', { ascending: false })
       
       if (error) throw error
       return data || []
     } catch (error) {
-      // Error handled
       throw error
     }
   },
@@ -628,16 +683,19 @@ export const paymentService = {
   // Get student payment history
   async getStudentPaymentHistory(studentId) {
     try {
+      const schoolId = await getCurrentUserSchoolId()
+      if (!schoolId) throw new Error('No school access')
+
       const { data, error } = await supabase
         .from('student_payments')
         .select('*')
         .eq('student_id', studentId)
+        .eq('school_id', schoolId)
         .order('payment_date', { ascending: false })
       
       if (error) throw error
       return data || []
     } catch (error) {
-      // Error handled
       throw error
     }
   },
@@ -645,16 +703,19 @@ export const paymentService = {
   // Get professor payment history
   async getProfessorPaymentHistory(professorId) {
     try {
+      const schoolId = await getCurrentUserSchoolId()
+      if (!schoolId) throw new Error('No school access')
+
       const { data, error } = await supabase
         .from('teacher_payouts')
         .select('*')
         .eq('teacher_id', professorId)
+        .eq('school_id', schoolId)
         .order('payment_date', { ascending: false })
       
       if (error) throw error
       return data || []
     } catch (error) {
-      // Error handled
       throw error
     }
   },
@@ -662,19 +723,21 @@ export const paymentService = {
   // Get student data for management
   async getStudentData() {
     try {
-      // This would typically aggregate payment data per student
+      const schoolId = await getCurrentUserSchoolId()
+      if (!schoolId) throw new Error('No school access')
+
       const { data, error } = await supabase
         .from('students')
         .select(`
           *,
           student_payments (*)
         `)
+        .eq('school_id', schoolId)
         .eq('archived', false)
       
       if (error) throw error
       return data || []
     } catch (error) {
-      // Error handled
       throw error
     }
   },
@@ -682,19 +745,21 @@ export const paymentService = {
   // Get teacher data for management
   async getTeacherData() {
     try {
-      // This would typically aggregate earnings data per teacher
+      const schoolId = await getCurrentUserSchoolId()
+      if (!schoolId) throw new Error('No school access')
+
       const { data, error } = await supabase
         .from('teachers')
         .select(`
           *,
           teacher_payouts (*)
         `)
+        .eq('school_id', schoolId)
         .eq('archived', false)
       
       if (error) throw error
       return data || []
     } catch (error) {
-      // Error handled
       throw error
     }
   },
@@ -702,6 +767,9 @@ export const paymentService = {
   // Update payment status
   async updatePaymentStatus(paymentId, status, approverName = null) {
     try {
+      const schoolId = await getCurrentUserSchoolId()
+      if (!schoolId) throw new Error('No school access')
+
       const updateData = {
         status,
         ...(approverName && {
@@ -714,13 +782,13 @@ export const paymentService = {
         .from('student_payments')
         .update(updateData)
         .eq('id', paymentId)
+        .eq('school_id', schoolId)
         .select()
         .single()
       
       if (error) throw error
       return data
     } catch (error) {
-      // Error handled
       throw error
     }
   },
@@ -728,15 +796,17 @@ export const paymentService = {
   // Get all payments combined and sorted by timeline
   async getAllPayments() {
     try {
+      const schoolId = await getCurrentUserSchoolId()
+      if (!schoolId) throw new Error('No school access')
+
       const [studentPayments, teacherPayouts] = await Promise.all([
-        supabase.from('student_payments').select('*').order('payment_date', { ascending: false }),
-        supabase.from('teacher_payouts').select('*').order('payment_date', { ascending: false })
+        supabase.from('student_payments').select('*').eq('school_id', schoolId).order('payment_date', { ascending: false }),
+        supabase.from('teacher_payouts').select('*').eq('school_id', schoolId).order('payment_date', { ascending: false })
       ])
       
       if (studentPayments.error) throw studentPayments.error
       if (teacherPayouts.error) throw teacherPayouts.error
       
-      // Combine and sort all payments by date
       const allPayments = [
         ...(studentPayments.data || []).map(p => ({ ...p, type: 'student' })),
         ...(teacherPayouts.data || []).map(p => ({ ...p, type: 'teacher' }))
@@ -744,7 +814,6 @@ export const paymentService = {
       
       return allPayments
     } catch (error) {
-      // Error handled
       throw error
     }
   },
@@ -752,34 +821,38 @@ export const paymentService = {
   // Toggle student payment for course
   async toggleStudentPayment(courseId, studentId) {
     try {
+      const schoolId = await getCurrentUserSchoolId()
+      if (!schoolId) throw new Error('No school access')
+
       // Check if payment exists
       const { data: existingPayment, error: fetchError } = await supabase
         .from('student_payments')
         .select('*')
         .eq('course_id', courseId)
         .eq('student_id', studentId)
+        .eq('school_id', schoolId)
         .single()
       
       if (fetchError && fetchError.code !== 'PGRST116') throw fetchError
       
       if (existingPayment) {
-        // Update payment status
         const { data, error } = await supabase
           .from('student_payments')
           .update({ status: existingPayment.status === 'paid' ? 'pending' : 'paid' })
           .eq('id', existingPayment.id)
+          .eq('school_id', schoolId)
           .select()
           .single()
         
         if (error) throw error
         return data
       } else {
-        // Create new payment record
         const { data, error } = await supabase
           .from('student_payments')
           .insert([{
             course_id: courseId,
             student_id: studentId,
+            school_id: schoolId,
             status: 'paid',
             payment_date: new Date().toISOString()
           }])
@@ -790,7 +863,6 @@ export const paymentService = {
         return data
       }
     } catch (error) {
-      // Error handled
       throw error
     }
   },
@@ -798,6 +870,9 @@ export const paymentService = {
   // Get student payments
   async getStudentPayments() {
     try {
+      const schoolId = await getCurrentUserSchoolId()
+      if (!schoolId) throw new Error('No school access')
+
       const { data, error } = await supabase
         .from('payments')
         .select(`
@@ -805,12 +880,12 @@ export const paymentService = {
           students(name),
           course_instances(subject)
         `)
+        .eq('school_id', schoolId)
         .order('created_at', { ascending: false })
       
       if (error) throw error
       return data || []
     } catch (error) {
-      // Error handled
       throw error
     }
   },
@@ -821,35 +896,39 @@ export const attendanceService = {
   // Update attendance for student in course
   async updateAttendance(courseId, studentId, week, attended) {
     try {
+      const schoolId = await getCurrentUserSchoolId()
+      if (!schoolId) throw new Error('No school access')
+
       // Check if attendance record exists
       const { data: existingRecord, error: fetchError } = await supabase
         .from('attendance')
         .select('*')
         .eq('course_id', courseId)
         .eq('student_id', studentId)
+        .eq('school_id', schoolId)
         .eq('week', week)
         .single()
       
       if (fetchError && fetchError.code !== 'PGRST116') throw fetchError
       
       if (existingRecord) {
-        // Update existing record
         const { data, error } = await supabase
           .from('attendance')
           .update({ attended })
           .eq('id', existingRecord.id)
+          .eq('school_id', schoolId)
           .select()
           .single()
         
         if (error) throw error
         return data
       } else {
-        // Create new record
         const { data, error } = await supabase
           .from('attendance')
           .insert([{
             course_id: courseId,
             student_id: studentId,
+            school_id: schoolId,
             week,
             attended
           }])
@@ -860,7 +939,6 @@ export const attendanceService = {
         return data
       }
     } catch (error) {
-      // Error handled
       throw error
     }
   },
@@ -868,10 +946,14 @@ export const attendanceService = {
   // Get attendance for course
   async getCourseAttendance(courseId) {
     try {
+      const schoolId = await getCurrentUserSchoolId()
+      if (!schoolId) throw new Error('No school access')
+
       const { data, error } = await supabase
         .from('attendance')
         .select('*')
         .eq('course_id', courseId)
+        .eq('school_id', schoolId)
       
       if (error) throw error
       
@@ -886,7 +968,6 @@ export const attendanceService = {
       
       return attendanceMap
     } catch (error) {
-      // Error handled
       throw error
     }
   },
