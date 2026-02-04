@@ -12,14 +12,26 @@ export interface SessionResult {
   error?: string | null
 }
 
+// Helper function to add timeout to promises
+function withTimeout<T>(promise: Promise<T>, ms: number, errorMessage: string): Promise<T> {
+  const timeout = new Promise<never>((_, reject) => {
+    setTimeout(() => reject(new Error(errorMessage)), ms)
+  })
+  return Promise.race([promise, timeout])
+}
+
 /**
  * Validates the current user session using the database RPC function.
  * This is the single source of truth for session validation.
  */
 export async function validateSession(): Promise<SessionResult> {
   try {
-    // First check if we have an auth session
-    const { data: { session }, error: sessionError } = await supabase.auth.getSession()
+    // First check if we have an auth session with timeout
+    const { data: { session }, error: sessionError } = await withTimeout(
+      supabase.auth.getSession(),
+      10000,
+      'Session check timed out'
+    )
     
     if (sessionError || !session) {
       return { 
@@ -33,8 +45,16 @@ export async function validateSession(): Promise<SessionResult> {
       }
     }
 
-    // Use the database function for complete session info
-    const { data, error } = await supabase.rpc('get_current_user_session')
+    // Use the database function for complete session info with timeout
+    // Wrap in native Promise for proper timeout handling
+    const rpcPromise = new Promise<{ data: any; error: any }>((resolve) => {
+      supabase.rpc('get_current_user_session').then(resolve)
+    })
+    const { data, error } = await withTimeout(
+      rpcPromise,
+      10000,
+      'Profile fetch timed out'
+    )
     
     if (error) {
       return { 

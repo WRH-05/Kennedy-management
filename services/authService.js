@@ -262,14 +262,24 @@ export const authService = {
         throw new Error('Only owners and managers can send invitations')
       }
 
+      // Validate role - ensure it's a valid user_role enum value
+      const validRoles = ['manager', 'receptionist']
+      if (!validRoles.includes(role)) {
+        throw new Error('Invalid role. Must be "manager" or "receptionist"')
+      }
+
       // Check if invitation already exists
-      const { data: existingInvite } = await supabase
+      const { data: existingInvite, error: checkError } = await supabase
         .from('invitations')
         .select('*')
         .eq('email', email)
         .eq('school_id', currentUser.profile.school_id)
         .is('accepted_at', null)
         .gt('expires_at', new Date().toISOString())
+
+      if (checkError) {
+        console.error('Error checking existing invitations:', checkError)
+      }
 
       if (existingInvite && existingInvite.length > 0) {
         throw new Error('Invitation already sent to this email')
@@ -279,8 +289,8 @@ export const authService = {
       const { data: invitation, error } = await supabase
         .from('invitations')
         .insert([{
-          email,
-          role,
+          email: email.toLowerCase().trim(),
+          role: role,
           school_id: currentUser.profile.school_id,
           invited_by: currentUser.id,
           expires_at: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString() // 7 days
@@ -288,14 +298,17 @@ export const authService = {
         .select()
         .single()
 
-      if (error) throw error
+      if (error) {
+        console.error('Invitation creation error:', error)
+        throw new Error(`Failed to create invitation: ${error.message}`)
+      }
 
-      // TODO: Send email with invitation link
-      // For now, return the invitation token for manual sharing
+      // Return invitation link for manual sharing
       const inviteLink = `${window.location.origin}/auth/signup?token=${invitation.token}&email=${encodeURIComponent(email)}`
       
       return { invitation, inviteLink }
     } catch (error) {
+      console.error('sendInvitation error:', error)
       throw error
     }
   },

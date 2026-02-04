@@ -40,7 +40,7 @@ export default function ManagerDashboard() {
 
   const handleSignOut = async () => {
     await signOut()
-    router.push('/auth/login')
+    // signOut handles the redirect internally
   }
 
   useEffect(() => {

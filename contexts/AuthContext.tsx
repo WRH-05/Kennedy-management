@@ -87,9 +87,27 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }
 
   const signOut = async () => {
-    await authService.signOut()
-    setUser(null)
-    refreshSession()
+    try {
+      // Clear user state immediately for responsive UI
+      setUser(null)
+      
+      // Sign out from Supabase
+      await authService.signOut()
+      
+      // Force session refresh to clear any cached state
+      refreshSession()
+      
+      // Redirect to login page
+      if (typeof window !== 'undefined') {
+        window.location.href = '/auth/login'
+      }
+    } catch (error) {
+      console.error('Sign out error:', error)
+      // Even if there's an error, redirect to login
+      if (typeof window !== 'undefined') {
+        window.location.href = '/auth/login'
+      }
+    }
   }
 
   const updateProfile = async (updates: any) => {

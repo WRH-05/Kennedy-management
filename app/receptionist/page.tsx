@@ -98,7 +98,7 @@ function ReceptionistDashboardContent() {
 
   const handleSignOut = async () => {
     await signOut()
-    router.push('/auth/login')
+    // signOut handles the redirect internally
   }
 
   if (loading) return null

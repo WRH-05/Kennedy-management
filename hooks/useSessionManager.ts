@@ -10,6 +10,7 @@ export function useSessionManager() {
   const [sessionData, setSessionData] = useState<SessionResult | null>(null)
   const lastValidationRef = useRef<number>(0)
   const isValidatingRef = useRef<boolean>(false)
+  const mountedRef = useRef<boolean>(true)
   
   const refreshSession = useCallback(async (force = false) => {
     const now = Date.now()
@@ -30,25 +31,34 @@ export function useSessionManager() {
     
     try {
       const session = await validateSession()
-      setSessionData(session)
+      // Only update state if component is still mounted
+      if (mountedRef.current) {
+        setSessionData(session)
+      }
     } catch (error) {
-      setSessionData({
-        valid: false,
-        authenticated: false,
-        user: null,
-        profile: null,
-        school: null,
-        permissions: null,
-        error: error instanceof Error ? error.message : 'Session validation failed'
-      })
+      if (mountedRef.current) {
+        setSessionData({
+          valid: false,
+          authenticated: false,
+          user: null,
+          profile: null,
+          school: null,
+          permissions: null,
+          error: error instanceof Error ? error.message : 'Session validation failed'
+        })
+      }
     } finally {
       isValidatingRef.current = false
-      setIsValidating(false)
+      if (mountedRef.current) {
+        setIsValidating(false)
+      }
     }
   }, [])
 
   // Auth state change listener
   useEffect(() => {
+    mountedRef.current = true
+    
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event) => {
         // Only refresh on meaningful auth changes
@@ -62,6 +72,7 @@ export function useSessionManager() {
     refreshSession(true)
 
     return () => {
+      mountedRef.current = false
       subscription.unsubscribe()
     }
   }, [refreshSession])
