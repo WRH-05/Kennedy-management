@@ -37,4 +37,6 @@ next-env.d.ts
 ./github/
 
 # logs
-browerConsole.log
+browserConsole.log
+
+/sql
