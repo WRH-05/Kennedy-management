@@ -126,6 +126,11 @@ export const paymentService = {
     return await supabaseDataService.payments.getTeacherData()
   },
 
+  /**
+   * @param {string} paymentId
+   * @param {string} status
+   * @param {string | null} [approverName]
+   */
   async updatePaymentStatus(paymentId, status, approverName = null) {
     return await supabaseDataService.payments.updatePaymentStatus(paymentId, status, approverName)
   },

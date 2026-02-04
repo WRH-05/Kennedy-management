@@ -79,7 +79,8 @@ export default function ManagerDashboard() {
 
   const approvePayment = async (paymentId: string, paymentType: string) => {
     try {
-      await paymentService.updatePaymentStatus(paymentId, 'approved', user?.profile?.name || 'Manager')
+      const approverName = user?.profile?.full_name || 'Manager'
+      await paymentService.updatePaymentStatus(paymentId, 'approved', approverName as string | null)
       // Reload payments to reflect the change
       const updatedPayments = await paymentService.getAllPayments()
       setAllPayments(updatedPayments)

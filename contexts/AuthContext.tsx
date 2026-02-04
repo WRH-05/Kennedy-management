@@ -3,7 +3,7 @@
 import React, { createContext, useContext, useEffect, useState } from 'react'
 import { authService } from '@/services/authService'
 import { useSessionManager } from '@/hooks/useSessionManager'
-import { SessionResult } from '@/utils/supabase-session'
+import { SessionResult, clearSessionCache } from '@/utils/supabase-session'
 
 interface User {
   id: string
@@ -91,11 +91,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       // Clear user state immediately for responsive UI
       setUser(null)
       
+      // Clear session cache
+      clearSessionCache()
+      
       // Sign out from Supabase
       await authService.signOut()
-      
-      // Force session refresh to clear any cached state
-      refreshSession()
       
       // Redirect to login page
       if (typeof window !== 'undefined') {
@@ -167,8 +167,14 @@ function renderContent(
     )
   }
 
-  // Session error
-  if (sessionData?.error) {
+  // Only show error if we have a critical error AND no valid session data
+  // Timeout errors should be silently retried, not shown to user
+  if (sessionData?.error && !sessionData.valid && !sessionData.authenticated) {
+    // Skip showing timeout errors - just render children and let it retry
+    if (sessionData.error.includes('timed out')) {
+      return <>{children}</>
+    }
+    
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
         <div className="max-w-md w-full text-center">

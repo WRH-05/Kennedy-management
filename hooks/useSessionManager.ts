@@ -1,9 +1,11 @@
 import { useEffect, useCallback, useState, useRef } from 'react'
-import { validateSession, SessionResult } from '@/utils/supabase-session'
+import { validateSession, SessionResult, clearSessionCache } from '@/utils/supabase-session'
 import { supabase } from '@/lib/supabase'
 
-const DEBOUNCE_MS = 3000
-const FOCUS_DEBOUNCE_MS = 30000
+const DEBOUNCE_MS = 5000 // Increased from 3s to 5s
+const FOCUS_DEBOUNCE_MS = 60000 // Increased from 30s to 60s
+const RETRY_DELAY_MS = 2000 // Retry delay on failure
+const MAX_RETRIES = 2 // Max retry attempts
 
 export function useSessionManager() {
   const [isValidating, setIsValidating] = useState(true)
@@ -11,6 +13,7 @@ export function useSessionManager() {
   const lastValidationRef = useRef<number>(0)
   const isValidatingRef = useRef<boolean>(false)
   const mountedRef = useRef<boolean>(true)
+  const retryCountRef = useRef<number>(0)
   
   const refreshSession = useCallback(async (force = false) => {
     const now = Date.now()
@@ -27,16 +30,38 @@ export function useSessionManager() {
     
     isValidatingRef.current = true
     lastValidationRef.current = now
-    setIsValidating(true)
+    
+    // Only show loading on initial load, not on refreshes
+    if (sessionData === null) {
+      setIsValidating(true)
+    }
     
     try {
-      const session = await validateSession()
+      const session = await validateSession(force)
+      
       // Only update state if component is still mounted
       if (mountedRef.current) {
+        // If we got a valid session or explicit not-authenticated, reset retry count
+        if (session.valid || !session.authenticated) {
+          retryCountRef.current = 0
+        }
+        
+        // Only set error if we have no valid cached session and exhausted retries
+        if (session.error && retryCountRef.current < MAX_RETRIES) {
+          retryCountRef.current++
+          // Schedule a retry
+          setTimeout(() => {
+            if (mountedRef.current) {
+              refreshSession(true)
+            }
+          }, RETRY_DELAY_MS)
+          return // Don't update state with error yet
+        }
+        
         setSessionData(session)
       }
     } catch (error) {
-      if (mountedRef.current) {
+      if (mountedRef.current && retryCountRef.current >= MAX_RETRIES) {
         setSessionData({
           valid: false,
           authenticated: false,
@@ -46,6 +71,14 @@ export function useSessionManager() {
           permissions: null,
           error: error instanceof Error ? error.message : 'Session validation failed'
         })
+      } else if (mountedRef.current) {
+        retryCountRef.current++
+        // Schedule a retry
+        setTimeout(() => {
+          if (mountedRef.current) {
+            refreshSession(true)
+          }
+        }, RETRY_DELAY_MS)
       }
     } finally {
       isValidatingRef.current = false
@@ -53,7 +86,7 @@ export function useSessionManager() {
         setIsValidating(false)
       }
     }
-  }, [])
+  }, [sessionData])
 
   // Auth state change listener
   useEffect(() => {
