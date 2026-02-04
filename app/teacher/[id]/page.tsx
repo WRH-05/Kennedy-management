@@ -20,15 +20,17 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
 import { teacherService, courseService } from "@/services/appDataService"
+import { useAuth } from "@/contexts/AuthContext"
+import AuthGuard from "@/components/auth/AuthGuard"
 
-export default function TeacherProfile() {
+function TeacherProfileContent() {
   const router = useRouter()
   const params = useParams()
   const teacherId = params.id as string
+  const { user } = useAuth()
   const [teacher, setTeacher] = useState<any>(null)
   const [isEditing, setIsEditing] = useState(false)
   const [editedTeacher, setEditedTeacher] = useState<any>(null)
-  const [user, setUser] = useState<any>(null)
   const [courses, setCourses] = useState<any[]>([])
   const [showSaveConfirmation, setShowSaveConfirmation] = useState(false)
   const [loading, setLoading] = useState(true)
@@ -37,14 +39,6 @@ export default function TeacherProfile() {
   useEffect(() => {
     const loadData = async () => {
       try {
-        // Check if user is logged in
-        const userData = localStorage.getItem("user")
-        if (!userData) {
-          router.push("/")
-          return
-        }
-        setUser(JSON.parse(userData))
-
         // Load teacher data from Supabase
         const teacherData = await teacherService.getTeacherById(Number.parseInt(teacherId))
         if (teacherData) {
@@ -52,7 +46,8 @@ export default function TeacherProfile() {
           setEditedTeacher(JSON.parse(JSON.stringify(teacherData))) // Deep copy to avoid reference issues
         } else {
           setError("Teacher not found")
-          router.push("/receptionist")
+          const redirectPath = user?.profile?.role === 'receptionist' ? '/receptionist' : '/manager'
+          router.push(redirectPath)
           return
         }
 
@@ -69,7 +64,7 @@ export default function TeacherProfile() {
     }
 
     loadData()
-  }, [teacherId, router])
+  }, [teacherId, router, user])
 
   const handleEdit = () => {
     setIsEditing(true)
@@ -447,5 +442,13 @@ export default function TeacherProfile() {
         </AlertDialogContent>
       </AlertDialog>
     </div>
+  )
+}
+
+export default function TeacherProfile() {
+  return (
+    <AuthGuard requiredRoles={['owner', 'manager', 'receptionist']}>
+      <TeacherProfileContent />
+    </AuthGuard>
   )
 }

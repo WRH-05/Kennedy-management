@@ -13,31 +13,29 @@ import { Label } from "@/components/ui/label"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { ArrowLeft, Download, User, BookOpen, Upload, AlertTriangle, CheckCircle } from "lucide-react"
 import { studentService, courseService } from "@/services/appDataService"
+import { useAuth } from "@/contexts/AuthContext"
+import AuthGuard from "@/components/auth/AuthGuard"
 
-export default function StudentDashboard() {
+function StudentDashboardContent() {
   const router = useRouter()
   const params = useParams()
   const studentId = params.id as string
+  const { user } = useAuth()
   const [student, setStudent] = useState<any>(null)
   const [courses, setCourses] = useState<any[]>([])
   const [uploadingDoc, setUploadingDoc] = useState("")
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    // Check if user is logged in
-    const userData = localStorage.getItem("user")
-    if (!userData) {
-      router.push("/")
-      return
-    }
-
     // Load student data
     const loadStudentData = async () => {
       setLoading(true)
       try {
         const studentData = await studentService.getStudentById(studentId)
         if (!studentData) {
-          router.push("/receptionist")
+          // Redirect based on user role
+          const redirectPath = user?.profile?.role === 'receptionist' ? '/receptionist' : '/manager'
+          router.push(redirectPath)
           return
         }
         setStudent(studentData)
@@ -46,14 +44,15 @@ export default function StudentDashboard() {
         const studentCourses = await courseService.getCoursesByStudentId(parseInt(studentId))
         setCourses(studentCourses)
       } catch (error) {
-        router.push("/receptionist")
+        const redirectPath = user?.profile?.role === 'receptionist' ? '/receptionist' : '/manager'
+        router.push(redirectPath)
       } finally {
         setLoading(false)
       }
     }
 
     loadStudentData()
-  }, [studentId, router])
+  }, [studentId, router, user])
 
   const [uploadError, setUploadError] = useState<string | null>(null)
 
@@ -380,5 +379,13 @@ export default function StudentDashboard() {
         </div>
       </div>
     </div>
+  )
+}
+
+export default function StudentDashboard() {
+  return (
+    <AuthGuard requiredRoles={['owner', 'manager', 'receptionist']}>
+      <StudentDashboardContent />
+    </AuthGuard>
   )
 }

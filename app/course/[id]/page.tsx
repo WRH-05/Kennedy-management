@@ -25,13 +25,15 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
 import { courseService, studentService, teacherService, paymentService, attendanceService } from "@/services/appDataService"
+import { useAuth } from "@/contexts/AuthContext"
+import AuthGuard from "@/components/auth/AuthGuard"
 
-export default function CourseDetail() {
+function CourseDetailContent() {
   const router = useRouter()
   const params = useParams()
   const courseId = params.id as string
+  const { user } = useAuth()
   const [course, setCourse] = useState<any>(null)
-  const [user, setUser] = useState<any>(null)
   const [students, setStudents] = useState<any[]>([])
   const [showAddStudentDialog, setShowAddStudentDialog] = useState(false)
   const [selectedStudent, setSelectedStudent] = useState("")
@@ -46,14 +48,6 @@ export default function CourseDetail() {
   })
 
   useEffect(() => {
-    // Check if user is logged in
-    const userData = localStorage.getItem("user")
-    if (!userData) {
-      router.push("/")
-      return
-    }
-    setUser(JSON.parse(userData))
-
     // Load course and student data
     const loadData = async () => {
       setLoading(true)
@@ -64,7 +58,8 @@ export default function CourseDetail() {
         ])
 
         if (!courseData) {
-          router.push("/receptionist")
+          const redirectPath = user?.profile?.role === 'receptionist' ? '/receptionist' : '/manager'
+          router.push(redirectPath)
           return
         }
 
@@ -81,14 +76,15 @@ export default function CourseDetail() {
         
       } catch (error) {
         console.error("Error loading course data:", error)
-        router.push("/receptionist")
+        const redirectPath = user?.profile?.role === 'receptionist' ? '/receptionist' : '/manager'
+        router.push(redirectPath)
       } finally {
         setLoading(false)
       }
     }
 
     loadData()
-  }, [courseId, router])
+  }, [courseId, router, user])
 
   const updateWeeklyAttendance = (studentId: number, week: string, present: boolean) => {
     setCourse((prev: any) => ({
@@ -580,5 +576,13 @@ export default function CourseDetail() {
         </AlertDialogContent>
       </AlertDialog>
     </div>
+  )
+}
+
+export default function CourseDetail() {
+  return (
+    <AuthGuard requiredRoles={['owner', 'manager', 'receptionist']}>
+      <CourseDetailContent />
+    </AuthGuard>
   )
 }
