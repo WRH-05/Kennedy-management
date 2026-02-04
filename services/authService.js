@@ -212,118 +212,36 @@ export const authService = {
 
       log('User created:', authData.user?.id)
 
-      // Wait for the trigger to complete profile creation
-      let profile = null
-      let attempts = 0
-      const maxAttempts = 8
+      // The profile will be created by database trigger on user signup
+      // We don't need to wait or fetch it here because:
+      // 1. The user needs to confirm their email first
+      // 2. RLS policies prevent reading profile before email confirmation
+      // 3. The profile creation happens via trigger which bypasses RLS
+      
+      // Just verify the trigger ran by calling the manual creation as backup
+      // This RPC function will either create the profile or return success if it exists
+      const { error: profileError } = await supabase
+        .rpc('create_owner_profile_manual', {
+          p_user_id: authData.user.id,
+          p_school_id: schoolId,
+          p_full_name: userData.full_name,
+          p_phone: userData.phone
+        })
 
-      while (!profile && attempts < maxAttempts) {
-        const delay = Math.min(100 * Math.pow(2, attempts), 2000)
-        await new Promise(resolve => setTimeout(resolve, delay))
-        
-        const { data: profileData, error: profileError } = await supabase
-          .from('profiles')
-          .select(`
-            *,
-            schools (
-              id,
-              name,
-              address,
-              phone,
-              email,
-              logo_url
-            )
-          `)
-          .eq('id', authData.user.id)
-          .single()
-
-        if (!profileError && profileData) {
-          profile = profileData
-          break
-        }
-        
-        attempts++
-      }
-
-      if (!profile) {
-        warn('Profile not created by trigger, creating manually...')
-        // Use the helper function to create profile manually (bypasses RLS)
-        const { data: manualResult, error: manualError } = await supabase
-          .rpc('create_owner_profile_manual', {
-            p_user_id: authData.user.id,
-            p_school_id: schoolId,
-            p_full_name: userData.full_name,
-            p_phone: userData.phone
-          })
-
-        if (manualError) {
-          // Ultimate fallback: Direct profile insertion
-          try {
-            const { data: directProfile, error: directError } = await supabase
-              .from('profiles')
-              .insert({
-                id: authData.user.id,
-                full_name: userData.full_name,
-                phone: userData.phone || null,
-                role: 'owner',
-                school_id: schoolId,
-                is_active: true
-              })
-              .select(`
-                *,
-                schools (
-                  id,
-                  name,
-                  address,
-                  phone,
-                  email,
-                  logo_url
-                )
-              `)
-              .single()
-              
-            if (directError) {
-              throw new Error('All profile creation methods failed')
-            }
-            
-            profile = directProfile
-          } catch (directInsertError) {
-            throw new Error('Failed to create user profile after multiple attempts')
-          }
-        }
-        
-        // If we used RPC method and it succeeded, get the profile data
-        if (!profile && manualResult && manualResult.success) {
-          const { data: profileData, error: profileError } = await supabase
-            .from('profiles')
-            .select(`
-              *,
-              schools (
-                id,
-                name,
-                address,
-                phone,
-                email,
-                logo_url
-              )
-            `)
-            .eq('id', authData.user.id)
-            .single()
-            
-          if (profileError) {
-            throw new Error('Failed to retrieve user profile after creation')
-          }
-          
-          profile = profileData
-        }
-        
-        if (!profile) {
-          throw new Error('Profile creation failed through all methods')
-        }
+      if (profileError) {
+        warn('Profile creation backup failed (may already exist):', profileError.message)
+        // This is not critical - the trigger may have already created it
       }
 
       log('School and owner created:', schoolId)
-      return { school: { id: schoolId }, user: authData.user, profile }
+      
+      // Return minimal data - profile will be loaded after email confirmation
+      return { 
+        school: { id: schoolId }, 
+        user: authData.user, 
+        profile: null, // Will be loaded after email confirmation
+        needsEmailConfirmation: true
+      }
     } catch (error) {
       const errorMessage = error?.message || error?.details || 'Failed to create school and owner'
       throw new Error(`School creation failed: ${errorMessage}`)

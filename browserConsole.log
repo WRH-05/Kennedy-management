@@ -1,23 +1,181 @@
-content-scripts.js:1 Content Script Bridge: Sending response back to page context: Object
-page-133d18244fb32db0.js:1 LoginForm useEffect - User state: Object
-pgmjwmxslbrafalpqfjb.supabase.co/rest/v1/profiles?select=*%2Cschools%28id%2Cname%2Caddress%2Cphone%2Cemail%2Clogo_url%29&id=eq.61ff7bec-6b17-40d2-b97e-06490613e708:1  Failed to load resource: the server responded with a status of 400 ()
-pgmjwmxslbrafalpqfjb.supabase.co/rest/v1/profiles?select=*%2Cschools%28id%2Cname%2Caddress%2Cphone%2Cemail%2Clogo_url%29&id=eq.61ff7bec-6b17-40d2-b97e-06490613e708:1  Failed to load resource: the server responded with a status of 400 ()
-pgmjwmxslbrafalpqfjb.supabase.co/rest/v1/profiles?select=*%2Cschools%28id%2Cname%2Caddress%2Cphone%2Cemail%2Clogo_url%29&id=eq.61ff7bec-6b17-40d2-b97e-06490613e708:1  Failed to load resource: the server responded with a status of 400 ()
-pgmjwmxslbrafalpqfjb.supabase.co/rest/v1/profiles?select=*%2Cschools%28id%2Cname%2Caddress%2Cphone%2Cemail%2Clogo_url%29&id=eq.61ff7bec-6b17-40d2-b97e-06490613e708:1  Failed to load resource: the server responded with a status of 400 ()
-pgmjwmxslbrafalpqfjb.supabase.co/rest/v1/profiles?select=*%2Cschools%28id%2Cname%2Caddress%2Cphone%2Cemail%2Clogo_url%29&id=eq.61ff7bec-6b17-40d2-b97e-06490613e708:1  Failed to load resource: the server responded with a status of 400 ()
-pgmjwmxslbrafalpqfjb.supabase.co/rest/v1/profiles?select=*%2Cschools%28id%2Cname%2Caddress%2Cphone%2Cemail%2Clogo_url%29&id=eq.61ff7bec-6b17-40d2-b97e-06490613e708:1  Failed to load resource: the server responded with a status of 400 ()
-pgmjwmxslbrafalpqfjb.supabase.co/rest/v1/profiles?select=*%2Cschools%28id%2Cname%2Caddress%2Cphone%2Cemail%2Clogo_url%29&id=eq.61ff7bec-6b17-40d2-b97e-06490613e708:1  Failed to load resource: the server responded with a status of 400 ()
-pgmjwmxslbrafalpqfjb.supabase.co/rest/v1/profiles?select=*%2Cschools%28id%2Cname%2Caddress%2Cphone%2Cemail%2Clogo_url%29&id=eq.61ff7bec-6b17-40d2-b97e-06490613e708:1  Failed to load resource: the server responded with a status of 400 ()
-pgmjwmxslbrafalpqfjb.supabase.co/rest/v1/profiles?select=*%2Cschools%28id%2Cname%2Caddress%2Cphone%2Cemail%2Clogo_url%29&id=eq.61ff7bec-6b17-40d2-b97e-06490613e708:1  Failed to load resource: the server responded with a status of 400 ()
+content-scripts.js:1 Content Script Bridge: Sending response back to page context: {isAllowListed: false, isProtectionEnabled: true, isScamsProtectionEnabled: true}
+497-c36adad4f3ffad23.js:37  GET https://pgmjwmxslbrafalpqfjb.supabase.co/rest/v1/profiles?select=*%2Cschools%28id%2Cname%2Caddress%2Cphone%2Cemail%2Clogo_url%29&id=eq.61ff7bec-6b17-40d2-b97e-06490613e708 406 (Not Acceptable)
+(anonymous) @ 497-c36adad4f3ffad23.js:37
+(anonymous) @ 497-c36adad4f3ffad23.js:37
+await in (anonymous)
+then @ 497-c36adad4f3ffad23.js:1
+setTimeout
+data @ 847-cd7dcf0d9705bfed.js:1
+createSchoolAndOwner @ 847-cd7dcf0d9705bfed.js:1
+await in createSchoolAndOwner
+b @ page-19de4b27df737276.js:1
+i8 @ 4bd1b696-c023c6e3521b1417.js:1
+(anonymous) @ 4bd1b696-c023c6e3521b1417.js:1
+nz @ 4bd1b696-c023c6e3521b1417.js:1
+sn @ 4bd1b696-c023c6e3521b1417.js:1
+cc @ 4bd1b696-c023c6e3521b1417.js:1
+ci @ 4bd1b696-c023c6e3521b1417.js:1
+497-c36adad4f3ffad23.js:37  GET https://pgmjwmxslbrafalpqfjb.supabase.co/rest/v1/profiles?select=*%2Cschools%28id%2Cname%2Caddress%2Cphone%2Cemail%2Clogo_url%29&id=eq.61ff7bec-6b17-40d2-b97e-06490613e708 406 (Not Acceptable)
+(anonymous) @ 497-c36adad4f3ffad23.js:37
+(anonymous) @ 497-c36adad4f3ffad23.js:37
+await in (anonymous)
+then @ 497-c36adad4f3ffad23.js:1
+setTimeout
+data @ 847-cd7dcf0d9705bfed.js:1
+createSchoolAndOwner @ 847-cd7dcf0d9705bfed.js:1
+await in createSchoolAndOwner
+b @ page-19de4b27df737276.js:1
+i8 @ 4bd1b696-c023c6e3521b1417.js:1
+(anonymous) @ 4bd1b696-c023c6e3521b1417.js:1
+nz @ 4bd1b696-c023c6e3521b1417.js:1
+sn @ 4bd1b696-c023c6e3521b1417.js:1
+cc @ 4bd1b696-c023c6e3521b1417.js:1
+ci @ 4bd1b696-c023c6e3521b1417.js:1
+497-c36adad4f3ffad23.js:37  GET https://pgmjwmxslbrafalpqfjb.supabase.co/rest/v1/profiles?select=*%2Cschools%28id%2Cname%2Caddress%2Cphone%2Cemail%2Clogo_url%29&id=eq.61ff7bec-6b17-40d2-b97e-06490613e708 406 (Not Acceptable)
+(anonymous) @ 497-c36adad4f3ffad23.js:37
+(anonymous) @ 497-c36adad4f3ffad23.js:37
+await in (anonymous)
+then @ 497-c36adad4f3ffad23.js:1
+setTimeout
+data @ 847-cd7dcf0d9705bfed.js:1
+createSchoolAndOwner @ 847-cd7dcf0d9705bfed.js:1
+await in createSchoolAndOwner
+b @ page-19de4b27df737276.js:1
+i8 @ 4bd1b696-c023c6e3521b1417.js:1
+(anonymous) @ 4bd1b696-c023c6e3521b1417.js:1
+nz @ 4bd1b696-c023c6e3521b1417.js:1
+sn @ 4bd1b696-c023c6e3521b1417.js:1
+cc @ 4bd1b696-c023c6e3521b1417.js:1
+ci @ 4bd1b696-c023c6e3521b1417.js:1
+497-c36adad4f3ffad23.js:37  GET https://pgmjwmxslbrafalpqfjb.supabase.co/rest/v1/profiles?select=*%2Cschools%28id%2Cname%2Caddress%2Cphone%2Cemail%2Clogo_url%29&id=eq.61ff7bec-6b17-40d2-b97e-06490613e708 406 (Not Acceptable)
+(anonymous) @ 497-c36adad4f3ffad23.js:37
+(anonymous) @ 497-c36adad4f3ffad23.js:37
+await in (anonymous)
+then @ 497-c36adad4f3ffad23.js:1
+setTimeout
+data @ 847-cd7dcf0d9705bfed.js:1
+createSchoolAndOwner @ 847-cd7dcf0d9705bfed.js:1
+await in createSchoolAndOwner
+b @ page-19de4b27df737276.js:1
+i8 @ 4bd1b696-c023c6e3521b1417.js:1
+(anonymous) @ 4bd1b696-c023c6e3521b1417.js:1
+nz @ 4bd1b696-c023c6e3521b1417.js:1
+sn @ 4bd1b696-c023c6e3521b1417.js:1
+cc @ 4bd1b696-c023c6e3521b1417.js:1
+ci @ 4bd1b696-c023c6e3521b1417.js:1
+497-c36adad4f3ffad23.js:37  GET https://pgmjwmxslbrafalpqfjb.supabase.co/rest/v1/profiles?select=*%2Cschools%28id%2Cname%2Caddress%2Cphone%2Cemail%2Clogo_url%29&id=eq.61ff7bec-6b17-40d2-b97e-06490613e708 406 (Not Acceptable)
+(anonymous) @ 497-c36adad4f3ffad23.js:37
+(anonymous) @ 497-c36adad4f3ffad23.js:37
+await in (anonymous)
+then @ 497-c36adad4f3ffad23.js:1
+setTimeout
+data @ 847-cd7dcf0d9705bfed.js:1
+createSchoolAndOwner @ 847-cd7dcf0d9705bfed.js:1
+await in createSchoolAndOwner
+b @ page-19de4b27df737276.js:1
+i8 @ 4bd1b696-c023c6e3521b1417.js:1
+(anonymous) @ 4bd1b696-c023c6e3521b1417.js:1
+nz @ 4bd1b696-c023c6e3521b1417.js:1
+sn @ 4bd1b696-c023c6e3521b1417.js:1
+cc @ 4bd1b696-c023c6e3521b1417.js:1
+ci @ 4bd1b696-c023c6e3521b1417.js:1
+497-c36adad4f3ffad23.js:37  GET https://pgmjwmxslbrafalpqfjb.supabase.co/rest/v1/profiles?select=*%2Cschools%28id%2Cname%2Caddress%2Cphone%2Cemail%2Clogo_url%29&id=eq.61ff7bec-6b17-40d2-b97e-06490613e708 406 (Not Acceptable)
+(anonymous) @ 497-c36adad4f3ffad23.js:37
+(anonymous) @ 497-c36adad4f3ffad23.js:37
+await in (anonymous)
+then @ 497-c36adad4f3ffad23.js:1
+setTimeout
+data @ 847-cd7dcf0d9705bfed.js:1
+createSchoolAndOwner @ 847-cd7dcf0d9705bfed.js:1
+await in createSchoolAndOwner
+b @ page-19de4b27df737276.js:1
+i8 @ 4bd1b696-c023c6e3521b1417.js:1
+(anonymous) @ 4bd1b696-c023c6e3521b1417.js:1
+nz @ 4bd1b696-c023c6e3521b1417.js:1
+sn @ 4bd1b696-c023c6e3521b1417.js:1
+cc @ 4bd1b696-c023c6e3521b1417.js:1
+ci @ 4bd1b696-c023c6e3521b1417.js:1
+497-c36adad4f3ffad23.js:37  GET https://pgmjwmxslbrafalpqfjb.supabase.co/rest/v1/profiles?select=*%2Cschools%28id%2Cname%2Caddress%2Cphone%2Cemail%2Clogo_url%29&id=eq.61ff7bec-6b17-40d2-b97e-06490613e708 406 (Not Acceptable)
+(anonymous) @ 497-c36adad4f3ffad23.js:37
+(anonymous) @ 497-c36adad4f3ffad23.js:37
+await in (anonymous)
+then @ 497-c36adad4f3ffad23.js:1
+setTimeout
+data @ 847-cd7dcf0d9705bfed.js:1
+createSchoolAndOwner @ 847-cd7dcf0d9705bfed.js:1
+await in createSchoolAndOwner
+b @ page-19de4b27df737276.js:1
+i8 @ 4bd1b696-c023c6e3521b1417.js:1
+(anonymous) @ 4bd1b696-c023c6e3521b1417.js:1
+nz @ 4bd1b696-c023c6e3521b1417.js:1
+sn @ 4bd1b696-c023c6e3521b1417.js:1
+cc @ 4bd1b696-c023c6e3521b1417.js:1
+ci @ 4bd1b696-c023c6e3521b1417.js:1
+497-c36adad4f3ffad23.js:37  GET https://pgmjwmxslbrafalpqfjb.supabase.co/rest/v1/profiles?select=*%2Cschools%28id%2Cname%2Caddress%2Cphone%2Cemail%2Clogo_url%29&id=eq.61ff7bec-6b17-40d2-b97e-06490613e708 406 (Not Acceptable)
+(anonymous) @ 497-c36adad4f3ffad23.js:37
+(anonymous) @ 497-c36adad4f3ffad23.js:37
+await in (anonymous)
+then @ 497-c36adad4f3ffad23.js:1
+setTimeout
+data @ 847-cd7dcf0d9705bfed.js:1
+createSchoolAndOwner @ 847-cd7dcf0d9705bfed.js:1
+await in createSchoolAndOwner
+b @ page-19de4b27df737276.js:1
+i8 @ 4bd1b696-c023c6e3521b1417.js:1
+(anonymous) @ 4bd1b696-c023c6e3521b1417.js:1
+nz @ 4bd1b696-c023c6e3521b1417.js:1
+sn @ 4bd1b696-c023c6e3521b1417.js:1
+cc @ 4bd1b696-c023c6e3521b1417.js:1
+ci @ 4bd1b696-c023c6e3521b1417.js:1
+497-c36adad4f3ffad23.js:37  GET https://pgmjwmxslbrafalpqfjb.supabase.co/rest/v1/profiles?select=*%2Cschools%28id%2Cname%2Caddress%2Cphone%2Cemail%2Clogo_url%29&id=eq.61ff7bec-6b17-40d2-b97e-06490613e708 406 (Not Acceptable)
+(anonymous) @ 497-c36adad4f3ffad23.js:37
+(anonymous) @ 497-c36adad4f3ffad23.js:37
+await in (anonymous)
+then @ 497-c36adad4f3ffad23.js:1
 page-19de4b27df737276.js:1 School creation error details:
 b @ page-19de4b27df737276.js:1
+await in b
+i8 @ 4bd1b696-c023c6e3521b1417.js:1
+(anonymous) @ 4bd1b696-c023c6e3521b1417.js:1
+nz @ 4bd1b696-c023c6e3521b1417.js:1
+sn @ 4bd1b696-c023c6e3521b1417.js:1
+cc @ 4bd1b696-c023c6e3521b1417.js:1
+ci @ 4bd1b696-c023c6e3521b1417.js:1
 page-19de4b27df737276.js:1 - Error message: School creation failed: Failed to retrieve user profile after creation
 b @ page-19de4b27df737276.js:1
+await in b
+i8 @ 4bd1b696-c023c6e3521b1417.js:1
+(anonymous) @ 4bd1b696-c023c6e3521b1417.js:1
+nz @ 4bd1b696-c023c6e3521b1417.js:1
+sn @ 4bd1b696-c023c6e3521b1417.js:1
+cc @ 4bd1b696-c023c6e3521b1417.js:1
+ci @ 4bd1b696-c023c6e3521b1417.js:1
 page-19de4b27df737276.js:1 - Error name: Error
 b @ page-19de4b27df737276.js:1
+await in b
+i8 @ 4bd1b696-c023c6e3521b1417.js:1
+(anonymous) @ 4bd1b696-c023c6e3521b1417.js:1
+nz @ 4bd1b696-c023c6e3521b1417.js:1
+sn @ 4bd1b696-c023c6e3521b1417.js:1
+cc @ 4bd1b696-c023c6e3521b1417.js:1
+ci @ 4bd1b696-c023c6e3521b1417.js:1
 page-19de4b27df737276.js:1 - Error stack: Error: School creation failed: Failed to retrieve user profile after creation
-    at Object.createSchoolAndOwner (https://kennedyerp.vercel.app/_next/static/chunks/app/page-31d2d4a17d1efa2c.js:1:12986)
-    at async b (https://kennedyerp.vercel.app/_next/static/chunks/app/auth/create-school/page-19de...
+    at Object.createSchoolAndOwner (https://kennedyerp.vercel.app/_next/static/chunks/847-cd7dcf0d9705bfed.js:1:8456)
+    at async b (https://kennedyerp.vercel.app/_next/static/chunks/app/auth/create-school/page-19de4b27df...
 b @ page-19de4b27df737276.js:1
-page-19de4b27df737276.js:1 - Full error object: Object
+await in b
+i8 @ 4bd1b696-c023c6e3521b1417.js:1
+(anonymous) @ 4bd1b696-c023c6e3521b1417.js:1
+nz @ 4bd1b696-c023c6e3521b1417.js:1
+sn @ 4bd1b696-c023c6e3521b1417.js:1
+cc @ 4bd1b696-c023c6e3521b1417.js:1
+ci @ 4bd1b696-c023c6e3521b1417.js:1
+page-19de4b27df737276.js:1 - Full error object: {message: 'School creation failed: Failed to retrieve user profile after creation', name: 'Error', cause: undefined, code: undefined}
 b @ page-19de4b27df737276.js:1
+await in b
+i8 @ 4bd1b696-c023c6e3521b1417.js:1
+(anonymous) @ 4bd1b696-c023c6e3521b1417.js:1
+nz @ 4bd1b696-c023c6e3521b1417.js:1
+sn @ 4bd1b696-c023c6e3521b1417.js:1
+cc @ 4bd1b696-c023c6e3521b1417.js:1
+ci @ 4bd1b696-c023c6e3521b1417.js:1
