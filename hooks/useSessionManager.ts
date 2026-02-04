@@ -2,10 +2,10 @@ import { useEffect, useCallback, useState, useRef } from 'react'
 import { validateSession, SessionResult, clearSessionCache } from '@/utils/supabase-session'
 import { supabase } from '@/lib/supabase'
 
-const DEBOUNCE_MS = 5000 // Increased from 3s to 5s
-const FOCUS_DEBOUNCE_MS = 60000 // Increased from 30s to 60s
-const RETRY_DELAY_MS = 2000 // Retry delay on failure
-const MAX_RETRIES = 2 // Max retry attempts
+const DEBOUNCE_MS = 5000
+const FOCUS_DEBOUNCE_MS = 60000
+const RETRY_DELAY_MS = 2000
+const MAX_RETRIES = 2
 
 export function useSessionManager() {
   const [isValidating, setIsValidating] = useState(true)
@@ -14,6 +14,11 @@ export function useSessionManager() {
   const isValidatingRef = useRef<boolean>(false)
   const mountedRef = useRef<boolean>(true)
   const retryCountRef = useRef<number>(0)
+  const initialLoadDoneRef = useRef<boolean>(false)
+  
+  // Use ref to track sessionData without causing re-renders
+  const sessionDataRef = useRef<SessionResult | null>(null)
+  sessionDataRef.current = sessionData
   
   const refreshSession = useCallback(async (force = false) => {
     const now = Date.now()
@@ -31,54 +36,57 @@ export function useSessionManager() {
     isValidatingRef.current = true
     lastValidationRef.current = now
     
-    // Only show loading on initial load, not on refreshes
-    if (sessionData === null) {
+    // Only show loading on initial load
+    if (!initialLoadDoneRef.current) {
       setIsValidating(true)
     }
     
     try {
       const session = await validateSession(force)
       
-      // Only update state if component is still mounted
       if (mountedRef.current) {
-        // If we got a valid session or explicit not-authenticated, reset retry count
+        initialLoadDoneRef.current = true
+        
+        // Reset retry count on success
         if (session.valid || !session.authenticated) {
           retryCountRef.current = 0
         }
         
-        // Only set error if we have no valid cached session and exhausted retries
+        // Retry on error if not exhausted
         if (session.error && retryCountRef.current < MAX_RETRIES) {
           retryCountRef.current++
-          // Schedule a retry
           setTimeout(() => {
             if (mountedRef.current) {
               refreshSession(true)
             }
           }, RETRY_DELAY_MS)
-          return // Don't update state with error yet
+          return
         }
         
         setSessionData(session)
       }
     } catch (error) {
-      if (mountedRef.current && retryCountRef.current >= MAX_RETRIES) {
-        setSessionData({
-          valid: false,
-          authenticated: false,
-          user: null,
-          profile: null,
-          school: null,
-          permissions: null,
-          error: error instanceof Error ? error.message : 'Session validation failed'
-        })
-      } else if (mountedRef.current) {
-        retryCountRef.current++
-        // Schedule a retry
-        setTimeout(() => {
-          if (mountedRef.current) {
-            refreshSession(true)
-          }
-        }, RETRY_DELAY_MS)
+      if (mountedRef.current) {
+        initialLoadDoneRef.current = true
+        
+        if (retryCountRef.current >= MAX_RETRIES) {
+          setSessionData({
+            valid: false,
+            authenticated: false,
+            user: null,
+            profile: null,
+            school: null,
+            permissions: null,
+            error: error instanceof Error ? error.message : 'Session validation failed'
+          })
+        } else {
+          retryCountRef.current++
+          setTimeout(() => {
+            if (mountedRef.current) {
+              refreshSession(true)
+            }
+          }, RETRY_DELAY_MS)
+        }
       }
     } finally {
       isValidatingRef.current = false
@@ -86,7 +94,7 @@ export function useSessionManager() {
         setIsValidating(false)
       }
     }
-  }, [sessionData])
+  }, []) // Empty dependency array - no dependencies!
 
   // Auth state change listener
   useEffect(() => {
