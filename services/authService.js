@@ -388,19 +388,31 @@ export const authService = {
       const currentUser = await this.getCurrentUser()
       if (!currentUser?.profile?.school_id) return []
 
-      const { data, error } = await supabase
+      // First get all profiles
+      const { data: profiles, error: profilesError } = await supabase
         .from('profiles')
-        .select(`
-          *,
-          invited_by_profile:profiles!profiles_invited_by_fkey (
-            full_name
-          )
-        `)
+        .select('*')
         .eq('school_id', currentUser.profile.school_id)
         .order('created_at', { ascending: false })
 
-      if (error) throw error
-      return data || []
+      if (profilesError) throw profilesError
+      
+      // Then enrich with invited_by names (self-reference workaround)
+      const enrichedProfiles = await Promise.all(
+        (profiles || []).map(async (profile) => {
+          if (profile.invited_by) {
+            const { data: inviter } = await supabase
+              .from('profiles')
+              .select('full_name')
+              .eq('id', profile.invited_by)
+              .single()
+            return { ...profile, invited_by_profile: inviter }
+          }
+          return { ...profile, invited_by_profile: null }
+        })
+      )
+      
+      return enrichedProfiles
     } catch (error) {
       return []
     }

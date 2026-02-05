@@ -266,7 +266,7 @@ export default function UserManagementTab() {
                   {users.map((user) => (
                     <TableRow key={user.id}>
                       <TableCell className="font-medium">{user.full_name}</TableCell>
-                      <TableCell>{user.id}</TableCell> {/* This would be the email from auth.users */}
+                      <TableCell>{user.id}</TableCell>
                       <TableCell>{getStatusBadge(user.role, user.is_active)}</TableCell>
                       <TableCell>
                         {user.invited_by_profile?.full_name || 'System'}

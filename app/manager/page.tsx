@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useMemo } from "react"
 import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -9,8 +9,8 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Badge } from "@/components/ui/badge"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { LogOut, DollarSign, Users, BookOpen, TrendingUp, Calendar, Search, Settings } from "lucide-react"
-import { paymentService, studentService, teacherService, courseService } from "@/services/appDataService"
+import { LogOut, DollarSign, Users, BookOpen, TrendingUp, Calendar, Search, Settings, RefreshCw } from "lucide-react"
+import { paymentService } from "@/services/appDataService"
 import { useAuth } from "@/contexts/AuthContext"
 import AuthGuard from "@/components/auth/AuthGuard"
 import StudentsTab from "@/components/tabs/StudentsTab"
@@ -20,102 +20,98 @@ import ArchiveTab from "@/components/tabs/ArchiveTab"
 import RevenueTab from "@/components/tabs/RevenueTab"
 import PayoutsTab from "@/components/tabs/PayoutsTab"
 import UserManagementTab from "@/components/tabs/UserManagementTab"
+import { useDashboardData, usePayments, revalidateData } from "@/hooks/useData"
 
 export default function ManagerDashboard() {
   const router = useRouter()
   const { user, signOut, hasRole } = useAuth()
+  
+  // Use SWR hooks for cached data fetching
+  const { students: allStudents, teachers: allTeachers, courses: allCourses, isLoading, refreshAll } = useDashboardData()
+  const { payments: allPayments, mutate: mutatePayments } = usePayments()
+  
   const [revenue, setRevenue] = useState<any[]>([])
   const [payouts, setPayouts] = useState<any[]>([])
-  const [students, setStudents] = useState<any[]>([])
-  const [teachers, setTeachers] = useState<any[]>([])
-  const [courses, setCourses] = useState<any[]>([])
-  const [allPayments, setAllPayments] = useState<any[]>([])
   const [selectedMonth, setSelectedMonth] = useState("2024-01")
-  const [loading, setLoading] = useState(true)
+
+  // Filter out archived items with memoization for performance
+  const students = useMemo(() => 
+    (allStudents || []).filter((student: any) => !student.archived), 
+    [allStudents]
+  )
+  const teachers = useMemo(() => 
+    (allTeachers || []).filter((teacher: any) => !teacher.archived), 
+    [allTeachers]
+  )
+  const courses = useMemo(() => 
+    (allCourses || []).filter((course: any) => !course.archived), 
+    [allCourses]
+  )
 
   // Search functionality
   const [searchQuery, setSearchQuery] = useState("")
-  const [searchResults, setSearchResults] = useState<any[]>([])
-  const [showSearchResults, setShowSearchResults] = useState(false)
 
   const handleSignOut = async () => {
     await signOut()
     // signOut handles the redirect internally
   }
 
+  // Load revenue and payouts data (these don't have SWR hooks yet)
   useEffect(() => {
-    const loadData = async () => {
-      setLoading(true)
+    const loadPaymentData = async () => {
       try {
-        const [revenueData, payoutsData, studentsData, teachersData, coursesData, paymentsData] = await Promise.all([
+        const [revenueData, payoutsData] = await Promise.all([
           paymentService.getRevenueData(),
           paymentService.getPendingPayouts(),
-          studentService.getAllStudents(),
-          teacherService.getAllTeachers(),
-          courseService.getAllCourseInstances(),
-          paymentService.getAllPayments(),
         ])
-
-        // Filter out archived items with null checking
-        const activeStudents = (studentsData || []).filter((student: any) => !student.archived)
-        const activeTeachers = (teachersData || []).filter((teacher: any) => !teacher.archived)
-        const activeCourses = (coursesData || []).filter((course: any) => !course.archived)
-
         setRevenue(revenueData)
         setPayouts(payoutsData)
-        setStudents(activeStudents)
-        setTeachers(activeTeachers)
-        setCourses(activeCourses)
-        setAllPayments(paymentsData)
       } catch (error) {
-        // Error loading data
-      } finally {
-        setLoading(false)
+        // Error loading payment data
       }
     }
 
-    loadData()
+    loadPaymentData()
   }, [])
 
   const approvePayment = async (paymentId: string, paymentType: string) => {
     try {
       const approverName = user?.profile?.full_name || 'Manager'
       await paymentService.updatePaymentStatus(paymentId, 'approved', approverName as string | null)
-      // Reload payments to reflect the change
-      const updatedPayments = await paymentService.getAllPayments()
-      setAllPayments(updatedPayments)
+      // Revalidate payments cache
+      mutatePayments()
     } catch (error) {
       // Error approving payment
     }
   }
 
-  // Enhanced search functionality
-  useEffect(() => {
-    if (searchQuery.trim()) {
-      const studentResults = students
-        .filter((student) => student.name.toLowerCase().includes(searchQuery.toLowerCase()))
-        .map((student) => ({ ...student, type: "student" }))
+  // Enhanced search functionality - using useMemo to prevent infinite loops
+  const searchResults = useMemo(() => {
+    if (!searchQuery.trim()) return []
+    
+    const query = searchQuery.toLowerCase()
+    
+    const studentResults = students
+      .filter((student) => student.name?.toLowerCase().includes(query))
+      .map((student) => ({ ...student, type: "student" }))
 
-      const teacherResults = teachers
-        .filter((teacher) => teacher.name.toLowerCase().includes(searchQuery.toLowerCase()))
-        .map((teacher) => ({ ...teacher, type: "teacher" }))
+    const teacherResults = teachers
+      .filter((teacher) => teacher.name?.toLowerCase().includes(query))
+      .map((teacher) => ({ ...teacher, type: "teacher" }))
 
-      const courseResults = courses
-        .filter(
-          (course) =>
-            course.subject.toLowerCase().includes(searchQuery.toLowerCase()) ||
-            course.school_year.toLowerCase().includes(searchQuery.toLowerCase()) ||
-            course.teacher_name.toLowerCase().includes(searchQuery.toLowerCase()),
-        )
-        .map((course) => ({ ...course, type: "course" }))
+    const courseResults = courses
+      .filter(
+        (course) =>
+          course.subject?.toLowerCase().includes(query) ||
+          course.school_year?.toLowerCase().includes(query) ||
+          course.teacher_name?.toLowerCase().includes(query),
+      )
+      .map((course) => ({ ...course, type: "course" }))
 
-      setSearchResults([...studentResults, ...teacherResults, ...courseResults])
-      setShowSearchResults(true)
-    } else {
-      setSearchResults([])
-      setShowSearchResults(false)
-    }
+    return [...studentResults, ...teacherResults, ...courseResults]
   }, [searchQuery, students, teachers, courses])
+
+  const showSearchResults = searchQuery.trim().length > 0 && searchResults.length > 0
 
   const handleSearchResultClick = (result: any) => {
     if (result.type === "student") {
@@ -125,8 +121,7 @@ export default function ManagerDashboard() {
     } else if (result.type === "course") {
       router.push(`/course/${result.id}`)
     }
-    setSearchQuery("")
-    setShowSearchResults(false)
+    setSearchQuery("") // This will also clear search results since they're derived from searchQuery
   }
 
   const approvePayout = async (payoutId: number) => {
@@ -146,7 +141,7 @@ export default function ManagerDashboard() {
   const totalPayouts = payouts.reduce((sum: number, payout: any) => sum + (payout.status === 'approved' && payout.amount ? payout.amount : 0), 0)
   const netProfit = totalRevenue - totalPayouts
 
-  if (loading) return null
+  if (isLoading) return null
 
   return (
     <AuthGuard requiredRoles={['owner', 'manager']}>
@@ -213,6 +208,9 @@ export default function ManagerDashboard() {
             </div>
 
             <div className="flex items-center space-x-4">
+              <Button onClick={() => refreshAll()} variant="outline" size="sm" title="Refresh data">
+                <RefreshCw className="h-4 w-4" />
+              </Button>
               <Button onClick={handleMonthlyRollover} variant="outline">
                 <Calendar className="h-4 w-4 mr-2" />
                 Monthly Rollover
@@ -306,7 +304,7 @@ export default function ManagerDashboard() {
             <StudentsTab 
               students={students}
               courses={courses}
-              onStudentsUpdate={setStudents}
+              onStudentsUpdate={() => revalidateData('students')}
               canAdd={true}
               showCourses={true}
               showPaymentStatus={true}
@@ -318,7 +316,7 @@ export default function ManagerDashboard() {
             <TeachersTab 
               teachers={teachers}
               courses={courses}
-              onTeachersUpdate={setTeachers}
+              onTeachersUpdate={() => revalidateData('teachers')}
               canAdd={true}
               showCourses={true}
               showStats={true}
@@ -331,7 +329,7 @@ export default function ManagerDashboard() {
               courses={courses}
               teachers={teachers}
               students={students}
-              onCoursesUpdate={setCourses}
+              onCoursesUpdate={() => revalidateData('courses')}
               canAdd={true}
             />
           </TabsContent>
@@ -339,22 +337,8 @@ export default function ManagerDashboard() {
           {/* Archive Tab */}
           <TabsContent value="archive">
             <ArchiveTab isManager={true} onArchiveUpdate={() => {
-              // Reload data when archive status changes
-              const loadData = async () => {
-                try {
-                  const [studentsData, teachersData, coursesData] = await Promise.all([
-                    studentService.getAllStudents(),
-                    teacherService.getAllTeachers(),
-                    courseService.getAllCourseInstances(),
-                  ])
-                  setStudents(studentsData)
-                  setTeachers(teachersData)
-                  setCourses(coursesData)
-                } catch (error) {
-                  // Error reloading data
-                }
-              }
-              loadData()
+              // Revalidate all data when archive status changes
+              refreshAll()
             }} />
           </TabsContent>
 

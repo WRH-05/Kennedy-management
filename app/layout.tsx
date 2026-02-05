@@ -4,6 +4,7 @@ import { Inter } from "next/font/google"
 import "./globals.css"
 import { AuthProvider } from "@/contexts/AuthContext"
 import ErrorBoundary from "@/components/ErrorBoundary"
+import SWRProvider from "@/components/providers/SWRProvider"
 
 // Import token cleanup utility for development debugging
 if (process.env.NODE_ENV === 'development') {
@@ -30,9 +31,11 @@ export default function RootLayout({
     <html lang="en">
       <body className={inter.className}>
         <ErrorBoundary>
-          <AuthProvider>
-            {children}
-          </AuthProvider>
+          <SWRProvider>
+            <AuthProvider>
+              {children}
+            </AuthProvider>
+          </SWRProvider>
         </ErrorBoundary>
       </body>
     </html>
