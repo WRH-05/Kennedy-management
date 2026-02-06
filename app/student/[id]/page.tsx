@@ -38,10 +38,19 @@ function StudentDashboardContent() {
           router.push(redirectPath)
           return
         }
-        setStudent(studentData)
+        // Add default documents structure if not present
+        setStudent({
+          ...studentData,
+          documents: studentData.documents || {
+            idCard: { uploaded: false, filename: null },
+            birthCertificate: { uploaded: false, filename: null },
+            schoolCertificate: { uploaded: false, filename: null },
+            photos: { uploaded: false, filename: null },
+          }
+        })
 
         // Load courses for this student
-        const studentCourses = await courseService.getCoursesByStudentId(parseInt(studentId))
+        const studentCourses = await courseService.getCoursesByStudentId(studentId)
         setCourses(studentCourses)
       } catch (error) {
         const redirectPath = user?.profile?.role === 'receptionist' ? '/receptionist' : '/manager'
@@ -107,20 +116,20 @@ function StudentDashboardContent() {
     )
   }
 
-  const studentCourses = courses.filter((course) => course.student_ids?.includes(Number.parseInt(studentId)))
+  const studentCourses = courses.filter((course) => course.student_ids?.includes(studentId))
   const activeCourses = studentCourses.filter((course) => course.status === "active")
   const completedCourses = studentCourses.filter((course) => course.status === "completed")
 
-  const totalMonthlyFees = activeCourses.reduce((sum, course) => sum + course.monthlyPrice, 0)
-  const paidThisMonth = activeCourses.reduce((sum, course) => {
-    return sum + (course.payments.students[Number.parseInt(studentId)] ? course.monthlyPrice : 0)
-  }, 0)
+  const totalMonthlyFees = activeCourses.reduce((sum, course) => sum + (course.monthly_price || 0), 0)
+  const paidThisMonth = 0 // Payment tracking to be implemented with payments table
 
   // Calculate alerts
-  const missedPayments = activeCourses.filter((course) => !course.payments.students[Number.parseInt(studentId)]).length
-  const missingDocuments = Object.entries(student.documents)
-    .filter(([_, doc]: [string, any]) => !doc.uploaded)
-    .map(([docType, _]) => docType)
+  const missedPayments = 0 // Payment tracking to be implemented with payments table
+  const missingDocuments = student?.documents 
+    ? Object.entries(student.documents)
+        .filter(([_, doc]: [string, any]) => !doc.uploaded)
+        .map(([docType, _]) => docType)
+    : []
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -242,7 +251,7 @@ function StudentDashboardContent() {
                   </Alert>
                 )}
 
-                {Object.entries(student.documents).map(([docType, doc]: [string, any]) => (
+                {student?.documents && Object.entries(student.documents).map(([docType, doc]: [string, any]) => (
                   <div key={docType} className="space-y-2">
                     <Label className="capitalize">{docType.replace(/([A-Z])/g, " $1").trim()}</Label>
                     <div className="flex items-center space-x-2">
@@ -318,12 +327,8 @@ function StudentDashboardContent() {
                             <TableCell>{course.schedule}</TableCell>
                             <TableCell>{course.monthly_price} DA</TableCell>
                             <TableCell>
-                              <Badge
-                                variant={
-                                  course.payments && course.payments[Number.parseInt(studentId)] ? "default" : "destructive"
-                                }
-                              >
-                                {course.payments && course.payments[Number.parseInt(studentId)] ? "Paid" : "Pending"}
+                              <Badge variant="outline">
+                                N/A
                               </Badge>
                             </TableCell>
                           </TableRow>

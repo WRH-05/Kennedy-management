@@ -39,6 +39,7 @@ export default function UserManagementTab() {
     email: '',
     role: 'receptionist' as 'manager' | 'receptionist'
   })
+  const [sendingInvite, setSendingInvite] = useState(false)
 
   useEffect(() => {
     loadData()
@@ -62,8 +63,11 @@ export default function UserManagementTab() {
 
   const handleSendInvitation = async (e: React.FormEvent) => {
     e.preventDefault()
+    if (sendingInvite) return // Prevent double submission
+    
     setError(null)
     setSuccess(null)
+    setSendingInvite(true)
 
     try {
       const result = await authService.sendInvitation(
@@ -72,12 +76,25 @@ export default function UserManagementTab() {
         currentUser?.profile?.full_name || 'System'
       )
       
-      setSuccess(`Invitation sent! Share this link: ${result.inviteLink}`)
+      if (result.emailSent) {
+        setSuccess(`Invitation email sent to ${inviteForm.email}!`)
+      } else {
+        // Copy link to clipboard if email wasn't sent
+        try {
+          await navigator.clipboard.writeText(result.inviteLink)
+          setSuccess(`Invitation created! Link copied to clipboard (email service not configured).`)
+        } catch {
+          setSuccess(`Invitation created! Share this link: ${result.inviteLink}`)
+        }
+      }
+      
       setInviteForm({ email: '', role: 'receptionist' })
       setInviteDialogOpen(false)
       await loadData()
     } catch (err: any) {
       setError(err.message || 'Failed to send invitation')
+    } finally {
+      setSendingInvite(false)
     }
   }
 
@@ -208,9 +225,9 @@ export default function UserManagementTab() {
                 </Select>
               </div>
               
-              <Button type="submit" className="w-full">
+              <Button type="submit" className="w-full" disabled={sendingInvite}>
                 <Mail className="mr-2 h-4 w-4" />
-                Send Invitation
+                {sendingInvite ? 'Sending...' : 'Send Invitation'}
               </Button>
             </form>
           </DialogContent>
@@ -266,7 +283,7 @@ export default function UserManagementTab() {
                   {users.map((user) => (
                     <TableRow key={user.id}>
                       <TableCell className="font-medium">{user.full_name}</TableCell>
-                      <TableCell>{user.id}</TableCell>
+                      <TableCell>{user.email || 'N/A'}</TableCell>
                       <TableCell>{getStatusBadge(user.role, user.is_active)}</TableCell>
                       <TableCell>
                         {user.invited_by_profile?.full_name || 'System'}

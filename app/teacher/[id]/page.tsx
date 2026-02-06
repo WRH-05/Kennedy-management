@@ -40,7 +40,7 @@ function TeacherProfileContent() {
     const loadData = async () => {
       try {
         // Load teacher data from Supabase
-        const teacherData = await teacherService.getTeacherById(Number.parseInt(teacherId))
+        const teacherData = await teacherService.getTeacherById(teacherId)
         if (teacherData) {
           setTeacher(teacherData)
           setEditedTeacher(JSON.parse(JSON.stringify(teacherData))) // Deep copy to avoid reference issues
@@ -52,7 +52,7 @@ function TeacherProfileContent() {
         }
 
         // Load teacher's courses
-        const teacherCourses = await courseService.getCoursesByTeacherId(Number.parseInt(teacherId))
+        const teacherCourses = await courseService.getCoursesByTeacherId(teacherId)
         setCourses(teacherCourses)
 
       } catch (err) {
@@ -76,7 +76,7 @@ function TeacherProfileContent() {
 
   const confirmSave = async () => {
     try {
-      await teacherService.updateTeacher(Number.parseInt(teacherId), editedTeacher)
+      await teacherService.updateTeacher(teacherId, editedTeacher)
       setTeacher({ ...editedTeacher })
       setIsEditing(false)
       setShowSaveConfirmation(false)
@@ -120,7 +120,7 @@ function TeacherProfileContent() {
     )
   }
 
-  const canEdit = user.role === "receptionist" || user.role === "manager"
+  const canEdit = user?.profile?.role === "receptionist" || user?.profile?.role === "manager" || user?.profile?.role === "owner"
   const activeCourses = courses.filter((course) => course.status === "active")
   const completedCourses = courses.filter((course) => course.status === "completed")
 

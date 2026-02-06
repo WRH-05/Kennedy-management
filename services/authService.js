@@ -268,28 +268,31 @@ export const authService = {
         throw new Error('Invalid role. Must be "manager" or "receptionist"')
       }
 
+      const normalizedEmail = email.toLowerCase().trim()
+
       // Check if invitation already exists
       const { data: existingInvite, error: checkError } = await supabase
         .from('invitations')
         .select('*')
-        .eq('email', email)
+        .eq('email', normalizedEmail)
         .eq('school_id', currentUser.profile.school_id)
         .is('accepted_at', null)
-        .gt('expires_at', new Date().toISOString())
 
       if (checkError) {
         console.error('Error checking existing invitations:', checkError)
       }
 
-      if (existingInvite && existingInvite.length > 0) {
-        throw new Error('Invitation already sent to this email')
+      // Check for pending (non-expired) invitations
+      const pendingInvite = existingInvite?.find(inv => new Date(inv.expires_at) > new Date())
+      if (pendingInvite) {
+        throw new Error('An active invitation already exists for this email')
       }
 
       // Create invitation
       const { data: invitation, error } = await supabase
         .from('invitations')
         .insert([{
-          email: email.toLowerCase().trim(),
+          email: normalizedEmail,
           role: role,
           school_id: currentUser.profile.school_id,
           invited_by: currentUser.id,
@@ -300,13 +303,44 @@ export const authService = {
 
       if (error) {
         console.error('Invitation creation error:', error)
+        // Handle unique constraint violation
+        if (error.code === '23505') {
+          throw new Error('An invitation already exists for this email')
+        }
         throw new Error(`Failed to create invitation: ${error.message}`)
       }
 
-      // Return invitation link for manual sharing
-      const inviteLink = `${window.location.origin}/auth/signup?token=${invitation.token}&email=${encodeURIComponent(email)}`
+      // Create invitation link
+      const inviteLink = `${window.location.origin}/auth/signup?token=${invitation.token}&email=${encodeURIComponent(normalizedEmail)}`
       
-      return { invitation, inviteLink }
+      // Get school name for the email
+      const { data: school } = await supabase
+        .from('schools')
+        .select('name')
+        .eq('id', currentUser.profile.school_id)
+        .single()
+
+      // Try to send email via edge function
+      let emailSent = false
+      try {
+        const { data: emailResult, error: emailError } = await supabase.functions.invoke('send-invite-email', {
+          body: {
+            to: normalizedEmail,
+            inviterName: inviterName || currentUser.profile?.full_name || 'A manager',
+            schoolName: school?.name || 'Unknown School',
+            role: role,
+            inviteLink: inviteLink
+          }
+        })
+        
+        if (!emailError && emailResult?.emailSent) {
+          emailSent = true
+        }
+      } catch (emailErr) {
+        console.log('Email sending not available, link will be copied instead')
+      }
+      
+      return { invitation, inviteLink, emailSent }
     } catch (error) {
       console.error('sendInvitation error:', error)
       throw error
@@ -321,17 +355,28 @@ export const authService = {
 
       const { data, error } = await supabase
         .from('invitations')
-        .select(`
-          *,
-          invited_by_profile:profiles!invitations_invited_by_fkey (
-            full_name
-          )
-        `)
+        .select('*')
         .eq('school_id', currentUser.profile.school_id)
         .order('created_at', { ascending: false })
 
       if (error) throw error
-      return data || []
+      
+      // Enrich with inviter name
+      const enriched = await Promise.all(
+        (data || []).map(async (invite) => {
+          if (invite.invited_by) {
+            const { data: inviter } = await supabase
+              .from('profiles')
+              .select('full_name')
+              .eq('id', invite.invited_by)
+              .single()
+            return { ...invite, invited_by_profile: inviter }
+          }
+          return { ...invite, invited_by_profile: null }
+        })
+      )
+      
+      return enriched
     } catch (error) {
       return []
     }
@@ -342,21 +387,26 @@ export const authService = {
     try {
       const { data, error } = await supabase
         .from('invitations')
-        .select(`
-          *,
-          schools (name),
-          invited_by_profile:profiles!invitations_invited_by_fkey (
-            full_name
-          )
-        `)
+        .select('*, schools (name)')
         .eq('token', token)
-        .eq('email', email)
+        .eq('email', email.toLowerCase().trim())
         .gt('expires_at', new Date().toISOString())
         .is('accepted_at', null)
         .single()
 
       if (error) throw error
-      return data
+      
+      // Enrich with inviter name
+      if (data && data.invited_by) {
+        const { data: inviter } = await supabase
+          .from('profiles')
+          .select('full_name')
+          .eq('id', data.invited_by)
+          .single()
+        return { ...data, invited_by_profile: inviter }
+      }
+      
+      return data ? { ...data, invited_by_profile: null } : null
     } catch (error) {
       return null
     }
@@ -388,31 +438,16 @@ export const authService = {
       const currentUser = await this.getCurrentUser()
       if (!currentUser?.profile?.school_id) return []
 
-      // First get all profiles
-      const { data: profiles, error: profilesError } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('school_id', currentUser.profile.school_id)
-        .order('created_at', { ascending: false })
+      // Use RPC function that can access auth.users safely
+      const { data, error } = await supabase.rpc('get_school_users_with_email')
 
-      if (profilesError) throw profilesError
+      if (error) throw error
       
-      // Then enrich with invited_by names (self-reference workaround)
-      const enrichedProfiles = await Promise.all(
-        (profiles || []).map(async (profile) => {
-          if (profile.invited_by) {
-            const { data: inviter } = await supabase
-              .from('profiles')
-              .select('full_name')
-              .eq('id', profile.invited_by)
-              .single()
-            return { ...profile, invited_by_profile: inviter }
-          }
-          return { ...profile, invited_by_profile: null }
-        })
-      )
-      
-      return enrichedProfiles
+      // Transform to match expected format
+      return (data || []).map(user => ({
+        ...user,
+        invited_by_profile: user.invited_by_name ? { full_name: user.invited_by_name } : null
+      }))
     } catch (error) {
       return []
     }
