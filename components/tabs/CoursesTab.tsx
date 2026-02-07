@@ -10,7 +10,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Badge } from "@/components/ui/badge"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
-import { BookOpen, Plus, Archive } from "lucide-react"
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
+import { BookOpen, Plus, Archive, MoreHorizontal, Pencil } from "lucide-react"
 import { courseService, teacherService } from "@/services/appDataService"
 
 interface CoursesTabProps {
@@ -383,75 +384,87 @@ export default function CoursesTab({
         </div>
       </CardHeader>
       <CardContent>
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Status</TableHead>
-              <TableHead>Course</TableHead>
-              <TableHead>Teacher</TableHead>
-              <TableHead>Type</TableHead>
-              <TableHead>Schedule</TableHead>
-              <TableHead>Students</TableHead>
-              <TableHead>Price</TableHead>
-              <TableHead>Actions</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {courses.map((course) => {
-              const enrolledStudents = students.filter((s) => course.student_ids?.includes(s.id))
-              return (
-                <TableRow key={course.id}>
-                  <TableCell>
-                    <div
-                      className={`w-3 h-3 rounded-full ${
-                        course.status === "active" ? "bg-green-500" : "bg-red-500"
-                      }`}
-                    />
-                  </TableCell>
-                  <TableCell className="font-medium">
-                    <Button
-                      variant="link"
-                      className="p-0 h-auto font-medium text-left"
-                      onClick={() => router.push(`/course/${course.id}`)}
-                    >
-                      {course.subject} - {course.school_year}
-                    </Button>
-                  </TableCell>
-                  <TableCell>
-                    <Button
-                      variant="link"
-                      className="p-0 h-auto font-medium text-left"
-                      onClick={() => router.push(`/teacher/${course.teacher_id}`)}
-                    >
-                      {course.teacher_name}
-                    </Button>
-                  </TableCell>
-                  <TableCell>
-                    <Badge variant={course.course_type === "Group" ? "default" : "secondary"}>
-                      {course.course_type}
-                    </Badge>
-                  </TableCell>
-                  <TableCell>{course.schedule}</TableCell>
-                  <TableCell>{enrolledStudents.length} students</TableCell>
-                  <TableCell>
-                    {course.price} DA {course.course_type === "Group" ? "/month" : "/session"}
-                  </TableCell>
-                  <TableCell>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => handleArchiveCourse(course.id, `${course.subject} - ${course.school_year}`)}
-                      className="text-orange-600 hover:text-orange-700"
-                    >
-                      <Archive className="h-4 w-4 mr-1" />
-                      Archive
-                    </Button>
-                  </TableCell>
-                </TableRow>
-              )
-            })}
-          </TableBody>
-        </Table>
+        <div className="max-h-[500px] overflow-auto scrollbar-thin">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Status</TableHead>
+                <TableHead>Course</TableHead>
+                <TableHead>Teacher</TableHead>
+                <TableHead>Type</TableHead>
+                <TableHead>Schedule</TableHead>
+                <TableHead>Students</TableHead>
+                <TableHead>Price</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {courses.map((course) => {
+                const enrolledStudents = students.filter((s) => course.student_ids?.includes(s.id))
+                return (
+                  <TableRow key={course.id} className="group">
+                    <TableCell>
+                      <div
+                        className={`w-3 h-3 rounded-full ${
+                          course.status === "active" ? "bg-green-500" : "bg-red-500"
+                        }`}
+                      />
+                    </TableCell>
+                    <TableCell className="font-medium">
+                      <Button
+                        variant="link"
+                        className="p-0 h-auto font-medium text-left"
+                        onClick={() => router.push(`/course/${course.id}`)}
+                      >
+                        {course.subject} - {course.school_year}
+                      </Button>
+                    </TableCell>
+                    <TableCell>
+                      <Button
+                        variant="link"
+                        className="p-0 h-auto font-medium text-left"
+                        onClick={() => router.push(`/teacher/${course.teacher_id}`)}
+                      >
+                        {course.teacher_name}
+                      </Button>
+                    </TableCell>
+                    <TableCell>
+                      <Badge variant={course.course_type === "Group" ? "default" : "secondary"}>
+                        {course.course_type}
+                      </Badge>
+                    </TableCell>
+                    <TableCell>{course.schedule}</TableCell>
+                    <TableCell>{enrolledStudents.length} students</TableCell>
+                    <TableCell>
+                      <div className="flex items-center justify-between">
+                        <span>{course.price} DA {course.course_type === "Group" ? "/month" : "/session"}</span>
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button variant="ghost" className="h-8 w-8 p-0 opacity-0 group-hover:opacity-100 transition-opacity">
+                              <MoreHorizontal className="h-4 w-4" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end">
+                            <DropdownMenuItem onClick={() => router.push(`/course/${course.id}`)}>
+                              <Pencil className="mr-2 h-4 w-4" />
+                              Edit
+                            </DropdownMenuItem>
+                            <DropdownMenuItem
+                              onClick={() => handleArchiveCourse(course.id, `${course.subject} - ${course.school_year}`)}
+                              className="text-orange-600"
+                            >
+                              <Archive className="mr-2 h-4 w-4" />
+                              Archive
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                )
+              })}
+            </TableBody>
+          </Table>
+        </div>
       </CardContent>
     </Card>
   )

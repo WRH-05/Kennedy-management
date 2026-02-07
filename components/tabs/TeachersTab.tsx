@@ -10,7 +10,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Badge } from "@/components/ui/badge"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
-import { GraduationCap, Plus, Archive } from "lucide-react"
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
+import { GraduationCap, Plus, Archive, MoreHorizontal, Pencil } from "lucide-react"
 import { teacherService } from "@/services/appDataService"
 
 interface TeachersTabProps {
@@ -282,93 +283,105 @@ export default function TeachersTab({
         </div>
       </CardHeader>
       <CardContent>
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Name</TableHead>
-              <TableHead>Subjects</TableHead>
-              <TableHead>School</TableHead>
-              <TableHead>School Years</TableHead>
-              <TableHead>Active Courses</TableHead>
-              {showStats && (
-                <>
-                  <TableHead>Students</TableHead>
-                  <TableHead>Total Earnings</TableHead>
-                  <TableHead>Performance</TableHead>
-                </>
-              )}
-              <TableHead>Actions</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {(teachers || []).map((teacher) => {
-              const teacherCourses = getTeacherCourses(teacher.id)
-              return (
-                <TableRow key={teacher.id}>
-                  <TableCell className="font-medium">
-                    <Button
-                      variant="link"
-                      className="p-0 h-auto font-medium text-left"
-                      onClick={() => router.push(`/teacher/${teacher.id}`)}
-                    >
-                      {teacher.name}
-                    </Button>
-                  </TableCell>
-                  <TableCell>
-                    {teacher.subjects && (teacher.subjects.length > 0 || typeof teacher.subjects === 'string') ? 
-                      (Array.isArray(teacher.subjects) 
-                        ? teacher.subjects 
-                        : (typeof teacher.subjects === 'string' ? teacher.subjects.split(',') : [])
-                      ).filter((s: string) => s && s.trim()).map((subject: string, idx: number) => (
-                        <Badge key={idx} variant="secondary" className="mr-1">
-                          {subject.trim()}
-                        </Badge>
-                      )) : 
-                      <span className="text-gray-500">No subjects</span>
-                    }
-                  </TableCell>
-                  <TableCell>{teacher.school}</TableCell>
-                  <TableCell>
-                    {teacher.school_years && (teacher.school_years.length > 0 || typeof teacher.school_years === 'string') ? 
-                      (Array.isArray(teacher.school_years) 
-                        ? teacher.school_years 
-                        : (typeof teacher.school_years === 'string' ? teacher.school_years.split(',') : [])
-                      ).filter((y: string) => y && y.trim()).map((year: string, idx: number) => (
-                        <Badge key={idx} variant="outline" className="mr-1">
-                          {year.trim()}
-                        </Badge>
-                      )) : 
-                      <span className="text-gray-500">No school years</span>
-                    }
-                  </TableCell>
-                  <TableCell>
-                    <span className="text-sm text-gray-600">{teacherCourses.length} course(s)</span>
-                  </TableCell>
-                  {showStats && (
-                    <>
-                      <TableCell>{teacher.students || 0}</TableCell>
-                      <TableCell>{(teacher.totalEarnings || 0).toLocaleString()} DA</TableCell>
-                      <TableCell>
-                        <Badge variant="default">Excellent</Badge>
-                      </TableCell>
-                    </>
-                  )}
-                  <TableCell>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => handleArchiveTeacher(teacher.id, teacher.name)}
-                      className="text-orange-600 hover:text-orange-700"
-                    >
-                      <Archive className="h-4 w-4 mr-1" />
-                      Archive
-                    </Button>
-                  </TableCell>
-                </TableRow>
-              )
-            })}
-          </TableBody>
-        </Table>
+        <div className="max-h-[500px] overflow-auto scrollbar-thin">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Name</TableHead>
+                <TableHead>Subjects</TableHead>
+                <TableHead>School</TableHead>
+                <TableHead>School Years</TableHead>
+                <TableHead>Active Courses</TableHead>
+                {showStats && (
+                  <>
+                    <TableHead>Students</TableHead>
+                    <TableHead>Total Earnings</TableHead>
+                    <TableHead>Performance</TableHead>
+                  </>
+                )}
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {(teachers || []).map((teacher) => {
+                const teacherCourses = getTeacherCourses(teacher.id)
+                return (
+                  <TableRow key={teacher.id} className="group">
+                    <TableCell className="font-medium">
+                      <Button
+                        variant="link"
+                        className="p-0 h-auto font-medium text-left"
+                        onClick={() => router.push(`/teacher/${teacher.id}`)}
+                      >
+                        {teacher.name}
+                      </Button>
+                    </TableCell>
+                    <TableCell>
+                      {teacher.subjects && (teacher.subjects.length > 0 || typeof teacher.subjects === 'string') ? 
+                        (Array.isArray(teacher.subjects) 
+                          ? teacher.subjects 
+                          : (typeof teacher.subjects === 'string' ? teacher.subjects.split(',') : [])
+                        ).filter((s: string) => s && s.trim()).map((subject: string, idx: number) => (
+                          <Badge key={idx} variant="secondary" className="mr-1">
+                            {subject.trim()}
+                          </Badge>
+                        )) : 
+                        <span className="text-gray-500">No subjects</span>
+                      }
+                    </TableCell>
+                    <TableCell>{teacher.school}</TableCell>
+                    <TableCell>
+                      {teacher.school_years && (teacher.school_years.length > 0 || typeof teacher.school_years === 'string') ? 
+                        (Array.isArray(teacher.school_years) 
+                          ? teacher.school_years 
+                          : (typeof teacher.school_years === 'string' ? teacher.school_years.split(',') : [])
+                        ).filter((y: string) => y && y.trim()).map((year: string, idx: number) => (
+                          <Badge key={idx} variant="outline" className="mr-1">
+                            {year.trim()}
+                          </Badge>
+                        )) : 
+                        <span className="text-gray-500">No school years</span>
+                      }
+                    </TableCell>
+                    <TableCell>
+                      <div className="flex items-center justify-between">
+                        <span className="text-sm text-gray-600">{teacherCourses.length} course(s)</span>
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button variant="ghost" className="h-8 w-8 p-0 opacity-0 group-hover:opacity-100 transition-opacity">
+                              <MoreHorizontal className="h-4 w-4" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end">
+                            <DropdownMenuItem onClick={() => router.push(`/teacher/${teacher.id}`)}>
+                              <Pencil className="mr-2 h-4 w-4" />
+                              Edit
+                            </DropdownMenuItem>
+                            <DropdownMenuItem
+                              onClick={() => handleArchiveTeacher(teacher.id, teacher.name)}
+                              className="text-orange-600"
+                            >
+                              <Archive className="mr-2 h-4 w-4" />
+                              Archive
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      </div>
+                    </TableCell>
+                    {showStats && (
+                      <>
+                        <TableCell>{teacher.students || 0}</TableCell>
+                        <TableCell>{(teacher.totalEarnings || 0).toLocaleString()} DA</TableCell>
+                        <TableCell>
+                          <Badge variant="default">Excellent</Badge>
+                        </TableCell>
+                      </>
+                    )}
+                  </TableRow>
+                )
+              })}
+            </TableBody>
+          </Table>
+        </div>
       </CardContent>
     </Card>
   )

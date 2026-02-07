@@ -499,6 +499,30 @@ export const authService = {
     }
   },
 
+  // Cancel invitation (owners and managers only)
+  async cancelInvitation(invitationId) {
+    try {
+      const currentUser = await this.getCurrentUser()
+      if (!['owner', 'manager'].includes(currentUser?.profile?.role)) {
+        throw new Error('Only owners and managers can cancel invitations')
+      }
+
+      const { data, error } = await supabase
+        .from('invitations')
+        .update({ canceled_at: new Date().toISOString() })
+        .eq('id', invitationId)
+        .eq('school_id', currentUser.profile.school_id)
+        .is('accepted_at', null)
+        .select()
+        .single()
+
+      if (error) throw error
+      return data
+    } catch (error) {
+      throw error
+    }
+  },
+
   // Listen to auth changes
   onAuthStateChange(callback) {
     return supabase.auth.onAuthStateChange(callback)

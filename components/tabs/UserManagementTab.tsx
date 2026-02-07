@@ -20,7 +20,9 @@ import {
   Clock,
   Copy,
   MoreHorizontal,
-  UserX
+  UserX,
+  XCircle,
+  Ban
 } from 'lucide-react'
 import { useAuth } from '@/contexts/AuthContext'
 import { authService } from '@/services/authService'
@@ -150,12 +152,32 @@ export default function UserManagementTab() {
       return <Badge variant="default"><CheckCircle className="w-3 h-3 mr-1" />Accepted</Badge>
     }
     
+    if (invitation.canceled_at) {
+      return <Badge variant="destructive"><XCircle className="w-3 h-3 mr-1" />Canceled</Badge>
+    }
+    
     const isExpired = new Date(invitation.expires_at) < new Date()
     if (isExpired) {
-      return <Badge variant="destructive"><AlertTriangle className="w-3 h-3 mr-1" />Expired</Badge>
+      return <Badge variant="outline" className="text-orange-600 border-orange-600"><AlertTriangle className="w-3 h-3 mr-1" />Expired</Badge>
     }
     
     return <Badge variant="secondary"><Clock className="w-3 h-3 mr-1" />Pending</Badge>
+  }
+
+  const handleCancelInvitation = async (invitationId: string) => {
+    try {
+      await authService.cancelInvitation(invitationId)
+      setSuccess('Invitation canceled successfully')
+      await loadData()
+    } catch (err: any) {
+      setError(err.message || 'Failed to cancel invitation')
+    }
+  }
+
+  const isInvitationActive = (invitation: any) => {
+    return !invitation.accepted_at && 
+           !invitation.canceled_at && 
+           new Date(invitation.expires_at) > new Date()
   }
 
   if (!hasRole(['owner', 'manager'])) {
@@ -268,73 +290,74 @@ export default function UserManagementTab() {
               <CardTitle>School Users</CardTitle>
             </CardHeader>
             <CardContent>
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Name</TableHead>
-                    <TableHead>Email</TableHead>
-                    <TableHead>Role</TableHead>
-                    <TableHead>Invited By</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead>Actions</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {users.map((user) => (
-                    <TableRow key={user.id}>
-                      <TableCell className="font-medium">{user.full_name}</TableCell>
-                      <TableCell>{user.email || 'N/A'}</TableCell>
-                      <TableCell>{getStatusBadge(user.role, user.is_active)}</TableCell>
-                      <TableCell>
-                        {user.invited_by_profile?.full_name || 'System'}
-                      </TableCell>
-                      <TableCell>
-                        <Badge variant={user.is_active ? "default" : "destructive"}>
-                          {user.is_active ? "Active" : "Inactive"}
-                        </Badge>
-                      </TableCell>
-                      <TableCell>
-                        {user.id !== currentUser?.id && hasRole('owner') && (
-                          <DropdownMenu>
-                            <DropdownMenuTrigger asChild>
-                              <Button variant="ghost" className="h-8 w-8 p-0">
-                                <MoreHorizontal className="h-4 w-4" />
-                              </Button>
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent align="end">
-                              {user.role !== 'owner' && (
-                                <>
-                                  <DropdownMenuItem
-                                    onClick={() => handleUpdateUserRole(user.id, 'manager')}
-                                    disabled={user.role === 'manager'}
-                                  >
-                                    Make Manager
-                                  </DropdownMenuItem>
-                                  <DropdownMenuItem
-                                    onClick={() => handleUpdateUserRole(user.id, 'receptionist')}
-                                    disabled={user.role === 'receptionist'}
-                                  >
-                                    Make Receptionist
-                                  </DropdownMenuItem>
-                                  {user.is_active && (
-                                    <DropdownMenuItem
-                                      onClick={() => handleDeactivateUser(user.id)}
-                                      className="text-destructive"
-                                    >
-                                      <UserX className="mr-2 h-4 w-4" />
-                                      Deactivate
-                                    </DropdownMenuItem>
-                                  )}
-                                </>
-                              )}
-                            </DropdownMenuContent>
-                          </DropdownMenu>
-                        )}
-                      </TableCell>
+              <div className="max-h-[500px] overflow-auto scrollbar-thin">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Name</TableHead>
+                      <TableHead>Email</TableHead>
+                      <TableHead>Role</TableHead>
+                      <TableHead>Invited By</TableHead>
+                      <TableHead>Status</TableHead>
                     </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
+                  </TableHeader>
+                  <TableBody>
+                    {users.map((user) => (
+                      <TableRow key={user.id} className="group">
+                        <TableCell className="font-medium">{user.full_name}</TableCell>
+                        <TableCell>{user.email || 'N/A'}</TableCell>
+                        <TableCell>{getStatusBadge(user.role, user.is_active)}</TableCell>
+                        <TableCell>
+                          {user.invited_by_profile?.full_name || 'System'}
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex items-center justify-between">
+                            <Badge variant={user.is_active ? "default" : "destructive"}>
+                              {user.is_active ? "Active" : "Inactive"}
+                            </Badge>
+                            {user.id !== currentUser?.id && hasRole('owner') && (
+                              <DropdownMenu>
+                                <DropdownMenuTrigger asChild>
+                                  <Button variant="ghost" className="h-8 w-8 p-0 opacity-0 group-hover:opacity-100 transition-opacity">
+                                    <MoreHorizontal className="h-4 w-4" />
+                                  </Button>
+                                </DropdownMenuTrigger>
+                                <DropdownMenuContent align="end">
+                                  {user.role !== 'owner' && (
+                                    <>
+                                      <DropdownMenuItem
+                                        onClick={() => handleUpdateUserRole(user.id, 'manager')}
+                                        disabled={user.role === 'manager'}
+                                      >
+                                        Make Manager
+                                      </DropdownMenuItem>
+                                      <DropdownMenuItem
+                                        onClick={() => handleUpdateUserRole(user.id, 'receptionist')}
+                                        disabled={user.role === 'receptionist'}
+                                      >
+                                        Make Receptionist
+                                      </DropdownMenuItem>
+                                      {user.is_active && (
+                                        <DropdownMenuItem
+                                          onClick={() => handleDeactivateUser(user.id)}
+                                          className="text-destructive"
+                                        >
+                                          <UserX className="mr-2 h-4 w-4" />
+                                          Deactivate
+                                        </DropdownMenuItem>
+                                      )}
+                                    </>
+                                  )}
+                                </DropdownMenuContent>
+                              </DropdownMenu>
+                            )}
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
             </CardContent>
           </Card>
         </TabsContent>
@@ -342,48 +365,68 @@ export default function UserManagementTab() {
         <TabsContent value="invitations">
           <Card>
             <CardHeader>
-              <CardTitle>Pending Invitations</CardTitle>
+              <CardTitle>Invitations</CardTitle>
             </CardHeader>
             <CardContent>
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Email</TableHead>
-                    <TableHead>Role</TableHead>
-                    <TableHead>Invited By</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead>Expires</TableHead>
-                    <TableHead>Actions</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {invitations.map((invitation) => (
-                    <TableRow key={invitation.id}>
-                      <TableCell className="font-medium">{invitation.email}</TableCell>
-                      <TableCell>
-                        <Badge variant="outline">{invitation.role}</Badge>
-                      </TableCell>
-                      <TableCell>{invitation.invited_by_profile?.full_name}</TableCell>
-                      <TableCell>{getInviteStatusBadge(invitation)}</TableCell>
-                      <TableCell>
-                        {new Date(invitation.expires_at).toLocaleDateString()}
-                      </TableCell>
-                      <TableCell>
-                        {!invitation.accepted_at && new Date(invitation.expires_at) > new Date() && (
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => copyInviteLink(invitation)}
-                          >
-                            <Copy className="h-4 w-4 mr-2" />
-                            Copy Link
-                          </Button>
-                        )}
-                      </TableCell>
+              <div className="max-h-[500px] overflow-auto scrollbar-thin">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Email</TableHead>
+                      <TableHead>Role</TableHead>
+                      <TableHead>Invited By</TableHead>
+                      <TableHead>Status</TableHead>
+                      <TableHead>Expires</TableHead>
                     </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
+                  </TableHeader>
+                  <TableBody>
+                    {invitations.map((invitation) => (
+                      <TableRow key={invitation.id} className="group">
+                        <TableCell className="font-medium">{invitation.email}</TableCell>
+                        <TableCell>
+                          <Badge variant="outline">{invitation.role}</Badge>
+                        </TableCell>
+                        <TableCell>{invitation.invited_by_profile?.full_name}</TableCell>
+                        <TableCell>{getInviteStatusBadge(invitation)}</TableCell>
+                        <TableCell>
+                          <div className="flex items-center justify-between">
+                            <span>{new Date(invitation.expires_at).toLocaleDateString()}</span>
+                            <DropdownMenu>
+                              <DropdownMenuTrigger asChild>
+                                <Button variant="ghost" className="h-8 w-8 p-0 opacity-0 group-hover:opacity-100 transition-opacity">
+                                  <MoreHorizontal className="h-4 w-4" />
+                                </Button>
+                              </DropdownMenuTrigger>
+                              <DropdownMenuContent align="end">
+                                {isInvitationActive(invitation) && (
+                                  <>
+                                    <DropdownMenuItem onClick={() => copyInviteLink(invitation)}>
+                                      <Copy className="mr-2 h-4 w-4" />
+                                      Copy Link
+                                    </DropdownMenuItem>
+                                    <DropdownMenuItem
+                                      onClick={() => handleCancelInvitation(invitation.id)}
+                                      className="text-destructive"
+                                    >
+                                      <Ban className="mr-2 h-4 w-4" />
+                                      Cancel Invitation
+                                    </DropdownMenuItem>
+                                  </>
+                                )}
+                                {!isInvitationActive(invitation) && (
+                                  <DropdownMenuItem disabled>
+                                    No actions available
+                                  </DropdownMenuItem>
+                                )}
+                              </DropdownMenuContent>
+                            </DropdownMenu>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
             </CardContent>
           </Card>
         </TabsContent>

@@ -11,7 +11,8 @@ import { Checkbox } from "@/components/ui/checkbox"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Badge } from "@/components/ui/badge"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
-import { Users, Plus, Archive } from "lucide-react"
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
+import { Users, Plus, Archive, MoreHorizontal, Pencil } from "lucide-react"
 import { studentService } from "@/services/appDataService"
 
 interface StudentsTabProps {
@@ -285,71 +286,109 @@ export default function StudentsTab({
         </div>
       </CardHeader>
       <CardContent>
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Name</TableHead>
-              <TableHead>School Year</TableHead>
-              <TableHead>Specialty</TableHead>
-              {showCourses && <TableHead>Enrolled Courses</TableHead>}
-              {showPaymentStatus && <TableHead>Payment Status</TableHead>}
-              <TableHead>Actions</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {students.map((student) => {
-              const studentCourses = getStudentCourses(student.id)
-              return (
-                <TableRow key={student.id}>
-                  <TableCell className="font-medium">
-                    <Button
-                      variant="link"
-                      className="p-0 h-auto font-medium text-left"
-                      onClick={() => router.push(`/student/${student.id}`)}
-                    >
-                      {student.name}
-                    </Button>
-                  </TableCell>
-                  <TableCell>{student.school_year}</TableCell>
-                  <TableCell>{student.specialty}</TableCell>
-                  {showCourses && (
-                    <TableCell>
-                      {studentCourses.map((course, idx) => (
-                        <Badge key={idx} variant="secondary" className="mr-1">
-                          {course.subject}
-                        </Badge>
-                      ))}
+        <div className="max-h-[500px] overflow-auto scrollbar-thin">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Name</TableHead>
+                <TableHead>School Year</TableHead>
+                <TableHead>Specialty</TableHead>
+                {showCourses && <TableHead>Enrolled Courses</TableHead>}
+                {showPaymentStatus && <TableHead>Payment Status</TableHead>}
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {students.map((student) => {
+                const studentCourses = getStudentCourses(student.id)
+                return (
+                  <TableRow key={student.id} className="group">
+                    <TableCell className="font-medium">
+                      <Button
+                        variant="link"
+                        className="p-0 h-auto font-medium text-left"
+                        onClick={() => router.push(`/student/${student.id}`)}
+                      >
+                        {student.name}
+                      </Button>
                     </TableCell>
-                  )}
-                  {showPaymentStatus && (
-                    <TableCell>
-                      {studentCourses.map((course, idx) => (
-                        <Badge
-                          key={idx}
-                          variant={course.payments?.students?.[student.id] ? "default" : "destructive"}
-                          className="mr-1"
-                        >
-                          {course.payments?.students?.[student.id] ? "Paid" : "Pending"}
-                        </Badge>
-                      ))}
-                    </TableCell>
-                  )}
-                  <TableCell>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => handleArchiveStudent(student.id, student.name)}
-                      className="text-orange-600 hover:text-orange-700"
-                    >
-                      <Archive className="h-4 w-4 mr-1" />
-                      Archive
-                    </Button>
-                  </TableCell>
-                </TableRow>
-              )
-            })}
-          </TableBody>
-        </Table>
+                    <TableCell>{student.school_year}</TableCell>
+                    <TableCell>{student.specialty}</TableCell>
+                    {showCourses && (
+                      <TableCell>
+                        {studentCourses.map((course, idx) => (
+                          <Badge key={idx} variant="secondary" className="mr-1">
+                            {course.subject}
+                          </Badge>
+                        ))}
+                      </TableCell>
+                    )}
+                    {showPaymentStatus && (
+                      <TableCell>
+                        <div className="flex items-center justify-between">
+                          <div>
+                            {studentCourses.map((course, idx) => (
+                              <Badge
+                                key={idx}
+                                variant={course.payments?.students?.[student.id] ? "default" : "destructive"}
+                                className="mr-1"
+                              >
+                                {course.payments?.students?.[student.id] ? "Paid" : "Pending"}
+                              </Badge>
+                            ))}
+                          </div>
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <Button variant="ghost" className="h-8 w-8 p-0 opacity-0 group-hover:opacity-100 transition-opacity">
+                                <MoreHorizontal className="h-4 w-4" />
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end">
+                              <DropdownMenuItem onClick={() => router.push(`/student/${student.id}`)}>
+                                <Pencil className="mr-2 h-4 w-4" />
+                                Edit
+                              </DropdownMenuItem>
+                              <DropdownMenuItem
+                                onClick={() => handleArchiveStudent(student.id, student.name)}
+                                className="text-orange-600"
+                              >
+                                <Archive className="mr-2 h-4 w-4" />
+                                Archive
+                              </DropdownMenuItem>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
+                        </div>
+                      </TableCell>
+                    )}
+                    {!showPaymentStatus && (
+                      <TableCell>
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button variant="ghost" className="h-8 w-8 p-0 opacity-0 group-hover:opacity-100 transition-opacity">
+                              <MoreHorizontal className="h-4 w-4" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end">
+                            <DropdownMenuItem onClick={() => router.push(`/student/${student.id}`)}>
+                              <Pencil className="mr-2 h-4 w-4" />
+                              Edit
+                            </DropdownMenuItem>
+                            <DropdownMenuItem
+                              onClick={() => handleArchiveStudent(student.id, student.name)}
+                              className="text-orange-600"
+                            >
+                              <Archive className="mr-2 h-4 w-4" />
+                              Archive
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      </TableCell>
+                    )}
+                  </TableRow>
+                )
+              })}
+            </TableBody>
+          </Table>
+        </div>
       </CardContent>
     </Card>
   )

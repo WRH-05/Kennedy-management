@@ -824,7 +824,29 @@ export const paymentService = {
       const schoolId = await getCurrentUserSchoolId()
       if (!schoolId) throw new Error('No school access')
 
-      // Check if payment exists
+      // Get course info for price and details
+      const { data: courseData, error: courseError } = await supabase
+        .from('course_instances')
+        .select('price, subject, school_year')
+        .eq('id', courseId)
+        .eq('school_id', schoolId)
+        .single()
+      
+      if (courseError) throw courseError
+
+      // Get student info
+      const { data: studentData, error: studentError } = await supabase
+        .from('students')
+        .select('name')
+        .eq('id', studentId)
+        .eq('school_id', schoolId)
+        .single()
+      
+      if (studentError) throw studentError
+
+      const currentMonth = new Date().toLocaleString('default', { month: 'long', year: 'numeric' })
+
+      // Check if payment exists in student_payments
       const { data: existingPayment, error: fetchError } = await supabase
         .from('student_payments')
         .select('*')
@@ -836,15 +858,37 @@ export const paymentService = {
       if (fetchError && fetchError.code !== 'PGRST116') throw fetchError
       
       if (existingPayment) {
+        const newStatus = existingPayment.status === 'paid' ? 'pending' : 'paid'
         const { data, error } = await supabase
           .from('student_payments')
-          .update({ status: existingPayment.status === 'paid' ? 'pending' : 'paid' })
+          .update({ 
+            status: newStatus,
+            amount: courseData.price || 0,
+            month: currentMonth,
+            updated_at: new Date().toISOString()
+          })
           .eq('id', existingPayment.id)
           .eq('school_id', schoolId)
           .select()
           .single()
         
         if (error) throw error
+
+        // Update revenue table too
+        await supabase
+          .from('revenue')
+          .upsert({
+            school_id: schoolId,
+            student_id: studentId,
+            course_id: courseId,
+            student_name: studentData.name,
+            course: `${courseData.subject} - ${courseData.school_year}`,
+            amount: courseData.price || 0,
+            month: currentMonth,
+            paid: newStatus === 'paid',
+            updated_at: new Date().toISOString()
+          }, { onConflict: 'school_id,student_id,course_id,month' })
+
         return data
       } else {
         const { data, error } = await supabase
@@ -853,6 +897,8 @@ export const paymentService = {
             course_id: courseId,
             student_id: studentId,
             school_id: schoolId,
+            amount: courseData.price || 0,
+            month: currentMonth,
             status: 'paid',
             payment_date: new Date().toISOString()
           }])
@@ -860,6 +906,23 @@ export const paymentService = {
           .single()
         
         if (error) throw error
+
+        // Insert into revenue table too
+        await supabase
+          .from('revenue')
+          .upsert({
+            school_id: schoolId,
+            student_id: studentId,
+            course_id: courseId,
+            student_name: studentData.name,
+            course: `${courseData.subject} - ${courseData.school_year}`,
+            amount: courseData.price || 0,
+            month: currentMonth,
+            paid: true,
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString()
+          }, { onConflict: 'school_id,student_id,course_id,month' })
+
         return data
       }
     } catch (error) {
