@@ -384,7 +384,7 @@ export default function CoursesTab({
         </div>
       </CardHeader>
       <CardContent>
-        <div className="max-h-[500px] overflow-auto scrollbar-thin">
+        <div className="max-h-[455px] overflow-auto scrollbar-thin">
           <Table>
             <TableHeader>
               <TableRow>

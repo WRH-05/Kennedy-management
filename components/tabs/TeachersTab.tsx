@@ -283,7 +283,7 @@ export default function TeachersTab({
         </div>
       </CardHeader>
       <CardContent>
-        <div className="max-h-[500px] overflow-auto scrollbar-thin">
+        <div className="max-h-[4550px] overflow-auto scrollbar-thin">
           <Table>
             <TableHeader>
               <TableRow>

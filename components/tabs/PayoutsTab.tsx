@@ -21,6 +21,7 @@ export default function PayoutsTab({ payouts, onApprovePayout }: PayoutsTabProps
         </CardTitle>
       </CardHeader>
       <CardContent>
+        <div className="max-h-[455px] overflow-auto scrollbar-thin">
         <Table>
           <TableHeader>
             <TableRow>
@@ -57,6 +58,7 @@ export default function PayoutsTab({ payouts, onApprovePayout }: PayoutsTabProps
             ))}
           </TableBody>
         </Table>
+        </div>
       </CardContent>
     </Card>
   )

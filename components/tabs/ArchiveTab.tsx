@@ -140,6 +140,7 @@ export default function ArchiveTab({ isManager = false, onArchiveUpdate }: Archi
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-6">
+        <div className="max-h-[455px] overflow-auto scrollbar-thin">
         {/* Pending Requests */}
         <div>
           <h3 className="text-lg font-medium mb-4">Pending Archive Requests</h3>
@@ -254,6 +255,7 @@ export default function ArchiveTab({ isManager = false, onArchiveUpdate }: Archi
             </Table>
           </div>
         )}
+        </div>
       </CardContent>
     </Card>
   )

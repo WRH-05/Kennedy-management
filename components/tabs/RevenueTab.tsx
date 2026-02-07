@@ -19,6 +19,7 @@ export default function RevenueTab({ revenue }: RevenueTabProps) {
         </CardTitle>
       </CardHeader>
       <CardContent>
+        <div className="max-h-[455px] overflow-auto scrollbar-thin">
         <Table>
           <TableHeader>
             <TableRow>
@@ -45,6 +46,7 @@ export default function RevenueTab({ revenue }: RevenueTabProps) {
             ))}
           </TableBody>
         </Table>
+        </div>
       </CardContent>
     </Card>
   )

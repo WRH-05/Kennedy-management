@@ -270,13 +270,14 @@ export const authService = {
 
       const normalizedEmail = email.toLowerCase().trim()
 
-      // Check if invitation already exists
+      // Check if invitation already exists (exclude canceled and accepted)
       const { data: existingInvite, error: checkError } = await supabase
         .from('invitations')
         .select('*')
         .eq('email', normalizedEmail)
         .eq('school_id', currentUser.profile.school_id)
         .is('accepted_at', null)
+        .is('canceled_at', null)
 
       if (checkError) {
         console.error('Error checking existing invitations:', checkError)
