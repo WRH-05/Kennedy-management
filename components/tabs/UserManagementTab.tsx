@@ -152,10 +152,6 @@ export default function UserManagementTab() {
       return <Badge variant="default"><CheckCircle className="w-3 h-3 mr-1" />Accepted</Badge>
     }
     
-    if (invitation.canceled_at) {
-      return <Badge variant="destructive"><XCircle className="w-3 h-3 mr-1" />Canceled</Badge>
-    }
-    
     const isExpired = new Date(invitation.expires_at) < new Date()
     if (isExpired) {
       return <Badge variant="outline" className="text-orange-600 border-orange-600"><AlertTriangle className="w-3 h-3 mr-1" />Expired</Badge>
@@ -176,7 +172,6 @@ export default function UserManagementTab() {
 
   const isInvitationActive = (invitation: any) => {
     return !invitation.accepted_at && 
-           !invitation.canceled_at && 
            new Date(invitation.expires_at) > new Date()
   }
 

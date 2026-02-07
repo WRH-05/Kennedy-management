@@ -82,9 +82,19 @@ function CourseDetailContent() {
         }
 
         // Initialize payment structures with loaded data
+        // Also check if teacher has been paid for this month
+        let teacherPaidStatus = false
+        if (courseData.teacher_id) {
+          try {
+            teacherPaidStatus = await paymentService.isTeacherPaidForMonth(courseData.teacher_id)
+          } catch {
+            teacherPaidStatus = false
+          }
+        }
+
         courseData.payments = { 
           students: studentPayments, 
-          teacherPaid: false 
+          teacherPaid: teacherPaidStatus 
         }
         
         if (!courseData.attendance) {
@@ -151,6 +161,11 @@ function CourseDetailContent() {
   }
 
   const toggleTeacherPayment = async () => {
+    if (!course?.teacher_id) {
+      alert("No teacher assigned to this course")
+      return
+    }
+
     const currentStatus = course?.payments?.teacherPaid || false
     const teacherEarningsAmount = Math.round((course?.price * (course?.student_ids?.length || 0) * (course?.percentage_cut || 0)) / 100)
     
@@ -160,18 +175,20 @@ function CourseDetailContent() {
       description: `Mark teacher payment as ${currentStatus ? "unpaid" : "paid"}? Amount: ${teacherEarningsAmount} DA`,
       action: async () => {
         try {
-          // For teacher payouts, we need to create/update a payout record
-          // We'll use the course instance to track teacher payment status for now
-          await courseService.updateCourseInstance(courseId, {
-            teacher_paid: !currentStatus
-          })
+          // Use the proper teacher_payouts table
+          const result = await paymentService.toggleTeacherPayment(
+            courseId, 
+            course.teacher_id, 
+            teacherEarningsAmount, 
+            course.percentage_cut || 50
+          )
           
           // Update local state after successful database update
           setCourse((prev: any) => ({
             ...prev,
             payments: {
               ...prev.payments,
-              teacherPaid: !currentStatus,
+              teacherPaid: result.isPaid,
             },
           }))
         } catch (error) {

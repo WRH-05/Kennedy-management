@@ -975,6 +975,104 @@ export const paymentService = {
     }
   },
 
+  // Toggle teacher payment for a course (creates/updates teacher_payouts)
+  async toggleTeacherPayment(courseId, teacherId, amount, percentage) {
+    try {
+      const schoolId = await getCurrentUserSchoolId()
+      if (!schoolId) throw new Error('No school access')
+
+      const currentMonth = new Date().toLocaleString('default', { month: 'long', year: 'numeric' })
+
+      // Get teacher info
+      const { data: teacherData, error: teacherError } = await supabase
+        .from('teachers')
+        .select('name')
+        .eq('id', teacherId)
+        .eq('school_id', schoolId)
+        .single()
+      
+      if (teacherError) throw teacherError
+
+      // Check if payout exists for this teacher and month
+      const { data: existingPayout, error: fetchError } = await supabase
+        .from('teacher_payouts')
+        .select('*')
+        .eq('teacher_id', teacherId)
+        .eq('school_id', schoolId)
+        .eq('month', currentMonth)
+        .single()
+      
+      if (fetchError && fetchError.code !== 'PGRST116') throw fetchError
+      
+      if (existingPayout) {
+        // Toggle status: pending -> paid, paid -> pending
+        const newStatus = existingPayout.status === 'paid' ? 'pending' : 'paid'
+        const { data, error } = await supabase
+          .from('teacher_payouts')
+          .update({ 
+            status: newStatus,
+            amount: amount,
+            percentage: percentage,
+            payment_date: newStatus === 'paid' ? new Date().toISOString().split('T')[0] : null,
+            updated_at: new Date().toISOString()
+          })
+          .eq('id', existingPayout.id)
+          .eq('school_id', schoolId)
+          .select()
+          .single()
+        
+        if (error) throw error
+        return { ...data, isPaid: newStatus === 'paid' }
+      } else {
+        // Create new payout record with status 'paid'
+        const { data, error } = await supabase
+          .from('teacher_payouts')
+          .insert([{
+            teacher_id: teacherId,
+            school_id: schoolId,
+            professor_name: teacherData?.name || 'Unknown',
+            percentage: percentage,
+            amount: amount,
+            month: currentMonth,
+            status: 'paid',
+            payment_date: new Date().toISOString().split('T')[0],
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString()
+          }])
+          .select()
+          .single()
+        
+        if (error) throw error
+        return { ...data, isPaid: true }
+      }
+    } catch (error) {
+      throw error
+    }
+  },
+
+  // Check if teacher is paid for current month
+  async isTeacherPaidForMonth(teacherId, month = null) {
+    try {
+      const schoolId = await getCurrentUserSchoolId()
+      if (!schoolId) throw new Error('No school access')
+
+      const targetMonth = month || new Date().toLocaleString('default', { month: 'long', year: 'numeric' })
+
+      const { data, error } = await supabase
+        .from('teacher_payouts')
+        .select('status')
+        .eq('teacher_id', teacherId)
+        .eq('school_id', schoolId)
+        .eq('month', targetMonth)
+        .single()
+      
+      if (error && error.code !== 'PGRST116') throw error
+      return data?.status === 'paid'
+    } catch (error) {
+      return false
+    }
+  },
+
   // Get student payments
   async getStudentPayments() {
     try {

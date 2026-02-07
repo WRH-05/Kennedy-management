@@ -272,14 +272,13 @@ export const authService = {
 
       const normalizedEmail = email.toLowerCase().trim()
 
-      // Check if invitation already exists (exclude canceled and accepted)
+      // Check if invitation already exists (exclude accepted)
       const { data: existingInvite, error: checkError } = await supabase
         .from('invitations')
         .select('*')
         .eq('email', normalizedEmail)
         .eq('school_id', currentUser.profile.school_id)
         .is('accepted_at', null)
-        .is('canceled_at', null)
 
       if (checkError) {
         console.error('Error checking existing invitations:', checkError)
@@ -502,7 +501,7 @@ export const authService = {
     }
   },
 
-  // Cancel invitation (owners and managers only)
+  // Cancel invitation (owners and managers only) - uses delete since canceled_at column doesn't exist
   async cancelInvitation(invitationId) {
     try {
       const currentUser = await this.getCurrentUser()
@@ -512,7 +511,7 @@ export const authService = {
 
       const { data, error } = await supabase
         .from('invitations')
-        .update({ canceled_at: new Date().toISOString() })
+        .delete()
         .eq('id', invitationId)
         .eq('school_id', currentUser.profile.school_id)
         .is('accepted_at', null)
