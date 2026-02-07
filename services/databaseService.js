@@ -1005,8 +1005,10 @@ export const paymentService = {
       if (fetchError && fetchError.code !== 'PGRST116') throw fetchError
       
       if (existingPayout) {
-        // Toggle status: pending -> paid, paid -> pending
-        const newStatus = existingPayout.status === 'paid' ? 'pending' : 'paid'
+        // Toggle status: pending -> paid, paid/approved -> pending
+        // 'approved' is also a terminal paid state
+        const isPaidState = existingPayout.status === 'paid' || existingPayout.status === 'approved'
+        const newStatus = isPaidState ? 'pending' : 'paid'
         const { data, error } = await supabase
           .from('teacher_payouts')
           .update({ 
@@ -1067,7 +1069,8 @@ export const paymentService = {
         .single()
       
       if (error && error.code !== 'PGRST116') throw error
-      return data?.status === 'paid'
+      // Both 'paid' and 'approved' are terminal paid states
+      return data?.status === 'paid' || data?.status === 'approved'
     } catch (error) {
       return false
     }

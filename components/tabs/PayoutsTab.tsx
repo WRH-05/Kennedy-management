@@ -43,12 +43,12 @@ export default function PayoutsTab({ payouts, onApprovePayout }: PayoutsTabProps
                 <TableCell>{(payout.amount || 0).toLocaleString()} DA</TableCell>
                 <TableCell>{payout.due_date || payout.month || 'N/A'}</TableCell>
                 <TableCell>
-                  <Badge variant={payout.status === 'approved' ? "default" : "destructive"}>
-                    {payout.status === 'approved' ? "Approved" : "Pending"}
+                  <Badge variant={payout.status === 'approved' || payout.status === 'paid' ? "default" : "destructive"}>
+                    {payout.status === 'approved' || payout.status === 'paid' ? "Paid" : "Pending"}
                   </Badge>
                 </TableCell>
                 <TableCell>
-                  {payout.status !== 'approved' && (
+                  {payout.status !== 'approved' && payout.status !== 'paid' && (
                     <Button variant="outline" size="sm" onClick={() => onApprovePayout(payout.id)}>
                       Approve
                     </Button>

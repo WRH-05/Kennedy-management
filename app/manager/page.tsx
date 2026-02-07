@@ -32,6 +32,7 @@ export default function ManagerDashboard() {
   
   const [revenue, setRevenue] = useState<any[]>([])
   const [payouts, setPayouts] = useState<any[]>([])
+  const [allPayoutsForTotal, setAllPayoutsForTotal] = useState<any[]>([])
   const [selectedMonth, setSelectedMonth] = useState("2024-01")
 
   // Filter out archived items with memoization for performance
@@ -60,12 +61,14 @@ export default function ManagerDashboard() {
   useEffect(() => {
     const loadPaymentData = async () => {
       try {
-        const [revenueData, payoutsData] = await Promise.all([
+        const [revenueData, pendingPayoutsData, allPayoutsData] = await Promise.all([
           paymentService.getRevenueData(),
           paymentService.getPendingPayouts(),
+          paymentService.getAllPayouts(),
         ])
         setRevenue(revenueData)
-        setPayouts(payoutsData)
+        setPayouts(pendingPayoutsData)
+        setAllPayoutsForTotal(allPayoutsData)
       } catch (error) {
         // Error loading payment data
       }
@@ -138,7 +141,7 @@ export default function ManagerDashboard() {
   }
 
   const totalRevenue = revenue.reduce((sum: number, item: any) => sum + (item.paid && item.amount ? item.amount : 0), 0)
-  const totalPayouts = payouts.reduce((sum: number, payout: any) => sum + (payout.status === 'approved' && payout.amount ? payout.amount : 0), 0)
+  const totalPayouts = allPayoutsForTotal.reduce((sum: number, payout: any) => sum + ((payout.status === 'approved' || payout.status === 'paid') && payout.amount ? payout.amount : 0), 0)
   const netProfit = totalRevenue - totalPayouts
 
   if (isLoading) return null
