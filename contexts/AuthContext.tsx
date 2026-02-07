@@ -31,7 +31,7 @@ interface AuthContextType {
   user: User | null
   loading: boolean
   signIn: (email: string, password: string) => Promise<any>
-  signUp: (email: string, password: string, token: string) => Promise<any>
+  signUp: (email: string, password: string, token: string, fullName?: string, phone?: string) => Promise<any>
   signOut: () => Promise<void>
   updateProfile: (updates: any) => Promise<any>
   hasRole: (roles: string | string[]) => boolean
@@ -82,8 +82,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     return result
   }
 
-  const signUp = async (email: string, password: string, token: string) => {
-    return await authService.signUp(email, password, token)
+  const signUp = async (email: string, password: string, token: string, fullName?: string, phone?: string) => {
+    return await authService.signUp(email, password, token, fullName, phone)
   }
 
   const signOut = async () => {

@@ -22,7 +22,9 @@ export default function SignUpForm() {
   const [formData, setFormData] = useState({
     email: inviteEmail || '',
     password: '',
-    confirmPassword: ''
+    confirmPassword: '',
+    fullName: '',
+    phone: ''
   })
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -75,9 +77,14 @@ export default function SignUpForm() {
       return
     }
 
+    if (!formData.fullName.trim()) {
+      setError('Please enter your full name')
+      return
+    }
+
     setLoading(true)
     try {
-      await signUp(formData.email, formData.password, token)
+      await signUp(formData.email, formData.password, token, formData.fullName.trim(), formData.phone.trim())
       // Redirect to check email page after successful signup
       router.push(`/auth/check-email?email=${encodeURIComponent(formData.email)}`)
     } catch (err: any) {
@@ -173,6 +180,33 @@ export default function SignUpForm() {
                   required
                   disabled={loading || !!inviteEmail}
                   placeholder="Enter your email"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="fullName">Full Name</Label>
+                <Input
+                  id="fullName"
+                  name="fullName"
+                  type="text"
+                  value={formData.fullName}
+                  onChange={handleChange}
+                  required
+                  disabled={loading}
+                  placeholder="Enter your full name"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="phone">Phone Number (Optional)</Label>
+                <Input
+                  id="phone"
+                  name="phone"
+                  type="tel"
+                  value={formData.phone}
+                  onChange={handleChange}
+                  disabled={loading}
+                  placeholder="Enter your phone number"
                 />
               </div>
               

@@ -63,16 +63,36 @@ function CourseDetailContent() {
           return
         }
 
-        setCourse(courseData)
-        setStudents(studentsData)
-        
-        // Initialize missing structures if needed
-        if (courseData && !courseData.payments) {
-          courseData.payments = { students: {}, teacherPaid: false }
+        // Load payment status for each enrolled student
+        const studentPayments: Record<string, boolean> = {}
+        if (courseData.student_ids && courseData.student_ids.length > 0) {
+          for (const studentId of courseData.student_ids) {
+            try {
+              const paymentHistory = await paymentService.getStudentPaymentHistory(studentId)
+              // Check if there's a paid payment for this course this month
+              const currentMonth = new Date().toLocaleString('default', { month: 'long', year: 'numeric' })
+              const paidForThisCourse = paymentHistory.some(
+                (p: any) => p.course_id === courseId && p.status === 'paid' && p.month === currentMonth
+              )
+              studentPayments[studentId] = paidForThisCourse
+            } catch {
+              studentPayments[studentId] = false
+            }
+          }
         }
-        if (courseData && !courseData.attendance) {
+
+        // Initialize payment structures with loaded data
+        courseData.payments = { 
+          students: studentPayments, 
+          teacherPaid: false 
+        }
+        
+        if (!courseData.attendance) {
           courseData.attendance = {}
         }
+
+        setCourse(courseData)
+        setStudents(studentsData)
         
       } catch (error) {
         console.error("Error loading course data:", error)
@@ -99,42 +119,65 @@ function CourseDetailContent() {
     }))
   }
 
-  const toggleStudentPayment = (studentId: number) => {
+  const toggleStudentPayment = async (studentId: string) => {
     const currentStatus = course?.payments?.students?.[studentId] || false
     setConfirmDialog({
       open: true,
       title: "Confirm Payment Status",
       description: `Mark payment as ${currentStatus ? "unpaid" : "paid"}?`,
-      action: () => {
-        setCourse((prev: any) => ({
-          ...prev,
-          payments: {
-            ...prev.payments,
-            students: {
-              ...prev.payments?.students,
-              [studentId]: !currentStatus,
+      action: async () => {
+        try {
+          // Call the payment service to toggle and persist the payment
+          await paymentService.toggleStudentPayment(courseId, studentId)
+          
+          // Update local state after successful database update
+          setCourse((prev: any) => ({
+            ...prev,
+            payments: {
+              ...prev.payments,
+              students: {
+                ...prev.payments?.students,
+                [studentId]: !currentStatus,
             },
           },
         }))
+        } catch (error) {
+          console.error("Error toggling student payment:", error)
+          alert("Failed to update payment status: " + (error as Error).message)
+        }
         setConfirmDialog({ open: false, title: "", description: "", action: () => {} })
       },
     })
   }
 
-  const toggleTeacherPayment = () => {
+  const toggleTeacherPayment = async () => {
     const currentStatus = course?.payments?.teacherPaid || false
+    const teacherEarningsAmount = Math.round((course?.price * (course?.student_ids?.length || 0) * (course?.percentage_cut || 0)) / 100)
+    
     setConfirmDialog({
       open: true,
       title: "Confirm Teacher Payment",
-      description: `Mark teacher payment as ${currentStatus ? "unpaid" : "paid"}?`,
-      action: () => {
-        setCourse((prev: any) => ({
-          ...prev,
-          payments: {
-            ...prev.payments,
-            teacherPaid: !currentStatus,
-          },
-        }))
+      description: `Mark teacher payment as ${currentStatus ? "unpaid" : "paid"}? Amount: ${teacherEarningsAmount} DA`,
+      action: async () => {
+        try {
+          // For teacher payouts, we need to create/update a payout record
+          // We'll use the course instance to track teacher payment status for now
+          await courseService.updateCourseInstance(courseId, {
+            teacher_paid: !currentStatus
+          })
+          
+          // Update local state after successful database update
+          setCourse((prev: any) => ({
+            ...prev,
+            payments: {
+              ...prev.payments,
+              teacherPaid: !currentStatus,
+            },
+          }))
+        } catch (error) {
+          console.error("Error toggling teacher payment:", error)
+          alert("Failed to update teacher payment: " + (error as Error).message)
+        }
         setConfirmDialog({ open: false, title: "", description: "", action: () => {} })
       },
     })

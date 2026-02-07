@@ -283,7 +283,7 @@ export default function TeachersTab({
         </div>
       </CardHeader>
       <CardContent>
-        <div className="max-h-[4550px] overflow-auto scrollbar-thin">
+        <div className="max-h-[455px] overflow-auto scrollbar-thin">
           <Table>
             <TableHeader>
               <TableRow>
@@ -296,9 +296,9 @@ export default function TeachersTab({
                   <>
                     <TableHead>Students</TableHead>
                     <TableHead>Total Earnings</TableHead>
-                    <TableHead>Performance</TableHead>
                   </>
                 )}
+                <TableHead className="w-[50px]"></TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -343,39 +343,36 @@ export default function TeachersTab({
                       }
                     </TableCell>
                     <TableCell>
-                      <div className="flex items-center justify-between">
-                        <span className="text-sm text-gray-600">{teacherCourses.length} course(s)</span>
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <Button variant="ghost" className="h-8 w-8 p-0 opacity-0 group-hover:opacity-100 transition-opacity">
-                              <MoreHorizontal className="h-4 w-4" />
-                            </Button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end">
-                            <DropdownMenuItem onClick={() => router.push(`/teacher/${teacher.id}`)}>
-                              <Pencil className="mr-2 h-4 w-4" />
-                              Edit
-                            </DropdownMenuItem>
-                            <DropdownMenuItem
-                              onClick={() => handleArchiveTeacher(teacher.id, teacher.name)}
-                              className="text-orange-600"
-                            >
-                              <Archive className="mr-2 h-4 w-4" />
-                              Archive
-                            </DropdownMenuItem>
-                          </DropdownMenuContent>
-                        </DropdownMenu>
-                      </div>
+                      <span className="text-sm text-gray-600">{teacherCourses.length} course(s)</span>
                     </TableCell>
                     {showStats && (
                       <>
                         <TableCell>{teacher.students || 0}</TableCell>
                         <TableCell>{(teacher.totalEarnings || 0).toLocaleString()} DA</TableCell>
-                        <TableCell>
-                          <Badge variant="default">Excellent</Badge>
-                        </TableCell>
                       </>
                     )}
+                    <TableCell>
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button variant="ghost" className="h-8 w-8 p-0 opacity-0 group-hover:opacity-100 transition-opacity">
+                            <MoreHorizontal className="h-4 w-4" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                          <DropdownMenuItem onClick={() => router.push(`/teacher/${teacher.id}`)}>
+                            <Pencil className="mr-2 h-4 w-4" />
+                            Edit
+                          </DropdownMenuItem>
+                          <DropdownMenuItem
+                            onClick={() => handleArchiveTeacher(teacher.id, teacher.name)}
+                            className="text-orange-600"
+                          >
+                            <Archive className="mr-2 h-4 w-4" />
+                            Archive
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    </TableCell>
                   </TableRow>
                 )
               })}

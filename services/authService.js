@@ -78,7 +78,7 @@ export const authService = {
   },
 
   // Sign up new user (only via invitation)
-  async signUp(email, password, token) {
+  async signUp(email, password, token, fullName = '', phone = '') {
     try {
       // First verify the invitation token
       const { data: invitation, error: inviteError } = await supabase
@@ -101,7 +101,9 @@ export const authService = {
         options: {
           emailRedirectTo: `${window.location.origin}/auth/callback`,
           data: {
-            invitation_token: token
+            invitation_token: token,
+            full_name: fullName || 'Invited User',
+            phone: phone || null
           }
         }
       })
