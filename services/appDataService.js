@@ -142,6 +142,14 @@ export const paymentService = {
   async toggleStudentPayment(courseId, studentId) {
     return await supabaseDataService.payments.toggleStudentPayment(courseId, studentId)
   },
+
+  async toggleTeacherPayment(courseId, teacherId, amount, percentage) {
+    return await supabaseDataService.payments.toggleTeacherPayment(courseId, teacherId, amount, percentage)
+  },
+
+  async isTeacherPaidForMonth(teacherId, month = null) {
+    return await supabaseDataService.payments.isTeacherPaidForMonth(teacherId, month)
+  },
 }
 
 // Attendance Services - Direct Supabase calls

@@ -82,6 +82,13 @@ export default function SignUpForm() {
       return
     }
 
+    // Validate phone number (required, at least 10 digits)
+    const phoneDigits = formData.phone.replace(/[^\d]/g, '')
+    if (!formData.phone.trim() || phoneDigits.length < 10) {
+      setError('Please enter a valid phone number (at least 10 digits)')
+      return
+    }
+
     setLoading(true)
     try {
       await signUp(formData.email, formData.password, token, formData.fullName.trim(), formData.phone.trim())
@@ -198,15 +205,16 @@ export default function SignUpForm() {
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="phone">Phone Number (Optional)</Label>
+                <Label htmlFor="phone">Phone Number</Label>
                 <Input
                   id="phone"
                   name="phone"
                   type="tel"
                   value={formData.phone}
                   onChange={handleChange}
+                  required
                   disabled={loading}
-                  placeholder="Enter your phone number"
+                  placeholder="Enter your phone number (min 10 digits)"
                 />
               </div>
               
