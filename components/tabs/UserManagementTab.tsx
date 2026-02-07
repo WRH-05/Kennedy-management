@@ -368,7 +368,7 @@ export default function UserManagementTab() {
               <CardTitle>Invitations</CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="max-h-[455px] overflow-auto scrollbar-thin">
+              <div className="max-h-[365px] overflow-auto scrollbar-thin">
                 <Table>
                   <TableHeader>
                     <TableRow>
