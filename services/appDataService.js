@@ -110,6 +110,10 @@ export const paymentService = {
     return await supabaseDataService.payments.getPendingPayouts()
   },
 
+  async getAllPayouts() {
+    return await supabaseDataService.payments.getAllPayouts()
+  },
+
   async getStudentPaymentHistory(studentId) {
     return await supabaseDataService.payments.getStudentPaymentHistory(studentId)
   },
