@@ -33,7 +33,7 @@ export default function RevenueTab({ revenue }: RevenueTabProps) {
           <TableBody>
             {revenue.map((item: any, index: number) => (
               <TableRow key={index}>
-                <TableCell className="font-medium">{item.studentName || 'N/A'}</TableCell>
+                <TableCell className="font-medium">{item.student_name || 'N/A'}</TableCell>
                 <TableCell>{item.course || 'N/A'}</TableCell>
                 <TableCell>{(item.amount || 0).toLocaleString()} DA</TableCell>
                 <TableCell>{item.month || 'N/A'}</TableCell>

@@ -37,11 +37,11 @@ export default function PayoutsTab({ payouts, onApprovePayout }: PayoutsTabProps
           <TableBody>
             {payouts.map((payout: any, index: number) => (
               <TableRow key={index}>
-                <TableCell className="font-medium">{payout.professorName || 'N/A'}</TableCell>
+                <TableCell className="font-medium">{payout.professor_name || 'N/A'}</TableCell>
                 <TableCell>{payout.percentage || 'N/A'}%</TableCell>
-                <TableCell>{(payout.totalGenerated || 0).toLocaleString()} DA</TableCell>
+                <TableCell>{(payout.total_generated || 0).toLocaleString()} DA</TableCell>
                 <TableCell>{(payout.amount || 0).toLocaleString()} DA</TableCell>
-                <TableCell>{payout.dueDate || 'N/A'}</TableCell>
+                <TableCell>{payout.due_date || payout.month || 'N/A'}</TableCell>
                 <TableCell>
                   <Badge variant={payout.status === 'approved' ? "default" : "destructive"}>
                     {payout.status === 'approved' ? "Approved" : "Pending"}

@@ -137,7 +137,7 @@ export default function ManagerDashboard() {
     // This would copy active group courses to new month
   }
 
-  const totalRevenue = revenue.reduce((sum: number, item: any) => sum + (item.status === 'paid' && item.amount ? item.amount : 0), 0)
+  const totalRevenue = revenue.reduce((sum: number, item: any) => sum + (item.paid && item.amount ? item.amount : 0), 0)
   const totalPayouts = payouts.reduce((sum: number, payout: any) => sum + (payout.status === 'approved' && payout.amount ? payout.amount : 0), 0)
   const netProfit = totalRevenue - totalPayouts
 

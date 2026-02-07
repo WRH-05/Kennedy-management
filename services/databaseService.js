@@ -874,20 +874,43 @@ export const paymentService = {
         
         if (error) throw error
 
-        // Update revenue table too
-        await supabase
+        // Update revenue table - check if exists first
+        const { data: existingRevenue } = await supabase
           .from('revenue')
-          .upsert({
-            school_id: schoolId,
-            student_id: studentId,
-            course_id: courseId,
-            student_name: studentData.name,
-            course: `${courseData.subject} - ${courseData.school_year}`,
-            amount: courseData.price || 0,
-            month: currentMonth,
-            paid: newStatus === 'paid',
-            updated_at: new Date().toISOString()
-          }, { onConflict: 'school_id,student_id,course_id,month' })
+          .select('id')
+          .eq('school_id', schoolId)
+          .eq('student_id', studentId)
+          .eq('course_id', courseId)
+          .eq('month', currentMonth)
+          .single()
+
+        if (existingRevenue) {
+          await supabase
+            .from('revenue')
+            .update({
+              student_name: studentData.name,
+              course: `${courseData.subject} - ${courseData.school_year}`,
+              amount: courseData.price || 0,
+              paid: newStatus === 'paid',
+              updated_at: new Date().toISOString()
+            })
+            .eq('id', existingRevenue.id)
+        } else {
+          await supabase
+            .from('revenue')
+            .insert({
+              school_id: schoolId,
+              student_id: studentId,
+              course_id: courseId,
+              student_name: studentData.name,
+              course: `${courseData.subject} - ${courseData.school_year}`,
+              amount: courseData.price || 0,
+              month: currentMonth,
+              paid: newStatus === 'paid',
+              created_at: new Date().toISOString(),
+              updated_at: new Date().toISOString()
+            })
+        }
 
         return data
       } else {
@@ -907,21 +930,43 @@ export const paymentService = {
         
         if (error) throw error
 
-        // Insert into revenue table too
-        await supabase
+        // Insert into revenue table - check if exists first
+        const { data: existingRevenue } = await supabase
           .from('revenue')
-          .upsert({
-            school_id: schoolId,
-            student_id: studentId,
-            course_id: courseId,
-            student_name: studentData.name,
-            course: `${courseData.subject} - ${courseData.school_year}`,
-            amount: courseData.price || 0,
-            month: currentMonth,
-            paid: true,
-            created_at: new Date().toISOString(),
-            updated_at: new Date().toISOString()
-          }, { onConflict: 'school_id,student_id,course_id,month' })
+          .select('id')
+          .eq('school_id', schoolId)
+          .eq('student_id', studentId)
+          .eq('course_id', courseId)
+          .eq('month', currentMonth)
+          .single()
+
+        if (existingRevenue) {
+          await supabase
+            .from('revenue')
+            .update({
+              student_name: studentData.name,
+              course: `${courseData.subject} - ${courseData.school_year}`,
+              amount: courseData.price || 0,
+              paid: true,
+              updated_at: new Date().toISOString()
+            })
+            .eq('id', existingRevenue.id)
+        } else {
+          await supabase
+            .from('revenue')
+            .insert({
+              school_id: schoolId,
+              student_id: studentId,
+              course_id: courseId,
+              student_name: studentData.name,
+              course: `${courseData.subject} - ${courseData.school_year}`,
+              amount: courseData.price || 0,
+              month: currentMonth,
+              paid: true,
+              created_at: new Date().toISOString(),
+              updated_at: new Date().toISOString()
+            })
+        }
 
         return data
       }
