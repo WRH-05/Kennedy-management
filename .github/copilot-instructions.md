@@ -1,10 +1,20 @@
 # Kennedy Management System - Development Guide
 
 ## System Overview
-Multi-tenant SaaS platform for educational institutions. Each school operates as isolated tenant with complete data separation and role-based access control.
+Multi-tenant SaaS platform for educational institutions (schools, tutoring centers). Each school operates as an isolated tenant with complete data separation enforced via Row Level Security (RLS) policies and application-level filtering.
 
-**Stack:** Next.js 15.2.4, React 19, TypeScript, Supabase PostgreSQL, shadcn/ui  
-**Roles:** `owner > manager > receptionist` (hierarchical permissions)
+**Stack:**
+- Next.js 16.x (App Router with Turbopack)
+- React 18
+- TypeScript 5
+- Supabase PostgreSQL with RLS
+- Tailwind CSS 4.x with shadcn/ui
+- SWR for client-side data fetching
+
+**User Roles (hierarchical):** `owner > manager > receptionist`
+- **owner** - Full access, user management, billing (future)
+- **manager** - Add teachers/courses, approve payouts, view revenue
+- **receptionist** - Add students, record attendance/payments
 
 ## Architecture - Three-Layer Service Pattern
 
@@ -28,7 +38,7 @@ import { supabase } from "@/lib/supabase"  // FORBIDDEN
 **Multi-tenant security is automatic:**
 - `databaseService.js` injects `school_id` into ALL queries via `getCurrentUserSchoolId()`
 - Database RLS policies provide secondary enforcement
-- `db.sql` contains production-ready schema (965 lines) - DO NOT MODIFY
+- SQL schemas in `/sql/` folder - DO NOT MODIFY without discussion
 
 ## Authentication Flow
 
@@ -117,6 +127,31 @@ supabase.rpc('get_current_user_session')  // Returns { authenticated, profile, s
 
 // Profile fallback creation
 supabase.rpc('create_owner_profile_manual', { p_user_id, p_school_id, p_full_name, p_phone })
+```
+
+## Database Tables
+
+**Auth Tables (`auth_schema.sql`):**
+- `schools` - Tenant organizations
+- `profiles` - User profiles (linked to auth.users)
+- `invitations` - Token-based user invitations
+
+**Business Tables (`business_schema.sql`):**
+- `students` - Student records with academic info
+- `teachers` - Teacher records with subjects/years
+- `course_instances` - Courses with pricing, schedule, enrolled students
+- `attendance` - Weekly attendance per student per course
+- `student_payments` - Payment records (status: pending/paid/cancelled)
+- `teacher_payouts` - Teacher payment records (status: pending/approved/paid)
+- `revenue` - Revenue tracking
+- `archive_requests` - Soft-delete workflow
+
+## Payment Status Values
+
+Teacher payouts use three statuses - treat `approved` AND `paid` as "completed":
+```typescript
+// Both are terminal paid states
+const isPaid = status === 'paid' || status === 'approved'
 ```
 
 ## Commands
