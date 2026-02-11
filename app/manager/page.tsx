@@ -61,13 +61,13 @@ export default function ManagerDashboard() {
   useEffect(() => {
     const loadPaymentData = async () => {
       try {
-        const [revenueData, pendingPayoutsData, allPayoutsData] = await Promise.all([
+        const [revenueData, allPayoutsData] = await Promise.all([
           paymentService.getRevenueData(),
-          paymentService.getPendingPayouts(),
           paymentService.getAllPayouts(),
         ])
         setRevenue(revenueData)
-        setPayouts(pendingPayoutsData)
+        // Show all payouts in the PayoutsTab, not just pending ones
+        setPayouts(allPayoutsData)
         setAllPayoutsForTotal(allPayoutsData)
       } catch (error) {
         // Error loading payment data
