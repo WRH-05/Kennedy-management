@@ -27,6 +27,7 @@ export default function RevenueTab({ revenue }: RevenueTabProps) {
               <TableHead>Course</TableHead>
               <TableHead>Amount</TableHead>
               <TableHead>Month</TableHead>
+              <TableHead>Recorded By</TableHead>
               <TableHead>Status</TableHead>
             </TableRow>
           </TableHeader>
@@ -37,6 +38,7 @@ export default function RevenueTab({ revenue }: RevenueTabProps) {
                 <TableCell>{item.course || 'N/A'}</TableCell>
                 <TableCell>{(item.amount || 0).toLocaleString()} DA</TableCell>
                 <TableCell>{item.month || 'N/A'}</TableCell>
+                <TableCell>{item.recorded_by_name || '-'}</TableCell>
                 <TableCell>
                   <Badge variant={item.paid ? "default" : "destructive"}>
                     {item.paid ? "Paid" : "Pending"}

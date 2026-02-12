@@ -12,7 +12,8 @@ import { Badge } from "@/components/ui/badge"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 import { GraduationCap, Plus, Archive, MoreHorizontal, Pencil } from "lucide-react"
-import { teacherService } from "@/services/appDataService"
+import { teacherService, archiveService } from "@/services/appDataService"
+import { useToast } from "@/hooks/use-toast"
 
 interface TeachersTabProps {
   teachers: any[]
@@ -32,6 +33,7 @@ export default function TeachersTab({
   showStats = false
 }: TeachersTabProps) {
   const router = useRouter()
+  const { toast } = useToast()
   const [showAddTeacherDialog, setShowAddTeacherDialog] = useState(false)
   
   const [newTeacher, setNewTeacher] = useState({
@@ -104,18 +106,21 @@ export default function TeachersTab({
 
   const handleArchiveTeacher = async (teacherId: number, teacherName: string) => {
     try {
-      const user = JSON.parse(localStorage.getItem("user") || '{}')
-      
       // Create archive request in database
-      // This would be implemented with a proper database call
-      // For now, we'll just mark the teacher as archived directly
-      await teacherService.archiveTeacher(teacherId)
+      await archiveService.createArchiveRequest('teacher', teacherId, teacherName)
       
-      // Update local state
-      const updatedTeachers = await teacherService.getAllTeachers()
-      onTeachersUpdate(updatedTeachers)
+      // Show visual feedback (request created, will be processed by manager)
+      toast({
+        title: "Archive request submitted",
+        description: "Waiting for manager approval.",
+      })
     } catch (error) {
-      // Error creating archive request
+      console.error('Error creating archive request:', error)
+      toast({
+        title: "Error",
+        description: "Failed to create archive request.",
+        variant: "destructive",
+      })
     }
   }
 

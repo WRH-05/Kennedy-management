@@ -13,7 +13,8 @@ import { Badge } from "@/components/ui/badge"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 import { Users, Plus, Archive, MoreHorizontal, Pencil } from "lucide-react"
-import { studentService } from "@/services/appDataService"
+import { studentService, archiveService } from "@/services/appDataService"
+import { useToast } from "@/hooks/use-toast"
 
 interface StudentsTabProps {
   students: any[]
@@ -33,6 +34,7 @@ export default function StudentsTab({
   showPaymentStatus = true
 }: StudentsTabProps) {
   const router = useRouter()
+  const { toast } = useToast()
   const [showAddStudentDialog, setShowAddStudentDialog] = useState(false)
   
   const [newStudent, setNewStudent] = useState({
@@ -93,18 +95,21 @@ export default function StudentsTab({
 
   const handleArchiveStudent = async (studentId: number, studentName: string) => {
     try {
-      const user = JSON.parse(localStorage.getItem("user") || '{}')
-      
       // Create archive request in database
-      // This would be implemented with a proper database call
-      // For now, we'll just mark the student as archived directly
-      await studentService.archiveStudent(studentId)
+      await archiveService.createArchiveRequest('student', studentId, studentName)
       
-      // Update local state
-      const updatedStudents = await studentService.getAllStudents()
-      onStudentsUpdate(updatedStudents)
+      // Show visual feedback (request created, will be processed by manager)
+      toast({
+        title: "Archive request submitted",
+        description: "Waiting for manager approval.",
+      })
     } catch (error) {
-      // Error creating archive request
+      console.error('Error creating archive request:', error)
+      toast({
+        title: "Error",
+        description: "Failed to create archive request.",
+        variant: "destructive",
+      })
     }
   }
 

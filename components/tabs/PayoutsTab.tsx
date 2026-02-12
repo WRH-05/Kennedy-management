@@ -30,6 +30,7 @@ export default function PayoutsTab({ payouts, onApprovePayout }: PayoutsTabProps
               <TableHead>Total Generated</TableHead>
               <TableHead>Total Payout</TableHead>
               <TableHead>Month</TableHead>
+              <TableHead>Recorded By</TableHead>
               <TableHead>Status</TableHead>
               <TableHead>Actions</TableHead>
             </TableRow>
@@ -42,6 +43,7 @@ export default function PayoutsTab({ payouts, onApprovePayout }: PayoutsTabProps
                 <TableCell>{(payout.total_generated || 0).toLocaleString()} DA</TableCell>
                 <TableCell>{(payout.amount || 0).toLocaleString()} DA</TableCell>
                 <TableCell>{payout.due_date || payout.month || 'N/A'}</TableCell>
+                <TableCell>{payout.recorded_by_name || '-'}</TableCell>
                 <TableCell>
                   <Badge variant={payout.status === 'approved' || payout.status === 'paid' ? "default" : "destructive"}>
                     {payout.status === 'approved' || payout.status === 'paid' ? "Paid" : "Pending"}

@@ -1,13 +1,13 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Badge } from "@/components/ui/badge"
-import { Archive, Check, X, Undo } from "lucide-react"
-import { studentService, teacherService, courseService } from "@/services/appDataService"
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
+import { Archive, Check, X, Undo, MoreHorizontal } from "lucide-react"
+import { studentService, teacherService, courseService, archiveService } from "@/services/appDataService"
 
 interface ArchiveTabProps {
   isManager?: boolean
@@ -15,21 +15,21 @@ interface ArchiveTabProps {
 }
 
 interface ArchiveRequest {
-  id: number
-  type: 'student' | 'teacher' | 'course'
-  entityId: number
-  entityName: string
-  requestedBy: string
-  requestedDate: string
+  id: string
+  entity_type: 'student' | 'teacher' | 'course'
+  entity_id: string
+  entity_name: string
+  requested_by: string
+  requested_by_name: string
+  created_at: string
   status: 'pending' | 'approved' | 'denied'
-  approvedBy?: string
-  approvedDate?: string
+  approved_by?: string
+  approved_by_name?: string
+  approved_date?: string
   reason?: string
-  details?: any
 }
 
 export default function ArchiveTab({ isManager = false, onArchiveUpdate }: ArchiveTabProps) {
-  const router = useRouter()
   const [archiveRequests, setArchiveRequests] = useState<ArchiveRequest[]>([])
   const [loading, setLoading] = useState(true)
 
@@ -40,58 +40,47 @@ export default function ArchiveTab({ isManager = false, onArchiveUpdate }: Archi
   const loadArchiveRequests = async () => {
     setLoading(true)
     try {
-      // In a real implementation, this would fetch from the archive_requests table
-      // For now, show empty state since we've cleaned up localStorage usage
-      setArchiveRequests([])
+      const requests = await archiveService.getAllArchiveRequests()
+      setArchiveRequests(requests || [])
     } catch (error) {
-      // Error loading archive requests
+      console.error('Error loading archive requests:', error)
+      setArchiveRequests([])
     } finally {
       setLoading(false)
     }
   }
 
-  const handleApproveArchive = async (requestId: number) => {
+  const handleApproveArchive = async (requestId: string) => {
     try {
-      const user = JSON.parse(localStorage.getItem("user") || '{}')
+      await archiveService.approveArchiveRequest(requestId)
       
-      // Find the request to approve
-      const request = archiveRequests.find(req => req.id === requestId)
-      if (!request) return
-
-      // Perform the actual archiving based on type
-      if (request.type === 'student') {
-        await studentService.archiveStudent(request.entityId)
-      } else if (request.type === 'teacher') {
-        await teacherService.archiveTeacher(request.entityId)
-      } else if (request.type === 'course') {
-        await courseService.archiveCourse(request.entityId)
-      }
-
-      // Remove the request from local state
-      setArchiveRequests(prev => prev.filter(req => req.id !== requestId))
+      // Reload archive requests
+      await loadArchiveRequests()
       
       if (onArchiveUpdate) {
         onArchiveUpdate()
       }
     } catch (error) {
-      // Error approving archive request
+      console.error('Error approving archive request:', error)
     }
   }
 
-  const handleDenyArchive = async (requestId: number) => {
+  const handleDenyArchive = async (requestId: string) => {
     try {
-      // Remove the request from local state without archiving
-      setArchiveRequests(prev => prev.filter(req => req.id !== requestId))
+      await archiveService.denyArchiveRequest(requestId)
+      
+      // Reload archive requests
+      await loadArchiveRequests()
       
       if (onArchiveUpdate) {
         onArchiveUpdate()
       }
     } catch (error) {
-      // Error denying archive request
+      console.error('Error denying archive request:', error)
     }
   }
 
-  const handleUnarchive = async (type: string, entityId: number) => {
+  const handleUnarchive = async (type: string, entityId: string) => {
     try {
       // Unarchive the entity based on type
       if (type === 'student') {
@@ -102,11 +91,14 @@ export default function ArchiveTab({ isManager = false, onArchiveUpdate }: Archi
         await courseService.unarchiveCourse(entityId)
       }
 
+      // Reload archive requests
+      await loadArchiveRequests()
+
       if (onArchiveUpdate) {
         onArchiveUpdate()
       }
     } catch (error) {
-      // Error unarchiving entity
+      console.error('Error unarchiving entity:', error)
     }
   }
 
@@ -158,36 +150,41 @@ export default function ArchiveTab({ isManager = false, onArchiveUpdate }: Archi
               </TableHeader>
               <TableBody>
                 {pendingRequests.map((request) => (
-                  <TableRow key={request.id}>
+                  <TableRow key={request.id} className="group">
                     <TableCell>
                       <Badge variant="outline" className="capitalize">
-                        {request.type}
+                        {request.entity_type}
                       </Badge>
                     </TableCell>
-                    <TableCell className="font-medium">{request.entityName}</TableCell>
-                    <TableCell>{request.requestedBy}</TableCell>
-                    <TableCell>{new Date(request.requestedDate).toLocaleDateString()}</TableCell>
+                    <TableCell className="font-medium">{request.entity_name}</TableCell>
+                    <TableCell>{request.requested_by_name || 'Unknown'}</TableCell>
+                    <TableCell>{new Date(request.created_at).toLocaleDateString()}</TableCell>
                     <TableCell>{request.reason || 'No reason provided'}</TableCell>
                     {isManager && (
                       <TableCell>
-                        <div className="flex space-x-2">
-                          <Button
-                            size="sm"
-                            onClick={() => handleApproveArchive(request.id)}
-                            className="bg-green-600 hover:bg-green-700"
-                          >
-                            <Check className="h-4 w-4 mr-1" />
-                            Approve
-                          </Button>
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={() => handleDenyArchive(request.id)}
-                          >
-                            <X className="h-4 w-4 mr-1" />
-                            Deny
-                          </Button>
-                        </div>
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button variant="ghost" className="h-8 w-8 p-0">
+                              <MoreHorizontal className="h-4 w-4" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end">
+                            <DropdownMenuItem
+                              onClick={() => handleApproveArchive(request.id)}
+                              className="text-green-600"
+                            >
+                              <Check className="mr-2 h-4 w-4" />
+                              Approve
+                            </DropdownMenuItem>
+                            <DropdownMenuItem
+                              onClick={() => handleDenyArchive(request.id)}
+                              className="text-red-600"
+                            >
+                              <X className="mr-2 h-4 w-4" />
+                              Deny
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
                       </TableCell>
                     )}
                   </TableRow>
@@ -204,7 +201,7 @@ export default function ArchiveTab({ isManager = false, onArchiveUpdate }: Archi
 
         {/* Processed Requests */}
         {processedRequests.length > 0 && (
-          <div>
+          <div className="mt-6">
             <h3 className="text-lg font-medium mb-4">Archive History</h3>
             <Table>
               <TableHeader>
@@ -220,32 +217,43 @@ export default function ArchiveTab({ isManager = false, onArchiveUpdate }: Archi
               </TableHeader>
               <TableBody>
                 {processedRequests.map((request) => (
-                  <TableRow key={request.id} className="opacity-60">
+                  <TableRow key={request.id} className="opacity-60 group">
                     <TableCell>
                       <Badge variant="outline" className="capitalize">
-                        {request.type}
+                        {request.entity_type}
                       </Badge>
                     </TableCell>
-                    <TableCell className="font-medium">{request.entityName}</TableCell>
-                    <TableCell>{request.requestedBy}</TableCell>
+                    <TableCell className="font-medium">{request.entity_name}</TableCell>
+                    <TableCell>{request.requested_by_name || 'Unknown'}</TableCell>
                     <TableCell>
                       <Badge variant={request.status === 'approved' ? 'default' : 'destructive'}>
                         {request.status}
                       </Badge>
                     </TableCell>
-                    <TableCell>{request.approvedBy || '-'}</TableCell>
-                    <TableCell>{request.approvedDate || '-'}</TableCell>
+                    <TableCell>{request.approved_by_name || '-'}</TableCell>
+                    <TableCell>
+                      {request.approved_date 
+                        ? new Date(request.approved_date).toLocaleDateString() 
+                        : '-'}
+                    </TableCell>
                     {isManager && (
                       <TableCell>
                         {request.status === 'approved' && (
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={() => handleUnarchive(request.type, request.entityId)}
-                          >
-                            <Undo className="h-4 w-4 mr-1" />
-                            Unarchive
-                          </Button>
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <Button variant="ghost" className="h-8 w-8 p-0 opacity-0 group-hover:opacity-100 transition-opacity">
+                                <MoreHorizontal className="h-4 w-4" />
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end">
+                              <DropdownMenuItem
+                                onClick={() => handleUnarchive(request.entity_type, request.entity_id)}
+                              >
+                                <Undo className="mr-2 h-4 w-4" />
+                                Unarchive
+                              </DropdownMenuItem>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
                         )}
                       </TableCell>
                     )}

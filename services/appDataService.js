@@ -1,7 +1,7 @@
 // Simplified data service that uses Supabase directly
 // All mock data fallback has been removed since Supabase is now fully integrated
 
-import { databaseService as supabaseDataService } from './databaseService.js'
+import { databaseService as supabaseDataService, archiveService as supabaseArchiveService } from './databaseService.js'
 
 // Student Services - Direct Supabase calls
 export const studentService = {
@@ -167,6 +167,25 @@ export const attendanceService = {
   },
 }
 
+// Archive Services - Direct Supabase calls
+export const archiveService = {
+  async getAllArchiveRequests() {
+    return await supabaseArchiveService.getAllArchiveRequests()
+  },
+
+  async createArchiveRequest(entityType, entityId, entityName, reason = null) {
+    return await supabaseArchiveService.createArchiveRequest(entityType, entityId, entityName, reason)
+  },
+
+  async approveArchiveRequest(requestId) {
+    return await supabaseArchiveService.approveArchiveRequest(requestId)
+  },
+
+  async denyArchiveRequest(requestId) {
+    return await supabaseArchiveService.denyArchiveRequest(requestId)
+  },
+}
+
 // Export unified service
 export const appDataService = {
   students: studentService,
@@ -174,6 +193,7 @@ export const appDataService = {
   courses: courseService,
   payments: paymentService,
   attendance: attendanceService,
+  archives: archiveService,
 }
 
 export default appDataService

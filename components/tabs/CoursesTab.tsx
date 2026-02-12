@@ -12,7 +12,8 @@ import { Badge } from "@/components/ui/badge"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 import { BookOpen, Plus, Archive, MoreHorizontal, Pencil } from "lucide-react"
-import { courseService, teacherService } from "@/services/appDataService"
+import { courseService, teacherService, archiveService } from "@/services/appDataService"
+import { useToast } from "@/hooks/use-toast"
 
 interface CoursesTabProps {
   courses: any[]
@@ -30,6 +31,7 @@ export default function CoursesTab({
   canAdd = false 
 }: CoursesTabProps) {
   const router = useRouter()
+  const { toast } = useToast()
   const [showAddCourseDialog, setShowAddCourseDialog] = useState(false)
   
   const [newCourse, setNewCourse] = useState({
@@ -139,18 +141,21 @@ export default function CoursesTab({
 
   const handleArchiveCourse = async (courseId: number, courseName: string) => {
     try {
-      const user = JSON.parse(localStorage.getItem("user") || '{}')
-      
       // Create archive request in database
-      // This would be implemented with a proper database call
-      // For now, we'll just mark the course as archived directly
-      await courseService.archiveCourse(courseId)
+      await archiveService.createArchiveRequest('course', courseId, courseName)
       
-      // Update local state
-      const updatedCourses = await courseService.getAllCourseInstances()
-      onCoursesUpdate(updatedCourses)
+      // Show visual feedback (request created, will be processed by manager)
+      toast({
+        title: "Archive request submitted",
+        description: "Waiting for manager approval.",
+      })
     } catch (error) {
-      // Error creating archive request
+      console.error('Error creating archive request:', error)
+      toast({
+        title: "Error",
+        description: "Failed to create archive request.",
+        variant: "destructive",
+      })
     }
   }
 

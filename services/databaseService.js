@@ -30,6 +30,30 @@ async function getCurrentUserSchoolId() {
   }
 }
 
+// Helper function to get current user's profile (id, name, role)
+async function getCurrentUserProfile() {
+  try {
+    const { data: { user }, error } = await supabase.auth.getUser()
+    if (error || !user) return null
+
+    const { data: profile, error: profileError } = await supabase
+      .from('profiles')
+      .select('id, full_name, role, school_id')
+      .eq('id', user.id)
+      .single()
+
+    if (profileError) {
+      console.warn('No profile found for user:', user.id)
+      return null
+    }
+
+    return profile
+  } catch (error) {
+    console.error('Error getting user profile:', error)
+    return null
+  }
+}
+
 // Student Services
 export const studentService = {
   // Get all students (excluding archived unless specified)
@@ -542,15 +566,27 @@ export const archiveService = {
     }
   },
 
-  // Create archive request
-  async createArchiveRequest(requestData) {
+  // Create archive request with current user info
+  async createArchiveRequest(entityType, entityId, entityName, reason = null) {
     try {
       const schoolId = await getCurrentUserSchoolId()
       if (!schoolId) throw new Error('No school access')
 
+      const userProfile = await getCurrentUserProfile()
+      if (!userProfile) throw new Error('No user profile')
+
       const { data, error } = await supabase
         .from('archive_requests')
-        .insert([{ ...requestData, school_id: schoolId }])
+        .insert([{
+          school_id: schoolId,
+          entity_type: entityType,
+          entity_id: entityId,
+          entity_name: entityName,
+          reason: reason,
+          requested_by: userProfile.id,
+          requested_by_name: userProfile.full_name,
+          status: 'pending'
+        }])
         .select()
         .single()
       
@@ -561,24 +597,88 @@ export const archiveService = {
     }
   },
 
-  // Update archive request status
-  async updateArchiveRequestStatus(id, status, approverName = null) {
+  // Approve archive request and perform actual archive
+  async approveArchiveRequest(requestId) {
     try {
       const schoolId = await getCurrentUserSchoolId()
       if (!schoolId) throw new Error('No school access')
 
-      const updateData = {
-        status,
-        ...(approverName && status === 'approved' && {
-          approved_by: approverName,
-          approved_date: new Date().toISOString()
-        })
+      const userProfile = await getCurrentUserProfile()
+      if (!userProfile) throw new Error('No user profile')
+
+      // Get the archive request first
+      const { data: request, error: fetchError } = await supabase
+        .from('archive_requests')
+        .select('*')
+        .eq('id', requestId)
+        .eq('school_id', schoolId)
+        .single()
+      
+      if (fetchError) throw fetchError
+      if (!request) throw new Error('Archive request not found')
+
+      // Perform the actual archive based on entity type
+      if (request.entity_type === 'student') {
+        await supabase
+          .from('students')
+          .update({ archived: true, archived_date: new Date().toISOString() })
+          .eq('id', request.entity_id)
+          .eq('school_id', schoolId)
+      } else if (request.entity_type === 'teacher') {
+        await supabase
+          .from('teachers')
+          .update({ archived: true, archived_date: new Date().toISOString() })
+          .eq('id', request.entity_id)
+          .eq('school_id', schoolId)
+      } else if (request.entity_type === 'course') {
+        await supabase
+          .from('course_instances')
+          .update({ archived: true, archived_date: new Date().toISOString() })
+          .eq('id', request.entity_id)
+          .eq('school_id', schoolId)
       }
+
+      // Update the archive request status
+      const { data, error } = await supabase
+        .from('archive_requests')
+        .update({
+          status: 'approved',
+          approved_by: userProfile.id,
+          approved_by_name: userProfile.full_name,
+          approved_date: new Date().toISOString(),
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', requestId)
+        .eq('school_id', schoolId)
+        .select()
+        .single()
+      
+      if (error) throw error
+      return data
+    } catch (error) {
+      throw error
+    }
+  },
+
+  // Deny archive request
+  async denyArchiveRequest(requestId) {
+    try {
+      const schoolId = await getCurrentUserSchoolId()
+      if (!schoolId) throw new Error('No school access')
+
+      const userProfile = await getCurrentUserProfile()
+      if (!userProfile) throw new Error('No user profile')
 
       const { data, error } = await supabase
         .from('archive_requests')
-        .update(updateData)
-        .eq('id', id)
+        .update({
+          status: 'denied',
+          approved_by: userProfile.id,
+          approved_by_name: userProfile.full_name,
+          approved_date: new Date().toISOString(),
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', requestId)
         .eq('school_id', schoolId)
         .select()
         .single()
@@ -824,6 +924,9 @@ export const paymentService = {
       const schoolId = await getCurrentUserSchoolId()
       if (!schoolId) throw new Error('No school access')
 
+      // Get current user profile for tracking
+      const userProfile = await getCurrentUserProfile()
+
       // Get course info for price and details
       const { data: courseData, error: courseError } = await supabase
         .from('course_instances')
@@ -865,7 +968,11 @@ export const paymentService = {
             status: newStatus,
             amount: courseData.price || 0,
             month: currentMonth,
-            updated_at: new Date().toISOString()
+            updated_at: new Date().toISOString(),
+            ...(newStatus === 'paid' && userProfile && {
+              recorded_by_id: userProfile.id,
+              recorded_by_name: userProfile.full_name
+            })
           })
           .eq('id', existingPayment.id)
           .eq('school_id', schoolId)
@@ -892,7 +999,11 @@ export const paymentService = {
               course: `${courseData.subject} - ${courseData.school_year}`,
               amount: courseData.price || 0,
               paid: newStatus === 'paid',
-              updated_at: new Date().toISOString()
+              updated_at: new Date().toISOString(),
+              ...(newStatus === 'paid' && userProfile && {
+                recorded_by_id: userProfile.id,
+                recorded_by_name: userProfile.full_name
+              })
             })
             .eq('id', existingRevenue.id)
         } else {
@@ -908,7 +1019,11 @@ export const paymentService = {
               month: currentMonth,
               paid: newStatus === 'paid',
               created_at: new Date().toISOString(),
-              updated_at: new Date().toISOString()
+              updated_at: new Date().toISOString(),
+              ...(newStatus === 'paid' && userProfile && {
+                recorded_by_id: userProfile.id,
+                recorded_by_name: userProfile.full_name
+              })
             })
         }
 
@@ -923,7 +1038,11 @@ export const paymentService = {
             amount: courseData.price || 0,
             month: currentMonth,
             status: 'paid',
-            payment_date: new Date().toISOString()
+            payment_date: new Date().toISOString(),
+            ...(userProfile && {
+              recorded_by_id: userProfile.id,
+              recorded_by_name: userProfile.full_name
+            })
           }])
           .select()
           .single()
@@ -948,7 +1067,11 @@ export const paymentService = {
               course: `${courseData.subject} - ${courseData.school_year}`,
               amount: courseData.price || 0,
               paid: true,
-              updated_at: new Date().toISOString()
+              updated_at: new Date().toISOString(),
+              ...(userProfile && {
+                recorded_by_id: userProfile.id,
+                recorded_by_name: userProfile.full_name
+              })
             })
             .eq('id', existingRevenue.id)
         } else {
@@ -964,7 +1087,11 @@ export const paymentService = {
               month: currentMonth,
               paid: true,
               created_at: new Date().toISOString(),
-              updated_at: new Date().toISOString()
+              updated_at: new Date().toISOString(),
+              ...(userProfile && {
+                recorded_by_id: userProfile.id,
+                recorded_by_name: userProfile.full_name
+              })
             })
         }
 
@@ -980,6 +1107,9 @@ export const paymentService = {
     try {
       const schoolId = await getCurrentUserSchoolId()
       if (!schoolId) throw new Error('No school access')
+
+      // Get current user profile for tracking
+      const userProfile = await getCurrentUserProfile()
 
       const currentMonth = new Date().toLocaleString('default', { month: 'long', year: 'numeric' })
 
@@ -1016,7 +1146,11 @@ export const paymentService = {
             amount: amount,
             percentage: percentage,
             payment_date: newStatus === 'paid' ? new Date().toISOString().split('T')[0] : null,
-            updated_at: new Date().toISOString()
+            updated_at: new Date().toISOString(),
+            ...(newStatus === 'paid' && userProfile && {
+              recorded_by_id: userProfile.id,
+              recorded_by_name: userProfile.full_name
+            })
           })
           .eq('id', existingPayout.id)
           .eq('school_id', schoolId)
@@ -1039,7 +1173,11 @@ export const paymentService = {
             status: 'paid',
             payment_date: new Date().toISOString().split('T')[0],
             created_at: new Date().toISOString(),
-            updated_at: new Date().toISOString()
+            updated_at: new Date().toISOString(),
+            ...(userProfile && {
+              recorded_by_id: userProfile.id,
+              recorded_by_name: userProfile.full_name
+            })
           }])
           .select()
           .single()
