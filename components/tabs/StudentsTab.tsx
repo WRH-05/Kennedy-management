@@ -135,7 +135,7 @@ export default function StudentsTab({
                 <form onSubmit={handleAddStudent} className="space-y-4">
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div className="space-y-2">
-                      <Label htmlFor="name">Student Name</Label>
+                      <Label htmlFor="name">Full Name</Label>
                       <Input
                         id="name"
                         value={newStudent.name}

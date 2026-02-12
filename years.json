@@ -1,0 +1,199 @@
+{
+  "country": "Algeria",
+  "system": "National Education (Education Nationale)",
+  "cycles": [
+    {
+      "level_id": "primary",
+      "duration_years": 5,
+      "years": [
+        {
+          "year_number": 1,
+          "code": "1 AP",
+          "name": "1st Year Primary"
+        },
+        {
+          "year_number": 2,
+          "code": "2 AP",
+          "name": "2nd Year Primary"
+        },
+        {
+          "year_number": 3,
+          "code": "3 AP",
+          "name": "3rd Year Primary"
+        },
+        {
+          "year_number": 4,
+          "code": "4 AP",
+          "name": "4th Year Primary"
+        },
+        {
+          "year_number": 5,
+          "code": "5 AP",
+          "name": "5th Year Primary",
+          "certificate": "Examen de fin de cycle primaire (Cinquième)"
+        }
+      ]
+    },
+    {
+      "level_id": "middle",
+      "duration_years": 4,
+      "years": [
+        {
+          "year_number": 1,
+          "code": "1 AM",
+          "name": "1st Year Middle"
+        },
+        {
+          "year_number": 2,
+          "code": "2 AM",
+          "name": "2nd Year Middle"
+        },
+        {
+          "year_number": 3,
+          "code": "3 AM",
+          "name": "3rd Year Middle"
+        },
+        {
+          "year_number": 4,
+          "code": "4 AM",
+          "name": "4th Year Middle",
+          "certificate": "BEM (Brevet d'Enseignement Moyen)"
+        }
+      ]
+    },
+    {
+      "level_id": "secondary",
+      "duration_years": 3,
+      "years": [
+        {
+          "year_number": 1,
+          "code": "1 AS",
+          "name": "1st Year Secondary",
+          "description": "Orientation into two main streams",
+          "specialties": [
+            {
+              "code": "1 AS",
+              "name_en": "Common Core Sciences and Technology",
+              "name_fr": "Tronc Commun Sciences et Technologie"
+            },
+            {
+              "code": "1 AL",
+              "name_en": "Common Core Arts and Letters",
+              "name_fr": "Tronc Commun Lettres"
+            }
+          ]
+        },
+        {
+          "year_number": 2,
+          "code": "2 AS",
+          "name": "2nd Year Secondary",
+          "description": "Specialization begins",
+          "specialties": [
+            {
+              "category": "Science",
+              "code": "2 AS",
+              "name_en": "Experimental Sciences",
+              "name_fr": "Sciences Expérimentales"
+            },
+            {
+              "category": "Science",
+              "code": "2 MA",
+              "name_en": "Mathematics",
+              "name_fr": "Mathématiques"
+            },
+            {
+              "category": "Science",
+              "code": "2 MT",
+              "name_en": "Technical Mathematical",
+              "name_fr": "Technique Mathématique",
+              "sub_options": [
+                { "code": "GC", "name_fr": "Génie Civil" },
+                { "code": "GM", "name_fr": "Génie Mécanique" },
+                { "code": "GE", "name_fr": "Génie Électrique" },
+                { "code": "GP", "name_fr": "Génie des Procédés" }
+              ]
+            },
+            {
+              "category": "Science",
+              "code": "2 GE",
+              "name_en": "Management and Economy",
+              "name_fr": "Gestion et Économie"
+            },
+            {
+              "category": "Arts",
+              "code": "2 LT",
+              "name_en": "Literature and Philosophy",
+              "name_fr": "Lettres et Philosophie"
+            },
+            {
+              "category": "Arts",
+              "code": "2 LE",
+              "name_en": "Foreign Languages",
+              "name_fr": "Langues Étrangères",
+              "sub_options": [
+                { "name": "Spanish" },
+                { "name": "German" },
+                { "name": "Italian" }
+              ]
+            }
+          ]
+        },
+        {
+          "year_number": 3,
+          "code": "3 AS",
+          "name": "3rd Year Secondary",
+          "certificate": "Baccalauréat (BAC)",
+          "specialties": [
+            {
+              "category": "Science",
+              "code": "3 AS",
+              "name_en": "Experimental Sciences",
+              "name_fr": "Sciences Expérimentales"
+            },
+            {
+              "category": "Science",
+              "code": "3 MA",
+              "name_en": "Mathematics",
+              "name_fr": "Mathématiques"
+            },
+            {
+              "category": "Science",
+              "code": "3 MT",
+              "name_en": "Technical Mathematical",
+              "name_fr": "Technique Mathématique",
+              "sub_options": [
+                { "code": "GC", "name_fr": "Génie Civil" },
+                { "code": "GM", "name_fr": "Génie Mécanique" },
+                { "code": "GE", "name_fr": "Génie Électrique" },
+                { "code": "GP", "name_fr": "Génie des Procédés" }
+              ]
+            },
+            {
+              "category": "Science",
+              "code": "3 GE",
+              "name_en": "Management and Economy",
+              "name_fr": "Gestion et Économie"
+            },
+            {
+              "category": "Arts",
+              "code": "3 LT",
+              "name_en": "Literature and Philosophy",
+              "name_fr": "Lettres et Philosophie"
+            },
+            {
+              "category": "Arts",
+              "code": "3 LE",
+              "name_en": "Foreign Languages",
+              "name_fr": "Langues Étrangères",
+              "sub_options": [
+                { "name": "Spanish" },
+                { "name": "German" },
+                { "name": "Italian" }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}
