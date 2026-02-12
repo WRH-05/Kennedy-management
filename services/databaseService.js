@@ -566,6 +566,39 @@ export const archiveService = {
     }
   },
 
+  // Get pending archive request entity IDs (for disabling archive buttons)
+  async getPendingArchiveEntityIds() {
+    try {
+      const schoolId = await getCurrentUserSchoolId()
+      if (!schoolId) throw new Error('No school access')
+
+      const { data, error } = await supabase
+        .from('archive_requests')
+        .select('entity_type, entity_id')
+        .eq('school_id', schoolId)
+        .eq('status', 'pending')
+      
+      if (error) throw error
+      
+      // Return a map of entity_type -> Set of entity_ids
+      const pendingMap = {
+        student: new Set(),
+        teacher: new Set(),
+        course: new Set()
+      }
+      
+      (data || []).forEach(req => {
+        if (pendingMap[req.entity_type]) {
+          pendingMap[req.entity_type].add(req.entity_id)
+        }
+      })
+      
+      return pendingMap
+    } catch (error) {
+      throw error
+    }
+  },
+
   // Create archive request with current user info
   async createArchiveRequest(entityType, entityId, entityName, reason = null) {
     try {
@@ -574,6 +607,22 @@ export const archiveService = {
 
       const userProfile = await getCurrentUserProfile()
       if (!userProfile) throw new Error('No user profile')
+
+      // Check if there's already a pending request for this entity
+      const { data: existingRequest, error: checkError } = await supabase
+        .from('archive_requests')
+        .select('id')
+        .eq('school_id', schoolId)
+        .eq('entity_type', entityType)
+        .eq('entity_id', entityId)
+        .eq('status', 'pending')
+        .single()
+      
+      if (checkError && checkError.code !== 'PGRST116') throw checkError
+      
+      if (existingRequest) {
+        throw new Error('An archive request is already pending for this item')
+      }
 
       const { data, error } = await supabase
         .from('archive_requests')

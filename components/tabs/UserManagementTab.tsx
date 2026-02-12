@@ -27,15 +27,15 @@ import {
 import { useAuth } from '@/contexts/AuthContext'
 import { authService } from '@/services/authService'
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
+import { useToast } from '@/hooks/use-toast'
 
 export default function UserManagementTab() {
   const { user: currentUser, hasRole } = useAuth()
+  const { toast } = useToast()
   const [users, setUsers] = useState<any[]>([])
   const [invitations, setInvitations] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
   const [inviteDialogOpen, setInviteDialogOpen] = useState(false)
-  const [error, setError] = useState<string | null>(null)
-  const [success, setSuccess] = useState<string | null>(null)
   
   const [inviteForm, setInviteForm] = useState({
     email: '',
@@ -57,7 +57,11 @@ export default function UserManagementTab() {
       setUsers(usersData)
       setInvitations(invitationsData)
     } catch (err: any) {
-      setError(err.message || 'Failed to load data')
+      toast({
+        title: "Error",
+        description: err.message || 'Failed to load data',
+        variant: "destructive",
+      })
     } finally {
       setLoading(false)
     }
@@ -67,8 +71,6 @@ export default function UserManagementTab() {
     e.preventDefault()
     if (sendingInvite) return // Prevent double submission
     
-    setError(null)
-    setSuccess(null)
     setSendingInvite(true)
 
     try {
@@ -79,14 +81,23 @@ export default function UserManagementTab() {
       )
       
       if (result.emailSent) {
-        setSuccess(`Invitation email sent to ${inviteForm.email}!`)
+        toast({
+          title: "Invitation Sent",
+          description: `Invitation email sent to ${inviteForm.email}!`,
+        })
       } else {
         // Copy link to clipboard if email wasn't sent
         try {
           await navigator.clipboard.writeText(result.inviteLink)
-          setSuccess(`Invitation created! Link copied to clipboard (email service not configured).`)
+          toast({
+            title: "Invitation Created",
+            description: "Link copied to clipboard (email service not configured).",
+          })
         } catch {
-          setSuccess(`Invitation created! Share this link: ${result.inviteLink}`)
+          toast({
+            title: "Invitation Created",
+            description: `Share this link: ${result.inviteLink}`,
+          })
         }
       }
       
@@ -94,7 +105,11 @@ export default function UserManagementTab() {
       setInviteDialogOpen(false)
       await loadData()
     } catch (err: any) {
-      setError(err.message || 'Failed to send invitation')
+      toast({
+        title: "Error",
+        description: err.message || 'Failed to send invitation',
+        variant: "destructive",
+      })
     } finally {
       setSendingInvite(false)
     }
@@ -103,20 +118,34 @@ export default function UserManagementTab() {
   const handleUpdateUserRole = async (userId: string, newRole: string) => {
     try {
       await authService.updateUserRole(userId, newRole)
-      setSuccess('User role updated successfully')
+      toast({
+        title: "Role Updated",
+        description: "User role updated successfully",
+      })
       await loadData()
     } catch (err: any) {
-      setError(err.message || 'Failed to update user role')
+      toast({
+        title: "Error",
+        description: err.message || 'Failed to update user role',
+        variant: "destructive",
+      })
     }
   }
 
   const handleDeactivateUser = async (userId: string) => {
     try {
       await authService.deactivateUser(userId)
-      setSuccess('User deactivated successfully')
+      toast({
+        title: "User Deactivated",
+        description: "User deactivated successfully",
+      })
       await loadData()
     } catch (err: any) {
-      setError(err.message || 'Failed to deactivate user')
+      toast({
+        title: "Error",
+        description: err.message || 'Failed to deactivate user',
+        variant: "destructive",
+      })
     }
   }
 
@@ -124,9 +153,16 @@ export default function UserManagementTab() {
     const link = `${window.location.origin}/auth/signup?token=${invitation.token}&email=${encodeURIComponent(invitation.email)}`
     try {
       await navigator.clipboard.writeText(link)
-      setSuccess('Invitation link copied to clipboard')
+      toast({
+        title: "Copied",
+        description: "Invitation link copied to clipboard",
+      })
     } catch {
-      setError('Failed to copy link')
+      toast({
+        title: "Error",
+        description: "Failed to copy link",
+        variant: "destructive",
+      })
     }
   }
 
@@ -163,10 +199,17 @@ export default function UserManagementTab() {
   const handleCancelInvitation = async (invitationId: string) => {
     try {
       await authService.cancelInvitation(invitationId)
-      setSuccess('Invitation canceled successfully')
+      toast({
+        title: "Invitation Canceled",
+        description: "Invitation canceled successfully",
+      })
       await loadData()
     } catch (err: any) {
-      setError(err.message || 'Failed to cancel invitation')
+      toast({
+        title: "Error",
+        description: err.message || 'Failed to cancel invitation',
+        variant: "destructive",
+      })
     }
   }
 
@@ -250,21 +293,6 @@ export default function UserManagementTab() {
           </DialogContent>
         </Dialog>
       </div>
-
-      {/* Alerts */}
-      {error && (
-        <Alert variant="destructive">
-          <AlertTriangle className="h-4 w-4" />
-          <AlertDescription>{error}</AlertDescription>
-        </Alert>
-      )}
-      
-      {success && (
-        <Alert>
-          <CheckCircle className="h-4 w-4" />
-          <AlertDescription>{success}</AlertDescription>
-        </Alert>
-      )}
 
       {/* Tabs */}
       <Tabs defaultValue="users" className="w-full">

@@ -11,6 +11,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Badge } from "@/components/ui/badge"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
+import { Checkbox } from "@/components/ui/checkbox"
 import { BookOpen, Plus, Archive, MoreHorizontal, Pencil } from "lucide-react"
 import { courseService, teacherService, archiveService } from "@/services/appDataService"
 import { useToast } from "@/hooks/use-toast"
@@ -21,6 +22,7 @@ interface CoursesTabProps {
   students: any[]
   onCoursesUpdate: (courses: any[]) => void
   canAdd?: boolean
+  pendingArchiveIds?: Set<string>
 }
 
 export default function CoursesTab({ 
@@ -28,11 +30,14 @@ export default function CoursesTab({
   teachers, 
   students, 
   onCoursesUpdate, 
-  canAdd = false 
+  canAdd = false,
+  pendingArchiveIds = new Set()
 }: CoursesTabProps) {
   const router = useRouter()
   const { toast } = useToast()
   const [showAddCourseDialog, setShowAddCourseDialog] = useState(false)
+  const [isSubmitting, setIsSubmitting] = useState(false)
+  const [selectedPrivateStudents, setSelectedPrivateStudents] = useState<string[]>([])
   
   const [newCourse, setNewCourse] = useState({
     teacherId: "",
@@ -66,27 +71,55 @@ export default function CoursesTab({
 
   const handleAddCourse = async (e: React.FormEvent) => {
     e.preventDefault()
+    if (isSubmitting) return // Prevent double submission
     
     if (!newCourse.teacherId) {
-      alert("Please select a teacher")
+      toast({
+        title: "Validation Error",
+        description: "Please select a teacher",
+        variant: "destructive",
+      })
       return
     }
     
     if (!newCourse.subject) {
-      alert("Please select a subject")
+      toast({
+        title: "Validation Error",
+        description: "Please select a subject",
+        variant: "destructive",
+      })
       return
     }
     
     if (!newCourse.schoolYear) {
-      alert("Please select a school year")
+      toast({
+        title: "Validation Error",
+        description: "Please select a school year",
+        variant: "destructive",
+      })
       return
     }
 
+    if (newCourse.courseType === "Private" && selectedPrivateStudents.length === 0) {
+      toast({
+        title: "Validation Error",
+        description: "Please select at least one student for private course",
+        variant: "destructive",
+      })
+      return
+    }
+
+    setIsSubmitting(true)
     try {
       console.log("Adding course:", newCourse)
       const teacher = teachers.find((t: any) => t.id.toString() === newCourse.teacherId)
       if (!teacher) {
-        alert("Selected teacher not found")
+        toast({
+          title: "Error",
+          description: "Selected teacher not found",
+          variant: "destructive",
+        })
+        setIsSubmitting(false)
         return
       }
 
@@ -103,7 +136,7 @@ export default function CoursesTab({
         schedule: `${newCourse.dayOfWeek} ${newCourse.startHour}-${endHour}`,
         price: newCourse.price,
         monthly_price: newCourse.price,
-        student_ids: [],
+        student_ids: newCourse.courseType === "Private" ? selectedPrivateStudents : [],
         status: "active"
       }
       console.log("Course object to add:", course)
@@ -123,10 +156,21 @@ export default function CoursesTab({
         startHour: "09:00",
         price: 500,
       })
+      setSelectedPrivateStudents([])
       setShowAddCourseDialog(false)
+      toast({
+        title: "Course added",
+        description: `${course.subject} - ${course.school_year} has been successfully added.`,
+      })
     } catch (error) {
       console.error("Error adding course:", error)
-      alert("Failed to add course: " + (error as Error).message)
+      toast({
+        title: "Error",
+        description: "Failed to add course: " + (error as Error).message,
+        variant: "destructive",
+      })
+    } finally {
+      setIsSubmitting(false)
     }
   }
 
@@ -297,7 +341,12 @@ export default function CoursesTab({
                       <Label htmlFor="courseType">Course Type</Label>
                       <Select
                         value={newCourse.courseType}
-                        onValueChange={(value) => setNewCourse({ ...newCourse, courseType: value })}
+                        onValueChange={(value) => {
+                          setNewCourse({ ...newCourse, courseType: value })
+                          if (value !== "Private") {
+                            setSelectedPrivateStudents([])
+                          }
+                        }}
                         required
                       >
                         <SelectTrigger>
@@ -305,10 +354,43 @@ export default function CoursesTab({
                         </SelectTrigger>
                         <SelectContent>
                           <SelectItem value="Group">Group</SelectItem>
-                          <SelectItem value="Individual">Individual</SelectItem>
+                          <SelectItem value="Private">Private</SelectItem>
                         </SelectContent>
                       </Select>
                     </div>
+                    {newCourse.courseType === "Private" && (
+                      <div className="space-y-2 md:col-span-2">
+                        <Label>Select Students (max 2)</Label>
+                        <div className="border rounded-md p-3 max-h-40 overflow-y-auto space-y-2">
+                          {students.map((student) => (
+                            <div key={student.id} className="flex items-center space-x-2">
+                              <Checkbox
+                                id={`student-${student.id}`}
+                                checked={selectedPrivateStudents.includes(student.id)}
+                                onCheckedChange={(checked) => {
+                                  if (checked) {
+                                    if (selectedPrivateStudents.length < 2) {
+                                      setSelectedPrivateStudents([...selectedPrivateStudents, student.id])
+                                    }
+                                  } else {
+                                    setSelectedPrivateStudents(selectedPrivateStudents.filter(id => id !== student.id))
+                                  }
+                                }}
+                                disabled={!selectedPrivateStudents.includes(student.id) && selectedPrivateStudents.length >= 2}
+                              />
+                              <Label htmlFor={`student-${student.id}`} className="text-sm cursor-pointer">
+                                {student.name} - {student.school_year}
+                              </Label>
+                            </div>
+                          ))}
+                        </div>
+                        {selectedPrivateStudents.length > 0 && (
+                          <div className="text-sm text-green-600">
+                            Selected: {selectedPrivateStudents.length}/2 student(s)
+                          </div>
+                        )}
+                      </div>
+                    )}
                     <div className="space-y-2">
                       <Label htmlFor="duration">Duration (hours)</Label>
                       <Input
@@ -380,7 +462,9 @@ export default function CoursesTab({
                     <Button type="button" variant="outline" onClick={() => setShowAddCourseDialog(false)}>
                       Cancel
                     </Button>
-                    <Button type="submit">Add Course</Button>
+                    <Button type="submit" disabled={isSubmitting}>
+                      {isSubmitting ? "Adding..." : "Add Course"}
+                    </Button>
                   </div>
                 </form>
               </DialogContent>
@@ -455,10 +539,11 @@ export default function CoursesTab({
                             </DropdownMenuItem>
                             <DropdownMenuItem
                               onClick={() => handleArchiveCourse(course.id, `${course.subject} - ${course.school_year}`)}
-                              className="text-orange-600"
+                              className={pendingArchiveIds.has(course.id) ? "text-gray-400 cursor-not-allowed" : "text-orange-600"}
+                              disabled={pendingArchiveIds.has(course.id)}
                             >
                               <Archive className="mr-2 h-4 w-4" />
-                              Archive
+                              {pendingArchiveIds.has(course.id) ? "Archive Pending" : "Archive"}
                             </DropdownMenuItem>
                           </DropdownMenuContent>
                         </DropdownMenu>

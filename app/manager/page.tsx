@@ -10,7 +10,7 @@ import { Badge } from "@/components/ui/badge"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { LogOut, DollarSign, Users, BookOpen, TrendingUp, Calendar, Search, Settings, RefreshCw } from "lucide-react"
-import { paymentService } from "@/services/appDataService"
+import { paymentService, archiveService } from "@/services/appDataService"
 import { useAuth } from "@/contexts/AuthContext"
 import AuthGuard from "@/components/auth/AuthGuard"
 import StudentsTab from "@/components/tabs/StudentsTab"
@@ -34,6 +34,11 @@ export default function ManagerDashboard() {
   const [payouts, setPayouts] = useState<any[]>([])
   const [allPayoutsForTotal, setAllPayoutsForTotal] = useState<any[]>([])
   const [selectedMonth, setSelectedMonth] = useState("2024-01")
+  const [pendingArchiveIds, setPendingArchiveIds] = useState<{
+    student: Set<string>
+    teacher: Set<string>
+    course: Set<string>
+  }>({ student: new Set(), teacher: new Set(), course: new Set() })
 
   // Filter out archived items with memoization for performance
   const students = useMemo(() => 
@@ -61,14 +66,16 @@ export default function ManagerDashboard() {
   useEffect(() => {
     const loadPaymentData = async () => {
       try {
-        const [revenueData, allPayoutsData] = await Promise.all([
+        const [revenueData, allPayoutsData, pendingArchiveMap] = await Promise.all([
           paymentService.getRevenueData(),
           paymentService.getAllPayouts(),
+          archiveService.getPendingArchiveEntityIds(),
         ])
         setRevenue(revenueData)
         // Show all payouts in the PayoutsTab, not just pending ones
         setPayouts(allPayoutsData)
         setAllPayoutsForTotal(allPayoutsData)
+        setPendingArchiveIds(pendingArchiveMap)
       } catch (error) {
         // Error loading payment data
       }
@@ -311,6 +318,7 @@ export default function ManagerDashboard() {
               canAdd={true}
               showCourses={true}
               showPaymentStatus={true}
+              pendingArchiveIds={pendingArchiveIds.student}
             />
           </TabsContent>
 
@@ -323,6 +331,7 @@ export default function ManagerDashboard() {
               canAdd={true}
               showCourses={true}
               showStats={true}
+              pendingArchiveIds={pendingArchiveIds.teacher}
             />
           </TabsContent>
 
@@ -334,6 +343,7 @@ export default function ManagerDashboard() {
               students={students}
               onCoursesUpdate={() => revalidateData('courses')}
               canAdd={true}
+              pendingArchiveIds={pendingArchiveIds.course}
             />
           </TabsContent>
 

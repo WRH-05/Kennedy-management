@@ -22,6 +22,7 @@ interface TeachersTabProps {
   canAdd?: boolean
   showCourses?: boolean
   showStats?: boolean
+  pendingArchiveIds?: Set<string>
 }
 
 export default function TeachersTab({ 
@@ -30,11 +31,13 @@ export default function TeachersTab({
   onTeachersUpdate, 
   canAdd = false,
   showCourses = true,
-  showStats = false
+  showStats = false,
+  pendingArchiveIds = new Set()
 }: TeachersTabProps) {
   const router = useRouter()
   const { toast } = useToast()
   const [showAddTeacherDialog, setShowAddTeacherDialog] = useState(false)
+  const [isSubmitting, setIsSubmitting] = useState(false)
   
   const [newTeacher, setNewTeacher] = useState({
     name: "",
@@ -48,18 +51,28 @@ export default function TeachersTab({
 
   const handleAddTeacher = async (e: React.FormEvent) => {
     e.preventDefault()
+    if (isSubmitting) return // Prevent double submission
     
     // Validate required fields
     if (newTeacher.subjects.length === 0) {
-      alert("Please select at least one subject")
+      toast({
+        title: "Validation Error",
+        description: "Please select at least one subject",
+        variant: "destructive",
+      })
       return
     }
     
     if (newTeacher.schoolYears.length === 0) {
-      alert("Please select at least one school year")
+      toast({
+        title: "Validation Error",
+        description: "Please select at least one school year",
+        variant: "destructive",
+      })
       return
     }
     
+    setIsSubmitting(true)
     try {
       console.log("Adding teacher:", newTeacher)
       const teacher = {
@@ -86,9 +99,19 @@ export default function TeachersTab({
         subjects: [],
       })
       setShowAddTeacherDialog(false)
+      toast({
+        title: "Teacher added",
+        description: `${teacher.name} has been successfully added.`,
+      })
     } catch (error) {
       console.error("Error adding teacher:", error)
-      alert("Failed to add teacher: " + (error as Error).message)
+      toast({
+        title: "Error",
+        description: "Failed to add teacher: " + (error as Error).message,
+        variant: "destructive",
+      })
+    } finally {
+      setIsSubmitting(false)
     }
   }
 
@@ -276,9 +299,9 @@ export default function TeachersTab({
                     <Button type="button" variant="outline" onClick={() => setShowAddTeacherDialog(false)}>
                       Cancel
                     </Button>
-                    <Button type="submit">
+                    <Button type="submit" disabled={isSubmitting}>
                       <GraduationCap className="h-4 w-4 mr-2" />
-                      Add Teacher
+                      {isSubmitting ? "Adding..." : "Add Teacher"}
                     </Button>
                   </div>
                 </form>
@@ -370,10 +393,11 @@ export default function TeachersTab({
                           </DropdownMenuItem>
                           <DropdownMenuItem
                             onClick={() => handleArchiveTeacher(teacher.id, teacher.name)}
-                            className="text-orange-600"
+                            className={pendingArchiveIds.has(teacher.id) ? "text-gray-400 cursor-not-allowed" : "text-orange-600"}
+                            disabled={pendingArchiveIds.has(teacher.id)}
                           >
                             <Archive className="mr-2 h-4 w-4" />
-                            Archive
+                            {pendingArchiveIds.has(teacher.id) ? "Archive Pending" : "Archive"}
                           </DropdownMenuItem>
                         </DropdownMenuContent>
                       </DropdownMenu>

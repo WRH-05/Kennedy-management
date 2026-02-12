@@ -173,6 +173,10 @@ export const archiveService = {
     return await supabaseArchiveService.getAllArchiveRequests()
   },
 
+  async getPendingArchiveEntityIds() {
+    return await supabaseArchiveService.getPendingArchiveEntityIds()
+  },
+
   async createArchiveRequest(entityType, entityId, entityName, reason = null) {
     return await supabaseArchiveService.createArchiveRequest(entityType, entityId, entityName, reason)
   },

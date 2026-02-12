@@ -9,7 +9,7 @@ import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { LogOut, Search } from "lucide-react"
-import { studentService, teacherService, courseService } from "@/services/appDataService"
+import { studentService, teacherService, courseService, archiveService } from "@/services/appDataService"
 import { useAuth } from "@/contexts/AuthContext"
 import AuthGuard from "@/components/auth/AuthGuard"
 import StudentsTab from "@/components/tabs/StudentsTab"
@@ -27,15 +27,21 @@ function ReceptionistDashboardContent() {
   const [searchResults, setSearchResults] = useState<any[]>([])
   const [showSearchResults, setShowSearchResults] = useState(false)
   const [loading, setLoading] = useState(true)
+  const [pendingArchiveIds, setPendingArchiveIds] = useState<{
+    student: Set<string>
+    teacher: Set<string>
+    course: Set<string>
+  }>({ student: new Set(), teacher: new Set(), course: new Set() })
 
   useEffect(() => {
     const loadData = async () => {
       setLoading(true)
       try {
-        const [studentsData, teachersData, coursesData] = await Promise.all([
+        const [studentsData, teachersData, coursesData, pendingArchiveMap] = await Promise.all([
           studentService.getAllStudents(),
           teacherService.getAllTeachers(),
           courseService.getAllCourseInstances(),
+          archiveService.getPendingArchiveEntityIds(),
         ])
 
         // Filter out archived items with null checking
@@ -46,6 +52,7 @@ function ReceptionistDashboardContent() {
         setStudents(activeStudents)
         setTeachers(activeTeachers)
         setCourses(activeCourses)
+        setPendingArchiveIds(pendingArchiveMap)
       } catch (error) {
         // Error loading data
       } finally {
@@ -190,6 +197,7 @@ function ReceptionistDashboardContent() {
               canAdd={true}
               showCourses={true}
               showPaymentStatus={true}
+              pendingArchiveIds={pendingArchiveIds.student}
             />
           </TabsContent>
 
@@ -201,6 +209,7 @@ function ReceptionistDashboardContent() {
               students={students}
               onCoursesUpdate={setCourses}
               canAdd={true}
+              pendingArchiveIds={pendingArchiveIds.course}
             />
           </TabsContent>
 
@@ -213,6 +222,7 @@ function ReceptionistDashboardContent() {
               canAdd={true}
               showCourses={true}
               showStats={false}
+              pendingArchiveIds={pendingArchiveIds.teacher}
             />
           </TabsContent>
 

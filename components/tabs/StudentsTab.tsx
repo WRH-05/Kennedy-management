@@ -23,6 +23,7 @@ interface StudentsTabProps {
   canAdd?: boolean
   showCourses?: boolean
   showPaymentStatus?: boolean
+  pendingArchiveIds?: Set<string>
 }
 
 export default function StudentsTab({ 
@@ -31,11 +32,13 @@ export default function StudentsTab({
   onStudentsUpdate, 
   canAdd = false,
   showCourses = true,
-  showPaymentStatus = true
+  showPaymentStatus = true,
+  pendingArchiveIds = new Set()
 }: StudentsTabProps) {
   const router = useRouter()
   const { toast } = useToast()
   const [showAddStudentDialog, setShowAddStudentDialog] = useState(false)
+  const [isSubmitting, setIsSubmitting] = useState(false)
   
   const [newStudent, setNewStudent] = useState({
     name: "",
@@ -54,6 +57,9 @@ export default function StudentsTab({
 
   const handleAddStudent = async (e: React.FormEvent) => {
     e.preventDefault()
+    if (isSubmitting) return // Prevent double submission
+    
+    setIsSubmitting(true)
     try {
       console.log("Adding student:", newStudent)
       const student = {
@@ -87,9 +93,19 @@ export default function StudentsTab({
         registration_fee_paid: false,
       })
       setShowAddStudentDialog(false)
+      toast({
+        title: "Student added",
+        description: `${student.name} has been successfully added.`,
+      })
     } catch (error) {
       console.error("Error adding student:", error)
-      alert("Failed to add student: " + (error as Error).message)
+      toast({
+        title: "Error",
+        description: "Failed to add student: " + (error as Error).message,
+        variant: "destructive",
+      })
+    } finally {
+      setIsSubmitting(false)
     }
   }
 
@@ -282,7 +298,9 @@ export default function StudentsTab({
                     <Button type="button" variant="outline" onClick={() => setShowAddStudentDialog(false)}>
                       Cancel
                     </Button>
-                    <Button type="submit">Add Student</Button>
+                    <Button type="submit" disabled={isSubmitting}>
+                      {isSubmitting ? "Adding..." : "Add Student"}
+                    </Button>
                   </div>
                 </form>
               </DialogContent>
@@ -354,10 +372,11 @@ export default function StudentsTab({
                               </DropdownMenuItem>
                               <DropdownMenuItem
                                 onClick={() => handleArchiveStudent(student.id, student.name)}
-                                className="text-orange-600"
+                                className={pendingArchiveIds.has(student.id) ? "text-gray-400 cursor-not-allowed" : "text-orange-600"}
+                                disabled={pendingArchiveIds.has(student.id)}
                               >
                                 <Archive className="mr-2 h-4 w-4" />
-                                Archive
+                                {pendingArchiveIds.has(student.id) ? "Archive Pending" : "Archive"}
                               </DropdownMenuItem>
                             </DropdownMenuContent>
                           </DropdownMenu>
@@ -379,10 +398,11 @@ export default function StudentsTab({
                             </DropdownMenuItem>
                             <DropdownMenuItem
                               onClick={() => handleArchiveStudent(student.id, student.name)}
-                              className="text-orange-600"
+                              className={pendingArchiveIds.has(student.id) ? "text-gray-400 cursor-not-allowed" : "text-orange-600"}
+                              disabled={pendingArchiveIds.has(student.id)}
                             >
                               <Archive className="mr-2 h-4 w-4" />
-                              Archive
+                              {pendingArchiveIds.has(student.id) ? "Archive Pending" : "Archive"}
                             </DropdownMenuItem>
                           </DropdownMenuContent>
                         </DropdownMenu>
