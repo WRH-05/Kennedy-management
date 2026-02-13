@@ -568,9 +568,19 @@ export const archiveService = {
 
   // Get pending archive request entity IDs (for disabling archive buttons)
   async getPendingArchiveEntityIds() {
+    // Return empty map structure as default - prevents Promise.all failures from breaking data loading
+    const emptyMap = {
+      student: new Set(),
+      teacher: new Set(),
+      course: new Set()
+    }
+    
     try {
       const schoolId = await getCurrentUserSchoolId()
-      if (!schoolId) throw new Error('No school access')
+      if (!schoolId) {
+        console.warn('getPendingArchiveEntityIds: No school access, returning empty map')
+        return emptyMap
+      }
 
       const { data, error } = await supabase
         .from('archive_requests')
@@ -578,7 +588,10 @@ export const archiveService = {
         .eq('school_id', schoolId)
         .eq('status', 'pending')
       
-      if (error) throw error
+      if (error) {
+        console.warn('getPendingArchiveEntityIds: Query error, returning empty map', error)
+        return emptyMap
+      }
       
       // Return a map of entity_type -> Set of entity_ids
       const pendingMap = {
@@ -595,7 +608,8 @@ export const archiveService = {
       
       return pendingMap
     } catch (error) {
-      throw error
+      console.error('getPendingArchiveEntityIds: Unexpected error, returning empty map', error)
+      return emptyMap
     }
   },
 

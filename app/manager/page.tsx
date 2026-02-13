@@ -66,18 +66,25 @@ export default function ManagerDashboard() {
   useEffect(() => {
     const loadPaymentData = async () => {
       try {
-        const [revenueData, allPayoutsData, pendingArchiveMap] = await Promise.all([
+        // Use Promise.allSettled to ensure all promises complete even if some fail
+        const results = await Promise.allSettled([
           paymentService.getRevenueData(),
           paymentService.getAllPayouts(),
           archiveService.getPendingArchiveEntityIds(),
         ])
-        setRevenue(revenueData)
+
+        // Extract data from settled promises, using empty arrays/objects as fallback
+        const revenueData = results[0].status === 'fulfilled' ? results[0].value : []
+        const allPayoutsData = results[1].status === 'fulfilled' ? results[1].value : []
+        const pendingArchiveMap = results[2].status === 'fulfilled' ? results[2].value : { student: new Set(), teacher: new Set(), course: new Set() }
+
+        setRevenue(revenueData || [])
         // Show all payouts in the PayoutsTab, not just pending ones
-        setPayouts(allPayoutsData)
-        setAllPayoutsForTotal(allPayoutsData)
+        setPayouts(allPayoutsData || [])
+        setAllPayoutsForTotal(allPayoutsData || [])
         setPendingArchiveIds(pendingArchiveMap)
       } catch (error) {
-        // Error loading payment data
+        console.error('Error loading payment data:', error)
       }
     }
 

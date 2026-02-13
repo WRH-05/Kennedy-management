@@ -37,12 +37,19 @@ function ReceptionistDashboardContent() {
     const loadData = async () => {
       setLoading(true)
       try {
-        const [studentsData, teachersData, coursesData, pendingArchiveMap] = await Promise.all([
+        // Use Promise.allSettled to ensure all promises complete even if some fail
+        const results = await Promise.allSettled([
           studentService.getAllStudents(),
           teacherService.getAllTeachers(),
           courseService.getAllCourseInstances(),
           archiveService.getPendingArchiveEntityIds(),
         ])
+
+        // Extract data from settled promises, using empty arrays as fallback for rejected promises
+        const studentsData = results[0].status === 'fulfilled' ? results[0].value : []
+        const teachersData = results[1].status === 'fulfilled' ? results[1].value : []
+        const coursesData = results[2].status === 'fulfilled' ? results[2].value : []
+        const pendingArchiveMap = results[3].status === 'fulfilled' ? results[3].value : { student: new Set(), teacher: new Set(), course: new Set() }
 
         // Filter out archived items with null checking
         const activeStudents = (studentsData || []).filter((student: any) => !student.archived)
@@ -54,7 +61,7 @@ function ReceptionistDashboardContent() {
         setCourses(activeCourses)
         setPendingArchiveIds(pendingArchiveMap)
       } catch (error) {
-        // Error loading data
+        console.error('Error loading data:', error)
       } finally {
         setLoading(false)
       }
