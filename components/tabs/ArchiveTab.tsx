@@ -8,6 +8,7 @@ import { Badge } from "@/components/ui/badge"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 import { Archive, Check, X, Undo, MoreHorizontal } from "lucide-react"
 import { studentService, teacherService, courseService, archiveService } from "@/services/appDataService"
+import { useAuth } from "@/contexts/AuthContext"
 
 interface ArchiveTabProps {
   isManager?: boolean
@@ -30,8 +31,10 @@ interface ArchiveRequest {
 }
 
 export default function ArchiveTab({ isManager = false, onArchiveUpdate }: ArchiveTabProps) {
+  const { user } = useAuth()
   const [archiveRequests, setArchiveRequests] = useState<ArchiveRequest[]>([])
   const [loading, setLoading] = useState(true)
+  const [processingIds, setProcessingIds] = useState<Set<string>>(new Set())
 
   useEffect(() => {
     loadArchiveRequests()
@@ -51,32 +54,60 @@ export default function ArchiveTab({ isManager = false, onArchiveUpdate }: Archi
   }
 
   const handleApproveArchive = async (requestId: string) => {
+    // Optimistic update - immediately update UI
+    const approverName = user?.profile?.full_name || 'Manager'
+    setArchiveRequests(prev => prev.map(req => 
+      req.id === requestId 
+        ? { ...req, status: 'approved' as const, approved_by_name: approverName, approved_date: new Date().toISOString() }
+        : req
+    ))
+    setProcessingIds(prev => new Set(prev).add(requestId))
+
     try {
       await archiveService.approveArchiveRequest(requestId)
-      
-      // Reload archive requests
-      await loadArchiveRequests()
-      
+      // Notify parent to update pending archive IDs without full refetch
       if (onArchiveUpdate) {
         onArchiveUpdate()
       }
     } catch (error) {
       console.error('Error approving archive request:', error)
+      // Rollback on error
+      await loadArchiveRequests()
+    } finally {
+      setProcessingIds(prev => {
+        const next = new Set(prev)
+        next.delete(requestId)
+        return next
+      })
     }
   }
 
   const handleDenyArchive = async (requestId: string) => {
+    // Optimistic update - immediately update UI
+    const approverName = user?.profile?.full_name || 'Manager'
+    setArchiveRequests(prev => prev.map(req => 
+      req.id === requestId 
+        ? { ...req, status: 'denied' as const, approved_by_name: approverName, approved_date: new Date().toISOString() }
+        : req
+    ))
+    setProcessingIds(prev => new Set(prev).add(requestId))
+
     try {
       await archiveService.denyArchiveRequest(requestId)
-      
-      // Reload archive requests
-      await loadArchiveRequests()
-      
+      // Notify parent to update pending archive IDs without full refetch
       if (onArchiveUpdate) {
         onArchiveUpdate()
       }
     } catch (error) {
       console.error('Error denying archive request:', error)
+      // Rollback on error
+      await loadArchiveRequests()
+    } finally {
+      setProcessingIds(prev => {
+        const next = new Set(prev)
+        next.delete(requestId)
+        return next
+      })
     }
   }
 
@@ -145,7 +176,6 @@ export default function ArchiveTab({ isManager = false, onArchiveUpdate }: Archi
                   <TableHead>Requested By</TableHead>
                   <TableHead>Date Requested</TableHead>
                   <TableHead>Reason</TableHead>
-                  {isManager && <TableHead>Actions</TableHead>}
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -161,7 +191,7 @@ export default function ArchiveTab({ isManager = false, onArchiveUpdate }: Archi
                     <TableCell>{new Date(request.created_at).toLocaleDateString()}</TableCell>
                     <TableCell>{request.reason || 'No reason provided'}</TableCell>
                     {isManager && (
-                      <TableCell>
+                      <TableCell className="w-10">
                         <DropdownMenu>
                           <DropdownMenuTrigger asChild>
                             <Button variant="ghost" className="h-8 w-8 p-0">
@@ -212,7 +242,6 @@ export default function ArchiveTab({ isManager = false, onArchiveUpdate }: Archi
                   <TableHead>Status</TableHead>
                   <TableHead>Processed By</TableHead>
                   <TableHead>Date Processed</TableHead>
-                  {isManager && <TableHead>Actions</TableHead>}
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -237,7 +266,7 @@ export default function ArchiveTab({ isManager = false, onArchiveUpdate }: Archi
                         : '-'}
                     </TableCell>
                     {isManager && (
-                      <TableCell>
+                      <TableCell className="w-10">
                         {request.status === 'approved' && (
                           <DropdownMenu>
                             <DropdownMenuTrigger asChild>

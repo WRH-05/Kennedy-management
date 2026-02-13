@@ -43,6 +43,7 @@ export default function RevenueTab({ revenue }: RevenueTabProps) {
       </CardHeader>
       <CardContent>
         <div className="max-h-[455px] overflow-auto scrollbar-thin">
+        {revenue.length > 0 ? (
         <Table>
           <TableHeader>
             <TableRow>
@@ -100,6 +101,12 @@ export default function RevenueTab({ revenue }: RevenueTabProps) {
             })}
           </TableBody>
         </Table>
+        ) : (
+          <div className="text-center py-8 text-gray-600">
+            <TrendingUp className="h-12 w-12 mx-auto mb-4 opacity-50" />
+            <p>No revenue records found</p>
+          </div>
+        )}
         </div>
       </CardContent>
     </Card>

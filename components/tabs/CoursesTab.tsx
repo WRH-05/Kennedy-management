@@ -55,6 +55,9 @@ export default function CoursesTab({
   const [teacherSearchQuery, setTeacherSearchQuery] = useState("")
   const [showTeacherResults, setShowTeacherResults] = useState(false)
   const [filteredTeachers, setFilteredTeachers] = useState<any[]>([])
+  const [studentSearchQuery, setStudentSearchQuery] = useState("")
+  const [showStudentResults, setShowStudentResults] = useState(false)
+  const [filteredStudents, setFilteredStudents] = useState<any[]>([])
 
   useEffect(() => {
     if (teacherSearchQuery.trim()) {
@@ -68,6 +71,20 @@ export default function CoursesTab({
       setShowTeacherResults(false)
     }
   }, [teacherSearchQuery, teachers])
+
+  useEffect(() => {
+    if (studentSearchQuery.trim()) {
+      const filtered = students.filter((student) =>
+        student.name.toLowerCase().includes(studentSearchQuery.toLowerCase()) &&
+        !selectedPrivateStudents.includes(student.id)
+      )
+      setFilteredStudents(filtered)
+      setShowStudentResults(true)
+    } else {
+      setFilteredStudents([])
+      setShowStudentResults(false)
+    }
+  }, [studentSearchQuery, students, selectedPrivateStudents])
 
   const handleAddCourse = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -361,32 +378,52 @@ export default function CoursesTab({
                     {newCourse.courseType === "Private" && (
                       <div className="space-y-2 md:col-span-2">
                         <Label>Select Students (max 2)</Label>
-                        <div className="border rounded-md p-3 max-h-40 overflow-y-auto space-y-2">
-                          {students.map((student) => (
-                            <div key={student.id} className="flex items-center space-x-2">
-                              <Checkbox
-                                id={`student-${student.id}`}
-                                checked={selectedPrivateStudents.includes(student.id)}
-                                onCheckedChange={(checked) => {
-                                  if (checked) {
+                        <div className="relative">
+                          <Input
+                            placeholder="Search for a student..."
+                            value={studentSearchQuery}
+                            onChange={(e) => setStudentSearchQuery(e.target.value)}
+                            disabled={selectedPrivateStudents.length >= 2}
+                          />
+                          {showStudentResults && filteredStudents.length > 0 && (
+                            <div className="absolute top-full left-0 right-0 mt-1 bg-white border rounded-md shadow-lg z-50 max-h-40 overflow-y-auto">
+                              {filteredStudents.map((student) => (
+                                <div
+                                  key={student.id}
+                                  className="px-4 py-2 hover:bg-gray-50 cursor-pointer border-b last:border-b-0"
+                                  onClick={() => {
                                     if (selectedPrivateStudents.length < 2) {
                                       setSelectedPrivateStudents([...selectedPrivateStudents, student.id])
+                                      setStudentSearchQuery("")
+                                      setShowStudentResults(false)
                                     }
-                                  } else {
-                                    setSelectedPrivateStudents(selectedPrivateStudents.filter(id => id !== student.id))
-                                  }
-                                }}
-                                disabled={!selectedPrivateStudents.includes(student.id) && selectedPrivateStudents.length >= 2}
-                              />
-                              <Label htmlFor={`student-${student.id}`} className="text-sm cursor-pointer">
-                                {student.name} - {student.school_year}
-                              </Label>
+                                  }}
+                                >
+                                  <div className="font-medium">{student.name}</div>
+                                  <div className="text-sm text-gray-600">{student.school_year}</div>
+                                </div>
+                              ))}
                             </div>
-                          ))}
+                          )}
                         </div>
                         {selectedPrivateStudents.length > 0 && (
-                          <div className="text-sm text-green-600">
-                            Selected: {selectedPrivateStudents.length}/2 student(s)
+                          <div className="space-y-2 mt-2">
+                            <div className="text-sm text-green-600">Selected: {selectedPrivateStudents.length}/2 student(s)</div>
+                            <div className="flex flex-wrap gap-2">
+                              {selectedPrivateStudents.map((studentId) => {
+                                const student = students.find((s) => s.id === studentId)
+                                return student ? (
+                                  <Badge
+                                    key={studentId}
+                                    variant="secondary"
+                                    className="cursor-pointer hover:bg-red-100"
+                                    onClick={() => setSelectedPrivateStudents(selectedPrivateStudents.filter(id => id !== studentId))}
+                                  >
+                                    {student.name} x
+                                  </Badge>
+                                ) : null
+                              })}
+                            </div>
                           </div>
                         )}
                       </div>

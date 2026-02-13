@@ -349,9 +349,14 @@ export default function ManagerDashboard() {
 
           {/* Archive Tab */}
           <TabsContent value="archive">
-            <ArchiveTab isManager={true} onArchiveUpdate={() => {
-              // Revalidate all data when archive status changes
-              refreshAll()
+            <ArchiveTab isManager={true} onArchiveUpdate={async () => {
+              // Only refresh pending archive IDs, no full data refetch
+              try {
+                const pendingArchiveMap = await archiveService.getPendingArchiveEntityIds()
+                setPendingArchiveIds(pendingArchiveMap)
+              } catch (error) {
+                // Silently handle error
+              }
             }} />
           </TabsContent>
 
