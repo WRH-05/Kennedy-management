@@ -200,6 +200,41 @@ export const archiveService = {
   },
 }
 
+// Billing Services - Monthly billing period management
+export const billingService = {
+  async getCurrentPeriod() {
+    return await supabaseDataService.billing.getCurrentPeriod()
+  },
+
+  async getAllPeriods() {
+    return await supabaseDataService.billing.getAllPeriods()
+  },
+
+  async startNewPeriod(periodString = null) {
+    return await supabaseDataService.billing.startNewPeriod(periodString)
+  },
+
+  async closePeriod(periodId) {
+    return await supabaseDataService.billing.closePeriod(periodId)
+  },
+
+  async getOutstandingItems() {
+    return await supabaseDataService.billing.getOutstandingItems()
+  },
+
+  async getRolloverSummary() {
+    return await supabaseDataService.billing.getRolloverSummary()
+  },
+
+  async handleStudentJoinedMidMonth(courseId, studentId) {
+    return await supabaseDataService.billing.handleStudentJoinedMidMonth(courseId, studentId)
+  },
+
+  async handleStudentLeftMidMonth(courseId, studentId) {
+    return await supabaseDataService.billing.handleStudentLeftMidMonth(courseId, studentId)
+  },
+}
+
 // Export unified service
 export const appDataService = {
   students: studentService,

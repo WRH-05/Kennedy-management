@@ -1397,6 +1397,453 @@ export const attendanceService = {
   },
 }
 
+// ============================================================================
+// BILLING SERVICE
+// ============================================================================
+const billingService = {
+  // Get current active billing period for the school
+  async getCurrentPeriod() {
+    try {
+      const schoolId = await getCurrentUserSchoolId()
+      if (!schoolId) throw new Error('No school access')
+
+      const { data, error } = await supabase
+        .from('billing_periods')
+        .select('*')
+        .eq('school_id', schoolId)
+        .eq('status', 'active')
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .single()
+      
+      if (error && error.code !== 'PGRST116') throw error
+      return data || null
+    } catch (error) {
+      throw error
+    }
+  },
+
+  // Get all billing periods for the school
+  async getAllPeriods() {
+    try {
+      const schoolId = await getCurrentUserSchoolId()
+      if (!schoolId) throw new Error('No school access')
+
+      const { data, error } = await supabase
+        .from('billing_periods')
+        .select('*')
+        .eq('school_id', schoolId)
+        .order('period', { ascending: false })
+      
+      if (error) throw error
+      return data || []
+    } catch (error) {
+      throw error
+    }
+  },
+
+  // Start a new billing period
+  async startNewPeriod(periodString = null) {
+    try {
+      const schoolId = await getCurrentUserSchoolId()
+      if (!schoolId) throw new Error('No school access')
+
+      // Generate period string if not provided (YYYY-MM format)
+      const now = new Date()
+      const period = periodString || `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`
+      const periodName = now.toLocaleString('default', { month: 'long', year: 'numeric' })
+
+      // Check if period already exists
+      const { data: existingPeriod } = await supabase
+        .from('billing_periods')
+        .select('id')
+        .eq('school_id', schoolId)
+        .eq('period', period)
+        .single()
+
+      if (existingPeriod) {
+        throw new Error('PERIOD_ALREADY_EXISTS')
+      }
+
+      // Close any currently active periods
+      await supabase
+        .from('billing_periods')
+        .update({ 
+          status: 'closed', 
+          closed_at: new Date().toISOString() 
+        })
+        .eq('school_id', schoolId)
+        .eq('status', 'active')
+
+      // Calculate start and end dates
+      const startDate = new Date(now.getFullYear(), now.getMonth(), 1)
+      const endDate = new Date(now.getFullYear(), now.getMonth() + 1, 0)
+
+      // Create new billing period
+      const { data: newPeriod, error: createError } = await supabase
+        .from('billing_periods')
+        .insert([{
+          school_id: schoolId,
+          period: period,
+          period_name: periodName,
+          status: 'active',
+          start_date: startDate.toISOString().split('T')[0],
+          end_date: endDate.toISOString().split('T')[0],
+          created_at: new Date().toISOString()
+        }])
+        .select()
+        .single()
+
+      if (createError) throw createError
+
+      // Get all active courses with enrolled students
+      const { data: courses, error: coursesError } = await supabase
+        .from('course_instances')
+        .select('id, subject, school_year, price, student_ids, teacher_id, teacher_name, percentage_cut')
+        .eq('school_id', schoolId)
+        .eq('archived', false)
+
+      if (coursesError) throw coursesError
+
+      // Create pending payment records for each enrolled student
+      const paymentRecords = []
+      const attendanceRecords = []
+
+      for (const course of (courses || [])) {
+        if (!course.student_ids || course.student_ids.length === 0) continue
+
+        for (const studentId of course.student_ids) {
+          // Create payment record
+          paymentRecords.push({
+            school_id: schoolId,
+            student_id: studentId,
+            course_id: course.id,
+            amount: course.price || 0,
+            month: periodName,
+            status: 'pending',
+            billing_period_id: newPeriod.id,
+            enrollment_status: 'full_month',
+            created_at: new Date().toISOString()
+          })
+
+          // Create attendance records for weeks 1-4
+          for (let week = 1; week <= 4; week++) {
+            attendanceRecords.push({
+              school_id: schoolId,
+              course_id: course.id,
+              student_id: studentId,
+              week: week,
+              attended: false,
+              billing_period_id: newPeriod.id,
+              created_at: new Date().toISOString()
+            })
+          }
+        }
+      }
+
+      // Insert payment records
+      if (paymentRecords.length > 0) {
+        const { error: paymentsError } = await supabase
+          .from('student_payments')
+          .insert(paymentRecords)
+
+        if (paymentsError) throw paymentsError
+      }
+
+      // Insert attendance records (ignore duplicates)
+      if (attendanceRecords.length > 0) {
+        const { error: attendanceError } = await supabase
+          .from('attendance')
+          .upsert(attendanceRecords, { 
+            onConflict: 'course_id,student_id,week',
+            ignoreDuplicates: true 
+          })
+
+        if (attendanceError) console.warn('Attendance insert warning:', attendanceError)
+      }
+
+      return {
+        period: newPeriod,
+        studentsCount: paymentRecords.length,
+        coursesCount: courses?.length || 0
+      }
+    } catch (error) {
+      throw error
+    }
+  },
+
+  // Close a billing period
+  async closePeriod(periodId) {
+    try {
+      const schoolId = await getCurrentUserSchoolId()
+      if (!schoolId) throw new Error('No school access')
+
+      const { data, error } = await supabase
+        .from('billing_periods')
+        .update({ 
+          status: 'closed', 
+          closed_at: new Date().toISOString() 
+        })
+        .eq('id', periodId)
+        .eq('school_id', schoolId)
+        .select()
+        .single()
+
+      if (error) throw error
+      return data
+    } catch (error) {
+      throw error
+    }
+  },
+
+  // Get all outstanding items (unpaid across all periods)
+  async getOutstandingItems() {
+    try {
+      const schoolId = await getCurrentUserSchoolId()
+      if (!schoolId) throw new Error('No school access')
+
+      // Get unpaid student payments
+      const { data: unpaidPayments, error: paymentsError } = await supabase
+        .from('student_payments')
+        .select(`
+          id,
+          student_id,
+          course_id,
+          amount,
+          month,
+          status,
+          created_at,
+          billing_period_id,
+          enrollment_status,
+          students (name),
+          course_instances (subject, school_year)
+        `)
+        .eq('school_id', schoolId)
+        .eq('status', 'pending')
+        .order('created_at', { ascending: true })
+
+      if (paymentsError) throw paymentsError
+
+      // Get pending teacher payouts
+      const { data: pendingPayouts, error: payoutsError } = await supabase
+        .from('teacher_payouts')
+        .select(`
+          id,
+          teacher_id,
+          professor_name,
+          amount,
+          month,
+          status,
+          created_at,
+          billing_period_id,
+          percentage
+        `)
+        .eq('school_id', schoolId)
+        .eq('status', 'pending')
+        .order('created_at', { ascending: true })
+
+      if (payoutsError) throw payoutsError
+
+      // Transform and combine results
+      const studentItems = (unpaidPayments || []).map(p => ({
+        type: 'student_payment',
+        id: p.id,
+        entityId: p.student_id,
+        entityName: p.students?.name || 'Unknown Student',
+        courseId: p.course_id,
+        courseName: p.course_instances ? `${p.course_instances.subject} - ${p.course_instances.school_year}` : 'Unknown Course',
+        amount: p.amount,
+        month: p.month,
+        status: p.status,
+        createdAt: p.created_at,
+        billingPeriodId: p.billing_period_id,
+        enrollmentStatus: p.enrollment_status,
+        daysOverdue: Math.floor((Date.now() - new Date(p.created_at).getTime()) / (1000 * 60 * 60 * 24))
+      }))
+
+      const teacherItems = (pendingPayouts || []).map(p => ({
+        type: 'teacher_payout',
+        id: p.id,
+        entityId: p.teacher_id,
+        entityName: p.professor_name || 'Unknown Teacher',
+        courseId: null,
+        courseName: null,
+        amount: p.amount,
+        month: p.month,
+        status: p.status,
+        createdAt: p.created_at,
+        billingPeriodId: p.billing_period_id,
+        percentage: p.percentage,
+        daysOverdue: Math.floor((Date.now() - new Date(p.created_at).getTime()) / (1000 * 60 * 60 * 24))
+      }))
+
+      return {
+        studentPayments: studentItems,
+        teacherPayouts: teacherItems,
+        totalStudentAmount: studentItems.reduce((sum, item) => sum + (item.amount || 0), 0),
+        totalTeacherAmount: teacherItems.reduce((sum, item) => sum + (item.amount || 0), 0)
+      }
+    } catch (error) {
+      throw error
+    }
+  },
+
+  // Get summary for rollover confirmation
+  async getRolloverSummary() {
+    try {
+      const schoolId = await getCurrentUserSchoolId()
+      if (!schoolId) throw new Error('No school access')
+
+      // Get outstanding items count
+      const outstanding = await this.getOutstandingItems()
+
+      // Get active courses count
+      const { count: coursesCount } = await supabase
+        .from('course_instances')
+        .select('id', { count: 'exact', head: true })
+        .eq('school_id', schoolId)
+        .eq('archived', false)
+
+      // Get enrolled students count (unique)
+      const { data: courses } = await supabase
+        .from('course_instances')
+        .select('student_ids')
+        .eq('school_id', schoolId)
+        .eq('archived', false)
+
+      const uniqueStudents = new Set()
+      courses?.forEach(c => {
+        c.student_ids?.forEach((id) => uniqueStudents.add(id))
+      })
+
+      // Get current period
+      const currentPeriod = await this.getCurrentPeriod()
+
+      return {
+        currentPeriod,
+        outstandingStudentPayments: outstanding.studentPayments.length,
+        outstandingTeacherPayouts: outstanding.teacherPayouts.length,
+        totalOutstandingAmount: outstanding.totalStudentAmount + outstanding.totalTeacherAmount,
+        activeCourses: coursesCount || 0,
+        enrolledStudents: uniqueStudents.size,
+        totalBillingRecordsToCreate: courses?.reduce((sum, c) => sum + (c.student_ids?.length || 0), 0) || 0
+      }
+    } catch (error) {
+      throw error
+    }
+  },
+
+  // Handle student joining mid-month
+  async handleStudentJoinedMidMonth(courseId, studentId) {
+    try {
+      const schoolId = await getCurrentUserSchoolId()
+      if (!schoolId) throw new Error('No school access')
+
+      const currentPeriod = await this.getCurrentPeriod()
+      if (!currentPeriod) {
+        throw new Error('NO_ACTIVE_PERIOD')
+      }
+
+      // Get course details
+      const { data: course, error: courseError } = await supabase
+        .from('course_instances')
+        .select('price, subject, school_year')
+        .eq('id', courseId)
+        .eq('school_id', schoolId)
+        .single()
+
+      if (courseError) throw courseError
+
+      // Create prorated payment record
+      const joinDate = new Date()
+      const daysInMonth = new Date(joinDate.getFullYear(), joinDate.getMonth() + 1, 0).getDate()
+      const daysRemaining = daysInMonth - joinDate.getDate() + 1
+      const proratedAmount = Math.round((course.price || 0) * (daysRemaining / daysInMonth))
+
+      const { data: payment, error: paymentError } = await supabase
+        .from('student_payments')
+        .insert([{
+          school_id: schoolId,
+          student_id: studentId,
+          course_id: courseId,
+          amount: proratedAmount,
+          month: currentPeriod.period_name,
+          status: 'pending',
+          billing_period_id: currentPeriod.id,
+          enrollment_status: 'joined_mid_month',
+          join_date: joinDate.toISOString().split('T')[0],
+          created_at: new Date().toISOString()
+        }])
+        .select()
+        .single()
+
+      if (paymentError) throw paymentError
+
+      // Create attendance records for remaining weeks
+      const currentWeek = Math.ceil(joinDate.getDate() / 7)
+      const attendanceRecords = []
+      
+      for (let week = currentWeek; week <= 4; week++) {
+        attendanceRecords.push({
+          school_id: schoolId,
+          course_id: courseId,
+          student_id: studentId,
+          week: week,
+          attended: false,
+          billing_period_id: currentPeriod.id,
+          created_at: new Date().toISOString()
+        })
+      }
+
+      if (attendanceRecords.length > 0) {
+        await supabase
+          .from('attendance')
+          .upsert(attendanceRecords, { 
+            onConflict: 'course_id,student_id,week',
+            ignoreDuplicates: true 
+          })
+      }
+
+      return payment
+    } catch (error) {
+      throw error
+    }
+  },
+
+  // Handle student leaving mid-month
+  async handleStudentLeftMidMonth(courseId, studentId) {
+    try {
+      const schoolId = await getCurrentUserSchoolId()
+      if (!schoolId) throw new Error('No school access')
+
+      const currentPeriod = await this.getCurrentPeriod()
+      if (!currentPeriod) return null
+
+      // Update existing payment record
+      const leaveDate = new Date()
+      
+      const { data, error } = await supabase
+        .from('student_payments')
+        .update({
+          enrollment_status: 'left_mid_month',
+          leave_date: leaveDate.toISOString().split('T')[0],
+          status: 'cancelled'
+        })
+        .eq('course_id', courseId)
+        .eq('student_id', studentId)
+        .eq('billing_period_id', currentPeriod.id)
+        .eq('school_id', schoolId)
+        .select()
+        .single()
+
+      if (error && error.code !== 'PGRST116') throw error
+      return data
+    } catch (error) {
+      throw error
+    }
+  }
+}
+
 // Export all services
 export const databaseService = {
   students: studentService,
@@ -1405,6 +1852,7 @@ export const databaseService = {
   archives: archiveService,
   payments: paymentService,
   attendance: attendanceService,
+  billing: billingService,
 }
 
 export default databaseService

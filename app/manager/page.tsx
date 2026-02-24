@@ -9,8 +9,8 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Badge } from "@/components/ui/badge"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { LogOut, DollarSign, Users, BookOpen, TrendingUp, Calendar, Search, Settings, RefreshCw } from "lucide-react"
-import { paymentService, archiveService } from "@/services/appDataService"
+import { LogOut, DollarSign, Users, BookOpen, TrendingUp, Calendar, Search, Settings, RefreshCw, AlertTriangle } from "lucide-react"
+import { paymentService, archiveService, billingService } from "@/services/appDataService"
 import { useAuth } from "@/contexts/AuthContext"
 import AuthGuard from "@/components/auth/AuthGuard"
 import StudentsTab from "@/components/tabs/StudentsTab"
@@ -20,11 +20,24 @@ import ArchiveTab from "@/components/tabs/ArchiveTab"
 import RevenueTab from "@/components/tabs/RevenueTab"
 import PayoutsTab from "@/components/tabs/PayoutsTab"
 import UserManagementTab from "@/components/tabs/UserManagementTab"
+import OutstandingTab from "@/components/tabs/OutstandingTab"
 import { useDashboardData, usePayments, revalidateData } from "@/hooks/useData"
+import { useToast } from "@/hooks/use-toast"
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog"
 
 export default function ManagerDashboard() {
   const router = useRouter()
   const { user, signOut, hasRole } = useAuth()
+  const { toast } = useToast()
   
   // Use SWR hooks for cached data fetching
   const { students: allStudents, teachers: allTeachers, courses: allCourses, isLoading, refreshAll } = useDashboardData()
@@ -39,6 +52,19 @@ export default function ManagerDashboard() {
     teacher: Set<string>
     course: Set<string>
   }>({ student: new Set(), teacher: new Set(), course: new Set() })
+
+  // Billing period state
+  const [currentPeriod, setCurrentPeriod] = useState<any>(null)
+  const [outstandingData, setOutstandingData] = useState<any>({
+    studentPayments: [],
+    teacherPayouts: [],
+    totalStudentAmount: 0,
+    totalTeacherAmount: 0
+  })
+  const [outstandingLoading, setOutstandingLoading] = useState(false)
+  const [showRolloverDialog, setShowRolloverDialog] = useState(false)
+  const [rolloverSummary, setRolloverSummary] = useState<any>(null)
+  const [isRollingOver, setIsRollingOver] = useState(false)
 
   // Filter out archived items with memoization for performance
   const students = useMemo(() => 
@@ -71,18 +97,24 @@ export default function ManagerDashboard() {
           paymentService.getRevenueData(),
           paymentService.getAllPayouts(),
           archiveService.getPendingArchiveEntityIds(),
+          billingService.getCurrentPeriod(),
+          billingService.getOutstandingItems(),
         ])
 
         // Extract data from settled promises, using empty arrays/objects as fallback
         const revenueData = results[0].status === 'fulfilled' ? results[0].value : []
         const allPayoutsData = results[1].status === 'fulfilled' ? results[1].value : []
         const pendingArchiveMap = results[2].status === 'fulfilled' ? results[2].value : { student: new Set(), teacher: new Set(), course: new Set() }
+        const periodData = results[3].status === 'fulfilled' ? results[3].value : null
+        const outstandingItems = results[4].status === 'fulfilled' ? results[4].value : { studentPayments: [], teacherPayouts: [], totalStudentAmount: 0, totalTeacherAmount: 0 }
 
         setRevenue(revenueData || [])
         // Show all payouts in the PayoutsTab, not just pending ones
         setPayouts(allPayoutsData || [])
         setAllPayoutsForTotal(allPayoutsData || [])
         setPendingArchiveIds(pendingArchiveMap)
+        setCurrentPeriod(periodData)
+        setOutstandingData(outstandingItems)
       } catch (error) {
         console.error('Error loading payment data:', error)
       }
@@ -161,14 +193,116 @@ export default function ManagerDashboard() {
       const updatedPayouts = await paymentService.getAllPayouts()
       setPayouts(updatedPayouts || [])
       setAllPayoutsForTotal(updatedPayouts || [])
+      // Also refresh outstanding items
+      const outstanding = await billingService.getOutstandingItems()
+      setOutstandingData(outstanding)
     } catch (error) {
       console.error('Error denying payout:', error)
     }
   }
 
-  const handleMonthlyRollover = () => {
-    // Monthly rollover functionality would be implemented here
-    // This would copy active group courses to new month
+  // Outstanding item handlers
+  const refreshOutstandingItems = async () => {
+    setOutstandingLoading(true)
+    try {
+      const outstanding = await billingService.getOutstandingItems()
+      setOutstandingData(outstanding)
+    } catch (error) {
+      console.error('Error refreshing outstanding items:', error)
+    } finally {
+      setOutstandingLoading(false)
+    }
+  }
+
+  const handleMarkOutstandingPaid = async (itemId: string, itemType: 'student_payment' | 'teacher_payout') => {
+    try {
+      const approverName = user?.profile?.full_name || 'Manager'
+      if (itemType === 'student_payment') {
+        await paymentService.updatePaymentStatus(itemId, 'paid', approverName)
+      } else {
+        await paymentService.updatePayoutStatus(itemId, 'approved', approverName)
+      }
+      // Refresh all relevant data
+      await refreshOutstandingItems()
+      const updatedPayouts = await paymentService.getAllPayouts()
+      setPayouts(updatedPayouts || [])
+      setAllPayoutsForTotal(updatedPayouts || [])
+    } catch (error) {
+      console.error('Error marking item as paid:', error)
+      throw error
+    }
+  }
+
+  const handleCancelOutstanding = async (itemId: string, itemType: 'student_payment' | 'teacher_payout') => {
+    try {
+      if (itemType === 'student_payment') {
+        await paymentService.updatePaymentStatus(itemId, 'cancelled', null)
+      } else {
+        await paymentService.updatePayoutStatus(itemId, 'denied', null)
+      }
+      // Refresh all relevant data
+      await refreshOutstandingItems()
+      const updatedPayouts = await paymentService.getAllPayouts()
+      setPayouts(updatedPayouts || [])
+      setAllPayoutsForTotal(updatedPayouts || [])
+    } catch (error) {
+      console.error('Error cancelling item:', error)
+      throw error
+    }
+  }
+
+  // Monthly rollover handlers
+  const handleShowRolloverDialog = async () => {
+    try {
+      const summary = await billingService.getRolloverSummary()
+      setRolloverSummary(summary)
+      setShowRolloverDialog(true)
+    } catch (error) {
+      console.error('Error getting rollover summary:', error)
+      toast({
+        title: "Error",
+        description: "Failed to load rollover summary.",
+        variant: "destructive",
+      })
+    }
+  }
+
+  const handleStartNewPeriod = async () => {
+    setIsRollingOver(true)
+    try {
+      const result = await billingService.startNewPeriod()
+      setCurrentPeriod(result.period)
+      setShowRolloverDialog(false)
+      
+      // Refresh all data
+      await refreshOutstandingItems()
+      const updatedPayouts = await paymentService.getAllPayouts()
+      setPayouts(updatedPayouts || [])
+      setAllPayoutsForTotal(updatedPayouts || [])
+      
+      toast({
+        title: "New billing period started",
+        description: `Created ${result.studentsCount} billing records for ${result.coursesCount} courses.`,
+      })
+    } catch (error) {
+      const errorMessage = (error as Error).message
+      if (errorMessage === 'PERIOD_ALREADY_EXISTS') {
+        toast({
+          title: "Period already exists",
+          description: "A billing period for this month already exists.",
+          variant: "destructive",
+        })
+      } else {
+        console.error('Error starting new period:', error)
+        toast({
+          title: "Error",
+          description: "Failed to start new billing period.",
+          variant: "destructive",
+        })
+      }
+    } finally {
+      setIsRollingOver(false)
+    }
   }
 
   const totalRevenue = revenue.reduce((sum: number, item: any) => sum + (item.paid && item.amount ? item.amount : 0), 0)
@@ -245,9 +379,16 @@ export default function ManagerDashboard() {
               <Button onClick={() => refreshAll()} variant="outline" size="sm" title="Refresh data">
                 <RefreshCw className="h-4 w-4" />
               </Button>
-              <Button onClick={handleMonthlyRollover} variant="outline">
+              {/* Period Indicator */}
+              {currentPeriod && (
+                <Badge variant="outline" className="text-sm px-3 py-1">
+                  <Calendar className="h-3 w-3 mr-1" />
+                  {currentPeriod.period_name}
+                </Badge>
+              )}
+              <Button onClick={handleShowRolloverDialog} variant="outline">
                 <Calendar className="h-4 w-4 mr-2" />
-                Monthly Rollover
+                {currentPeriod ? 'New Period' : 'Start Billing Period'}
               </Button>
               <span className="text-sm text-gray-600">Welcome, {user?.profile?.full_name || 'Manager'}</span>
               <span className="text-xs text-gray-500 bg-gray-100 px-2 py-1 rounded">
@@ -307,8 +448,17 @@ export default function ManagerDashboard() {
           </Card>
         </div>
 
-        <Tabs defaultValue="revenue" className="space-y-6">
-          <TabsList className="grid w-full grid-cols-7">
+        <Tabs defaultValue="outstanding" className="space-y-6">
+          <TabsList className="grid w-full grid-cols-8">
+            <TabsTrigger value="outstanding" className="flex items-center">
+              <AlertTriangle className="h-4 w-4 mr-1" />
+              Outstanding
+              {(outstandingData.studentPayments.length + outstandingData.teacherPayouts.length) > 0 && (
+                <Badge variant="destructive" className="ml-1 h-5 w-5 p-0 flex items-center justify-center text-xs">
+                  {outstandingData.studentPayments.length + outstandingData.teacherPayouts.length}
+                </Badge>
+              )}
+            </TabsTrigger>
             <TabsTrigger value="revenue">Revenue</TabsTrigger>
             <TabsTrigger value="payouts">Payouts</TabsTrigger>
             <TabsTrigger value="students">Students</TabsTrigger>
@@ -322,6 +472,20 @@ export default function ManagerDashboard() {
               </TabsTrigger>
             )}
           </TabsList>
+
+          {/* Outstanding Tab */}
+          <TabsContent value="outstanding">
+            <OutstandingTab
+              studentPayments={outstandingData.studentPayments}
+              teacherPayouts={outstandingData.teacherPayouts}
+              totalStudentAmount={outstandingData.totalStudentAmount}
+              totalTeacherAmount={outstandingData.totalTeacherAmount}
+              onMarkPaid={handleMarkOutstandingPaid}
+              onCancel={handleCancelOutstanding}
+              onRefresh={refreshOutstandingItems}
+              isLoading={outstandingLoading}
+            />
+          </TabsContent>
 
           {/* Revenue Tab */}
           <TabsContent value="revenue">
@@ -392,6 +556,66 @@ export default function ManagerDashboard() {
           )}
         </Tabs>
       </div>
+
+      {/* Rollover Confirmation Dialog */}
+      <AlertDialog open={showRolloverDialog} onOpenChange={setShowRolloverDialog}>
+        <AlertDialogContent className="max-w-md">
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center">
+              <Calendar className="h-5 w-5 mr-2" />
+              {currentPeriod ? 'Start New Billing Period' : 'Initialize Billing Period'}
+            </AlertDialogTitle>
+            <AlertDialogDescription asChild>
+              <div className="space-y-4">
+                {rolloverSummary && (
+                  <>
+                    {currentPeriod && (
+                      <div className="bg-gray-50 rounded-lg p-3">
+                        <p className="text-sm font-medium text-gray-700">Current Period</p>
+                        <p className="text-lg font-bold">{currentPeriod.period_name}</p>
+                      </div>
+                    )}
+
+                    {(rolloverSummary.outstandingStudentPayments > 0 || rolloverSummary.outstandingTeacherPayouts > 0) && (
+                      <div className="bg-orange-50 border border-orange-200 rounded-lg p-3">
+                        <div className="flex items-start">
+                          <AlertTriangle className="h-5 w-5 text-orange-500 mr-2 mt-0.5" />
+                          <div>
+                            <p className="text-sm font-medium text-orange-800">Outstanding Items</p>
+                            <p className="text-sm text-orange-700">
+                              {rolloverSummary.outstandingStudentPayments} unpaid student payments and{' '}
+                              {rolloverSummary.outstandingTeacherPayouts} pending teacher payouts will remain in Outstanding until resolved.
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
+                    <div className="bg-blue-50 rounded-lg p-3">
+                      <p className="text-sm font-medium text-blue-700">New Period Preview</p>
+                      <div className="mt-2 space-y-1 text-sm text-blue-900">
+                        <p>{rolloverSummary.activeCourses} active courses</p>
+                        <p>{rolloverSummary.enrolledStudents} enrolled students</p>
+                        <p>{rolloverSummary.totalBillingRecordsToCreate} billing records will be created</p>
+                      </div>
+                    </div>
+
+                    <p className="text-sm text-gray-600">
+                      This will create pending payment records for all enrolled students and reset attendance tracking for the new month.
+                    </p>
+                  </>
+                )}
+              </div>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={isRollingOver}>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={handleStartNewPeriod} disabled={isRollingOver}>
+              {isRollingOver ? 'Starting...' : 'Start New Period'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
     </AuthGuard>
   )

@@ -24,7 +24,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
-import { courseService, studentService, teacherService, paymentService, attendanceService } from "@/services/appDataService"
+import { courseService, studentService, teacherService, paymentService, attendanceService, billingService } from "@/services/appDataService"
 import { useAuth } from "@/contexts/AuthContext"
 import AuthGuard from "@/components/auth/AuthGuard"
 import { useToast } from "@/hooks/use-toast"
@@ -239,6 +239,14 @@ function CourseDetailContent() {
         student_ids: updatedStudentIds
       })
 
+      // Create mid-month billing record if there's an active billing period
+      try {
+        await billingService.handleStudentJoinedMidMonth(courseId, student.id)
+      } catch (billingError) {
+        // If no active period, this is expected - continue without billing record
+        console.log("No active billing period or billing record creation skipped:", billingError)
+      }
+
       setCourse((prev: any) => ({
         ...prev,
         student_ids: [...(prev.student_ids || []), student.id],
@@ -259,10 +267,18 @@ function CourseDetailContent() {
       setSelectedStudent("")
       setStudentSearchQuery("")
       setShowAddStudentDialog(false)
-      console.log("Student added to course successfully")
+      
+      toast({
+        title: "Student added",
+        description: `${student.name} has been added to the course.`,
+      })
     } catch (error) {
       console.error("Error adding student to course:", error)
-      alert("Failed to add student to course: " + (error as Error).message)
+      toast({
+        title: "Error",
+        description: "Failed to add student to course: " + (error as Error).message,
+        variant: "destructive",
+      })
     }
   }
 
@@ -271,39 +287,66 @@ function CourseDetailContent() {
     setConfirmDialog({
       open: true,
       title: "Remove Student",
-      description: `Are you sure you want to remove ${studentName} from this course?`,
-      action: () => {
-        setCourse((prev: any) => {
-          const studentIndex = prev?.student_ids?.findIndex((id: number) => id === studentId)
-          if (studentIndex === -1) return prev
+      description: `Are you sure you want to remove ${studentName} from this course? Their billing record for this period will be marked as cancelled.`,
+      action: async () => {
+        try {
+          // Update the course in database
+          const newEnrolledStudents = course.student_ids.filter((id: number) => id !== studentId)
+          await courseService.updateCourseInstance(courseId, {
+            student_ids: newEnrolledStudents
+          })
 
-          const newEnrolledStudents = [...(prev?.student_ids || [])]
-          newEnrolledStudents.splice(studentIndex, 1)
-
-          const newStudentNames = [...(prev?.student_names || [])]
-          newStudentNames.splice(studentIndex, 1)
-
-          const newPayments = { ...prev.payments }
-          if (newPayments?.students) {
-            delete newPayments.students[studentId]
+          // Mark billing record as left mid-month
+          try {
+            await billingService.handleStudentLeftMidMonth(courseId, studentId.toString())
+          } catch (billingError) {
+            console.log("No active billing period or billing update skipped:", billingError)
           }
 
-          const newAttendance = { ...prev.attendance }
-          delete newAttendance[studentId]
+          setCourse((prev: any) => {
+            const studentIndex = prev?.student_ids?.findIndex((id: number) => id === studentId)
+            if (studentIndex === -1) return prev
 
-          return {
-            ...prev,
-            student_ids: newEnrolledStudents,
-            student_names: newStudentNames,
-            payments: {
-              ...newPayments,
-              students: { ...(newPayments?.students || {}) },
-            },
-            attendance: {
-              ...newAttendance,
-            },
-          }
-        })
+            const newStudentIds = [...(prev?.student_ids || [])]
+            newStudentIds.splice(studentIndex, 1)
+
+            const newStudentNames = [...(prev?.student_names || [])]
+            newStudentNames.splice(studentIndex, 1)
+
+            const newPayments = { ...prev.payments }
+            if (newPayments?.students) {
+              delete newPayments.students[studentId]
+            }
+
+            const newAttendance = { ...prev.attendance }
+            delete newAttendance[studentId]
+
+            return {
+              ...prev,
+              student_ids: newStudentIds,
+              student_names: newStudentNames,
+              payments: {
+                ...newPayments,
+                students: { ...(newPayments?.students || {}) },
+              },
+              attendance: {
+                ...newAttendance,
+              },
+            }
+          })
+
+          toast({
+            title: "Student removed",
+            description: `${studentName} has been removed from the course.`,
+          })
+        } catch (error) {
+          console.error("Error removing student:", error)
+          toast({
+            title: "Error",
+            description: "Failed to remove student from course.",
+            variant: "destructive",
+          })
+        }
         setConfirmDialog({ open: false, title: "", description: "", action: () => {} })
       },
     })
