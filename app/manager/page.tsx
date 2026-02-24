@@ -143,9 +143,26 @@ export default function ManagerDashboard() {
 
   const approvePayout = async (payoutId: number) => {
     try {
-      await approvePayment(payoutId.toString(), 'payout')
+      const approverName = user?.profile?.full_name || 'Manager'
+      await paymentService.updatePayoutStatus(payoutId.toString(), 'approved', approverName as string | null)
+      // Refresh payouts data
+      const updatedPayouts = await paymentService.getAllPayouts()
+      setPayouts(updatedPayouts || [])
+      setAllPayoutsForTotal(updatedPayouts || [])
     } catch (error) {
-      // Error approving payout
+      console.error('Error approving payout:', error)
+    }
+  }
+
+  const denyPayout = async (payoutId: number) => {
+    try {
+      await paymentService.updatePayoutStatus(payoutId.toString(), 'denied', null)
+      // Refresh payouts data
+      const updatedPayouts = await paymentService.getAllPayouts()
+      setPayouts(updatedPayouts || [])
+      setAllPayoutsForTotal(updatedPayouts || [])
+    } catch (error) {
+      console.error('Error denying payout:', error)
     }
   }
 
@@ -313,7 +330,7 @@ export default function ManagerDashboard() {
 
           {/* Payouts Tab */}
           <TabsContent value="payouts">
-            <PayoutsTab payouts={payouts} onApprovePayout={approvePayout} />
+            <PayoutsTab payouts={payouts} onApprovePayout={approvePayout} onDenyPayout={denyPayout} />
           </TabsContent>
 
           {/* Students Tab */}

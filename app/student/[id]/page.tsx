@@ -161,10 +161,24 @@ function StudentDashboardContent() {
                 <div>
                   <h3 className="font-semibold text-lg">{student.name}</h3>
                   <p className="text-gray-600">
-                    {student.school_year} - {student.specialty}
+                    {student.school_level && <span className="capitalize">{student.school_level} - </span>}
+                    {student.school_year}{student.specialty && ` - ${student.specialty}`}
                   </p>
                 </div>
                 <div className="space-y-2">
+                  {student.school_level && (
+                    <p>
+                      <span className="font-medium">Level:</span> <span className="capitalize">{student.school_level}</span>
+                    </p>
+                  )}
+                  <p>
+                    <span className="font-medium">School Year:</span> {student.school_year}
+                  </p>
+                  {student.specialty && (
+                    <p>
+                      <span className="font-medium">Specialty:</span> {student.specialty}
+                    </p>
+                  )}
                   <p>
                     <span className="font-medium">School:</span> {student.school}
                   </p>

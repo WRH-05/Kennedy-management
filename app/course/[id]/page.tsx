@@ -27,12 +27,14 @@ import {
 import { courseService, studentService, teacherService, paymentService, attendanceService } from "@/services/appDataService"
 import { useAuth } from "@/contexts/AuthContext"
 import AuthGuard from "@/components/auth/AuthGuard"
+import { useToast } from "@/hooks/use-toast"
 
 function CourseDetailContent() {
   const router = useRouter()
   const params = useParams()
   const courseId = params.id as string
   const { user } = useAuth()
+  const { toast } = useToast()
   const [course, setCourse] = useState<any>(null)
   const [students, setStudents] = useState<any[]>([])
   const [showAddStudentDialog, setShowAddStudentDialog] = useState(false)
@@ -162,17 +164,20 @@ function CourseDetailContent() {
 
   const toggleTeacherPayment = async () => {
     if (!course?.teacher_id) {
-      alert("No teacher assigned to this course")
+      toast({
+        title: "Error",
+        description: "No teacher assigned to this course",
+        variant: "destructive",
+      })
       return
     }
 
-    const currentStatus = course?.payments?.teacherPaid || false
     const teacherEarningsAmount = Math.round((course?.price * (course?.student_ids?.length || 0) * (course?.percentage_cut || 0)) / 100)
     
     setConfirmDialog({
       open: true,
-      title: "Confirm Teacher Payment",
-      description: `Mark teacher payment as ${currentStatus ? "unpaid" : "paid"}? Amount: ${teacherEarningsAmount} DA`,
+      title: "Create Payout Request",
+      description: `Create a payout request for the teacher? Amount: ${teacherEarningsAmount} DA. This will need to be approved by a manager.`,
       action: async () => {
         try {
           // Use the proper teacher_payouts table
@@ -183,17 +188,36 @@ function CourseDetailContent() {
             course.percentage_cut || 50
           )
           
+          toast({
+            title: "Payout request created",
+            description: "The payout request is pending manager approval.",
+          })
+          
           // Update local state after successful database update
           setCourse((prev: any) => ({
             ...prev,
             payments: {
               ...prev.payments,
               teacherPaid: result.isPaid,
+              payoutPending: !result.isPaid,
             },
           }))
         } catch (error) {
-          console.error("Error toggling teacher payment:", error)
-          alert("Failed to update teacher payment: " + (error as Error).message)
+          const errorMessage = (error as Error).message
+          if (errorMessage === 'PAYOUT_ALREADY_PENDING') {
+            toast({
+              title: "Payout already pending",
+              description: "A payout request for this teacher is already pending approval.",
+              variant: "destructive",
+            })
+          } else {
+            console.error("Error creating payout request:", error)
+            toast({
+              title: "Error",
+              description: "Failed to create payout request: " + errorMessage,
+              variant: "destructive",
+            })
+          }
         }
         setConfirmDialog({ open: false, title: "", description: "", action: () => {} })
       },

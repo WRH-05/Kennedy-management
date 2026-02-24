@@ -783,9 +783,16 @@ export const paymentService = {
 
       const updateData = {
         status,
-        ...(approverName && status === 'approved' && {
-          approved_by: approverName,
-          approved_date: new Date().toISOString().split('T')[0]
+        updated_at: new Date().toISOString(),
+        ...(status === 'approved' && {
+          approved_by: approverName || 'Manager',
+          approved_date: new Date().toISOString().split('T')[0],
+          payment_date: new Date().toISOString().split('T')[0]
+        }),
+        ...(status === 'denied' && {
+          approved_by: null,
+          approved_date: null,
+          payment_date: null
         })
       }
 
@@ -1198,32 +1205,39 @@ export const paymentService = {
       if (fetchError && fetchError.code !== 'PGRST116') throw fetchError
       
       if (existingPayout) {
-        // Toggle status: pending -> paid, paid/approved -> pending
-        // 'approved' is also a terminal paid state
+        // If a pending payout already exists, throw an error to prevent duplicates
+        if (existingPayout.status === 'pending') {
+          throw new Error('PAYOUT_ALREADY_PENDING')
+        }
+        // If payout was approved/paid, allow creating a new pending request
         const isPaidState = existingPayout.status === 'paid' || existingPayout.status === 'approved'
-        const newStatus = isPaidState ? 'pending' : 'paid'
-        const { data, error } = await supabase
-          .from('teacher_payouts')
-          .update({ 
-            status: newStatus,
-            amount: amount,
-            percentage: percentage,
-            payment_date: newStatus === 'paid' ? new Date().toISOString().split('T')[0] : null,
-            updated_at: new Date().toISOString(),
-            ...(newStatus === 'paid' && userProfile && {
-              recorded_by_id: userProfile.id,
-              recorded_by_name: userProfile.full_name
+        if (isPaidState) {
+          // Update to pending for re-review (e.g., amount changed)
+          const { data, error } = await supabase
+            .from('teacher_payouts')
+            .update({ 
+              status: 'pending',
+              amount: amount,
+              percentage: percentage,
+              payment_date: null, // Only set when manager approves
+              updated_at: new Date().toISOString(),
+              ...(userProfile && {
+                recorded_by_id: userProfile.id,
+                recorded_by_name: userProfile.full_name
+              })
             })
-          })
-          .eq('id', existingPayout.id)
-          .eq('school_id', schoolId)
-          .select()
-          .single()
-        
-        if (error) throw error
-        return { ...data, isPaid: newStatus === 'paid' }
+            .eq('id', existingPayout.id)
+            .eq('school_id', schoolId)
+            .select()
+            .single()
+          
+          if (error) throw error
+          return { ...data, isPaid: false, alreadyExists: true }
+        }
+        // For any other status, don't allow duplicates
+        throw new Error('PAYOUT_ALREADY_PENDING')
       } else {
-        // Create new payout record with status 'paid'
+        // Create new payout record with status 'pending' - manager must approve
         const { data, error } = await supabase
           .from('teacher_payouts')
           .insert([{
@@ -1233,8 +1247,8 @@ export const paymentService = {
             percentage: percentage,
             amount: amount,
             month: currentMonth,
-            status: 'paid',
-            payment_date: new Date().toISOString().split('T')[0],
+            status: 'pending',
+            payment_date: null, // Only set when manager approves
             created_at: new Date().toISOString(),
             updated_at: new Date().toISOString(),
             ...(userProfile && {
@@ -1246,7 +1260,7 @@ export const paymentService = {
           .single()
         
         if (error) throw error
-        return { ...data, isPaid: true }
+        return { ...data, isPaid: false }
       }
     } catch (error) {
       throw error

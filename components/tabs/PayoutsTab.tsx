@@ -175,8 +175,20 @@ export default function PayoutsTab({ payouts, onApprovePayout, onDenyPayout, isM
                         <TableCell>{dateTime.time}</TableCell>
                         <TableCell>{payout.recorded_by_name || '-'}</TableCell>
                         <TableCell>
-                          <Badge variant={payout.status === 'approved' || payout.status === 'paid' ? "default" : "destructive"}>
-                            {payout.status === 'approved' || payout.status === 'paid' ? "Paid" : payout.status}
+                          <Badge 
+                            variant={
+                              payout.status === 'approved' || payout.status === 'paid' 
+                                ? "default" 
+                                : payout.status === 'denied' 
+                                  ? "destructive" 
+                                  : "secondary"
+                            }
+                          >
+                            {payout.status === 'approved' || payout.status === 'paid' 
+                              ? "Paid" 
+                              : payout.status === 'denied' 
+                                ? "Denied" 
+                                : payout.status}
                           </Badge>
                         </TableCell>
                       </TableRow>

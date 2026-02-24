@@ -154,6 +154,16 @@ export const paymentService = {
   async isTeacherPaidForMonth(teacherId, month = null) {
     return await supabaseDataService.payments.isTeacherPaidForMonth(teacherId, month)
   },
+
+  /**
+   * Update payout status (for teacher payouts)
+   * @param {string} payoutId
+   * @param {string} status
+   * @param {string | null} [approverName]
+   */
+  async updatePayoutStatus(payoutId, status, approverName = null) {
+    return await supabaseDataService.payments.updatePayoutStatus(payoutId, status, approverName)
+  },
 }
 
 // Attendance Services - Direct Supabase calls

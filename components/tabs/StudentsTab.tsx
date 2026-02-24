@@ -42,6 +42,7 @@ export default function StudentsTab({
   
   const [newStudent, setNewStudent] = useState({
     name: "",
+    schoolLevel: "",
     schoolYear: "",
     specialty: "",
     address: "",
@@ -55,6 +56,70 @@ export default function StudentsTab({
     registration_fee_paid: false,
   })
 
+  // School years based on Algerian education system (years.json)
+  const schoolYearOptions = {
+    primary: [
+      { code: "1 AP", name: "1st Year Primary" },
+      { code: "2 AP", name: "2nd Year Primary" },
+      { code: "3 AP", name: "3rd Year Primary" },
+      { code: "4 AP", name: "4th Year Primary" },
+      { code: "5 AP", name: "5th Year Primary" },
+    ],
+    middle: [
+      { code: "1 AM", name: "1st Year Middle" },
+      { code: "2 AM", name: "2nd Year Middle" },
+      { code: "3 AM", name: "3rd Year Middle" },
+      { code: "4 AM", name: "4th Year Middle (BEM)" },
+    ],
+    secondary: [
+      { code: "1 AS", name: "1st Year Secondary" },
+      { code: "2 AS", name: "2nd Year Secondary" },
+      { code: "3 AS", name: "3rd Year Secondary (BAC)" },
+    ],
+  }
+
+  // Specialty options based on school year for secondary level
+  const getSpecialtyOptions = (schoolYear: string) => {
+    if (schoolYear === "1 AS") {
+      return [
+        { code: "1 AS", name: "Common Core Sciences and Technology" },
+        { code: "1 AL", name: "Common Core Arts and Letters" },
+      ]
+    }
+    if (schoolYear === "2 AS" || schoolYear === "3 AS") {
+      return [
+        // Science Stream
+        { code: schoolYear === "2 AS" ? "2 AS" : "3 AS", name: "Experimental Sciences" },
+        { code: schoolYear === "2 AS" ? "2 MA" : "3 MA", name: "Mathematics" },
+        { code: schoolYear === "2 AS" ? "2 MT" : "3 MT", name: "Technical Mathematical" },
+        { code: schoolYear === "2 AS" ? "2 GE" : "3 GE", name: "Management and Economy" },
+        // Arts Stream
+        { code: schoolYear === "2 AS" ? "2 LT" : "3 LT", name: "Literature and Philosophy" },
+        { code: schoolYear === "2 AS" ? "2 LE" : "3 LE", name: "Foreign Languages" },
+      ]
+    }
+    return []
+  }
+
+  // Handle school level change - reset dependent fields
+  const handleSchoolLevelChange = (level: string) => {
+    setNewStudent({
+      ...newStudent,
+      schoolLevel: level,
+      schoolYear: "",
+      specialty: "",
+    })
+  }
+
+  // Handle school year change - reset specialty if needed
+  const handleSchoolYearChange = (year: string) => {
+    setNewStudent({
+      ...newStudent,
+      schoolYear: year,
+      specialty: "",
+    })
+  }
+
   const handleAddStudent = async (e: React.FormEvent) => {
     e.preventDefault()
     if (isSubmitting) return // Prevent double submission
@@ -64,6 +129,7 @@ export default function StudentsTab({
       console.log("Adding student:", newStudent)
       const student = {
         name: newStudent.name,
+        school_level: newStudent.schoolLevel,
         school_year: newStudent.schoolYear,
         specialty: newStudent.specialty,
         address: newStudent.address,
@@ -80,6 +146,7 @@ export default function StudentsTab({
       onStudentsUpdate(updatedStudents)
       setNewStudent({
         name: "",
+        schoolLevel: "",
         schoolYear: "",
         specialty: "",
         address: "",
@@ -165,40 +232,60 @@ export default function StudentsTab({
                       />
                     </div>
                     <div className="space-y-2">
-                      <Label htmlFor="schoolYear">School Year</Label>
+                      <Label htmlFor="schoolLevel">School Level</Label>
                       <Select
-                        value={newStudent.schoolYear}
-                        onValueChange={(value) => setNewStudent({ ...newStudent, schoolYear: value })}
+                        value={newStudent.schoolLevel}
+                        onValueChange={handleSchoolLevelChange}
                       >
                         <SelectTrigger>
-                          <SelectValue placeholder="Select school year" />
+                          <SelectValue placeholder="Select school level" />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="1AS">1AS</SelectItem>
-                          <SelectItem value="2AS">2AS</SelectItem>
-                          <SelectItem value="3AS">3AS</SelectItem>
-                          <SelectItem value="BEM">BEM</SelectItem>
-                          <SelectItem value="BAC">BAC</SelectItem>
+                          <SelectItem value="primary">Primary (Elementary)</SelectItem>
+                          <SelectItem value="middle">Middle School</SelectItem>
+                          <SelectItem value="secondary">Secondary (High School)</SelectItem>
                         </SelectContent>
                       </Select>
                     </div>
                     <div className="space-y-2">
-                      <Label htmlFor="specialty">Specialty</Label>
+                      <Label htmlFor="schoolYear">School Year</Label>
                       <Select
-                        value={newStudent.specialty}
-                        onValueChange={(value) => setNewStudent({ ...newStudent, specialty: value })}
+                        value={newStudent.schoolYear}
+                        onValueChange={handleSchoolYearChange}
+                        disabled={!newStudent.schoolLevel}
                       >
                         <SelectTrigger>
-                          <SelectValue placeholder="Select specialty" />
+                          <SelectValue placeholder={newStudent.schoolLevel ? "Select school year" : "Select level first"} />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="Math">Mathematics</SelectItem>
-                          <SelectItem value="Sciences">Sciences</SelectItem>
-                          <SelectItem value="Literature">Literature</SelectItem>
-                          <SelectItem value="Languages">Languages</SelectItem>
+                          {newStudent.schoolLevel && schoolYearOptions[newStudent.schoolLevel as keyof typeof schoolYearOptions]?.map((year) => (
+                            <SelectItem key={year.code} value={year.code}>
+                              {year.code} - {year.name}
+                            </SelectItem>
+                          ))}
                         </SelectContent>
                       </Select>
                     </div>
+                    {newStudent.schoolLevel === "secondary" && newStudent.schoolYear && (
+                      <div className="space-y-2">
+                        <Label htmlFor="specialty">Specialty/Stream</Label>
+                        <Select
+                          value={newStudent.specialty}
+                          onValueChange={(value) => setNewStudent({ ...newStudent, specialty: value })}
+                        >
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select specialty" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {getSpecialtyOptions(newStudent.schoolYear).map((spec) => (
+                              <SelectItem key={spec.code} value={spec.code}>
+                                {spec.code} - {spec.name}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    )}
                     <div className="space-y-2">
                       <Label htmlFor="address">Address</Label>
                       <Input
@@ -314,6 +401,7 @@ export default function StudentsTab({
             <TableHeader>
               <TableRow>
                 <TableHead>Name</TableHead>
+                <TableHead>Level</TableHead>
                 <TableHead>School Year</TableHead>
                 <TableHead>Specialty</TableHead>
                 {showCourses && <TableHead>Enrolled Courses</TableHead>}
@@ -334,8 +422,9 @@ export default function StudentsTab({
                         {student.name}
                       </Button>
                     </TableCell>
+                    <TableCell className="capitalize">{student.school_level || "-"}</TableCell>
                     <TableCell>{student.school_year}</TableCell>
-                    <TableCell>{student.specialty}</TableCell>
+                    <TableCell>{student.specialty || "-"}</TableCell>
                     {showCourses && (
                       <TableCell>
                         {studentCourses.map((course, idx) => (
