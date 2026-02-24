@@ -811,6 +811,25 @@ export const paymentService = {
     }
   },
 
+  // Delete payout (for denying pending payouts)
+  async deletePayout(id) {
+    try {
+      const schoolId = await getCurrentUserSchoolId()
+      if (!schoolId) throw new Error('No school access')
+
+      const { error } = await supabase
+        .from('teacher_payouts')
+        .delete()
+        .eq('id', id)
+        .eq('school_id', schoolId)
+      
+      if (error) throw error
+      return true
+    } catch (error) {
+      throw error
+    }
+  },
+
   // Get revenue data
   async getRevenueData() {
     try {

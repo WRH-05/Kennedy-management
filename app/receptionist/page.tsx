@@ -186,7 +186,7 @@ function ReceptionistDashboardContent() {
         </div>
       </header>
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <div className="max-w-[90rem] mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <Tabs defaultValue="students" className="space-y-6">
           <TabsList className="grid w-full grid-cols-4">
             <TabsTrigger value="students">Students</TabsTrigger>

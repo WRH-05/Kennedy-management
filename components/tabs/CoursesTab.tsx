@@ -514,7 +514,6 @@ export default function CoursesTab({
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>Status</TableHead>
                 <TableHead>Course</TableHead>
                 <TableHead>Teacher</TableHead>
                 <TableHead>Type</TableHead>
@@ -528,13 +527,6 @@ export default function CoursesTab({
                 const enrolledStudents = students.filter((s) => course.student_ids?.includes(s.id))
                 return (
                   <TableRow key={course.id} className="group">
-                    <TableCell>
-                      <div
-                        className={`w-3 h-3 rounded-full ${
-                          course.status === "active" ? "bg-green-500" : "bg-red-500"
-                        }`}
-                      />
-                    </TableCell>
                     <TableCell className="font-medium">
                       <Button
                         variant="link"

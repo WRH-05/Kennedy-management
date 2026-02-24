@@ -188,7 +188,7 @@ export default function ManagerDashboard() {
 
   const denyPayout = async (payoutId: number) => {
     try {
-      await paymentService.updatePayoutStatus(payoutId.toString(), 'denied', null)
+      await paymentService.deletePayout(payoutId.toString())
       // Refresh payouts data
       const updatedPayouts = await paymentService.getAllPayouts()
       setPayouts(updatedPayouts || [])
@@ -238,7 +238,7 @@ export default function ManagerDashboard() {
       if (itemType === 'student_payment') {
         await paymentService.updatePaymentStatus(itemId, 'cancelled', null)
       } else {
-        await paymentService.updatePayoutStatus(itemId, 'denied', null)
+        await paymentService.deletePayout(itemId)
       }
       // Refresh all relevant data
       await refreshOutstandingItems()

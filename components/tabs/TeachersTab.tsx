@@ -11,6 +11,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Badge } from "@/components/ui/badge"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
 import { GraduationCap, Plus, Archive, MoreHorizontal, Pencil } from "lucide-react"
 import { teacherService, archiveService } from "@/services/appDataService"
 import { useToast } from "@/hooks/use-toast"
@@ -344,31 +345,83 @@ export default function TeachersTab({
                       </Button>
                     </TableCell>
                     <TableCell>
-                      {teacher.subjects && (teacher.subjects.length > 0 || typeof teacher.subjects === 'string') ? 
-                        (Array.isArray(teacher.subjects) 
-                          ? teacher.subjects 
-                          : (typeof teacher.subjects === 'string' ? teacher.subjects.split(',') : [])
-                        ).filter((s: string) => s && s.trim()).map((subject: string, idx: number) => (
-                          <Badge key={idx} variant="secondary" className="mr-1">
-                            {subject.trim()}
-                          </Badge>
-                        )) : 
-                        <span className="text-gray-500">No subjects</span>
-                      }
+                      {(() => {
+                        const subjects = teacher.subjects && (teacher.subjects.length > 0 || typeof teacher.subjects === 'string') 
+                          ? (Array.isArray(teacher.subjects) 
+                              ? teacher.subjects 
+                              : (typeof teacher.subjects === 'string' ? teacher.subjects.split(',') : [])
+                            ).filter((s: string) => s && s.trim())
+                          : []
+                        
+                        if (subjects.length === 0) {
+                          return <span className="text-gray-500">No subjects</span>
+                        }
+                        
+                        const firstSubject = subjects[0].trim()
+                        const remainingCount = subjects.length - 1
+                        
+                        return (
+                          <div className="flex items-center gap-1">
+                            <Badge variant="secondary">{firstSubject}</Badge>
+                            {remainingCount > 0 && (
+                              <TooltipProvider>
+                                <Tooltip>
+                                  <TooltipTrigger asChild>
+                                    <Badge variant="outline" className="cursor-pointer">+{remainingCount}</Badge>
+                                  </TooltipTrigger>
+                                  <TooltipContent>
+                                    <div className="flex flex-col gap-1">
+                                      {subjects.slice(1).map((subject: string, idx: number) => (
+                                        <span key={idx}>{subject.trim()}</span>
+                                      ))}
+                                    </div>
+                                  </TooltipContent>
+                                </Tooltip>
+                              </TooltipProvider>
+                            )}
+                          </div>
+                        )
+                      })()}
                     </TableCell>
                     <TableCell>{teacher.school}</TableCell>
                     <TableCell>
-                      {teacher.school_years && (teacher.school_years.length > 0 || typeof teacher.school_years === 'string') ? 
-                        (Array.isArray(teacher.school_years) 
-                          ? teacher.school_years 
-                          : (typeof teacher.school_years === 'string' ? teacher.school_years.split(',') : [])
-                        ).filter((y: string) => y && y.trim()).map((year: string, idx: number) => (
-                          <Badge key={idx} variant="outline" className="mr-1">
-                            {year.trim()}
-                          </Badge>
-                        )) : 
-                        <span className="text-gray-500">No school years</span>
-                      }
+                      {(() => {
+                        const schoolYears = teacher.school_years && (teacher.school_years.length > 0 || typeof teacher.school_years === 'string') 
+                          ? (Array.isArray(teacher.school_years) 
+                              ? teacher.school_years 
+                              : (typeof teacher.school_years === 'string' ? teacher.school_years.split(',') : [])
+                            ).filter((y: string) => y && y.trim())
+                          : []
+                        
+                        if (schoolYears.length === 0) {
+                          return <span className="text-gray-500">No school years</span>
+                        }
+                        
+                        const firstYear = schoolYears[0].trim()
+                        const remainingCount = schoolYears.length - 1
+                        
+                        return (
+                          <div className="flex items-center gap-1">
+                            <Badge variant="outline">{firstYear}</Badge>
+                            {remainingCount > 0 && (
+                              <TooltipProvider>
+                                <Tooltip>
+                                  <TooltipTrigger asChild>
+                                    <Badge variant="outline" className="cursor-pointer">+{remainingCount}</Badge>
+                                  </TooltipTrigger>
+                                  <TooltipContent>
+                                    <div className="flex flex-col gap-1">
+                                      {schoolYears.slice(1).map((year: string, idx: number) => (
+                                        <span key={idx}>{year.trim()}</span>
+                                      ))}
+                                    </div>
+                                  </TooltipContent>
+                                </Tooltip>
+                              </TooltipProvider>
+                            )}
+                          </div>
+                        )
+                      })()}
                     </TableCell>
                     <TableCell>
                       <span className="text-sm text-gray-600">{teacherCourses.length} course(s)</span>

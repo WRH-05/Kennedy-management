@@ -12,7 +12,7 @@ import { Badge } from "@/components/ui/badge"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
-import { ArrowLeft, BookOpen, Users, Calendar, DollarSign, Plus } from "lucide-react"
+import { ArrowLeft, BookOpen, Users, Calendar, DollarSign, Plus, FileText } from "lucide-react"
 import { Input } from "@/components/ui/input"
 import {
   AlertDialog,
@@ -48,6 +48,193 @@ function CourseDetailContent() {
     description: "",
     action: () => {},
   })
+
+  // Export course report function
+  const exportCourseReport = async () => {
+    if (!course) return
+
+    try {
+      // Get current month for the report
+      const currentDate = new Date()
+      const currentMonth = currentDate.toLocaleString('default', { month: 'long', year: 'numeric' })
+      const formattedDate = currentDate.toLocaleDateString('en-US', { 
+        year: 'numeric', 
+        month: 'long', 
+        day: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit'
+      })
+
+      // Get teacher payout history for this month
+      let teacherPayouts: any[] = []
+      if (course.teacher_id) {
+        try {
+          teacherPayouts = await paymentService.getProfessorPaymentHistory(course.teacher_id)
+        } catch (e) {
+          console.error("Error fetching teacher payouts:", e)
+        }
+      }
+
+      // Filter payouts for current month
+      const currentMonthPayouts = teacherPayouts.filter((p: any) => {
+        const payoutDate = new Date(p.created_at || p.payment_date)
+        return payoutDate.getMonth() === currentDate.getMonth() && 
+               payoutDate.getFullYear() === currentDate.getFullYear()
+      })
+
+      // Calculate totals
+      const totalRevenue = (course?.price || 0) * (course?.student_ids?.length || 0)
+      const teacherEarningsAmount = Math.round(totalRevenue * (course?.percentage_cut || 0) / 100)
+      const schoolEarnings = totalRevenue - teacherEarningsAmount
+
+      // Build report content
+      let reportContent = `
+================================================================================
+                         COURSE REPORT
+================================================================================
+Generated: ${formattedDate}
+Report Period: ${currentMonth}
+
+================================================================================
+                         COURSE DETAILS
+================================================================================
+Course: ${course.subject} - ${course.school_year}
+Teacher: ${course.teacher_name}
+Type: ${course.course_type}
+Schedule: ${course.schedule}
+Duration: ${course.duration || 'N/A'}h
+Price: ${course.price} DA ${course.course_type === 'Group' ? '/month' : '/session'}
+Teacher Cut: ${course.percentage_cut || 0}%
+Status: ${course.status}
+
+================================================================================
+                         ENROLLMENT SUMMARY
+================================================================================
+Total Enrolled Students: ${course.student_ids?.length || 0}
+
+`
+
+      // Student Details Section
+      reportContent += `
+================================================================================
+                         STUDENT DETAILS
+================================================================================
+`
+      reportContent += `${'Name'.padEnd(30)} | ${'Week 1'.padEnd(8)} | ${'Week 2'.padEnd(8)} | ${'Week 3'.padEnd(8)} | ${'Week 4'.padEnd(8)} | ${'Payment'.padEnd(10)}
+${'─'.repeat(100)}
+`
+
+      // Add each student's details
+      const enrolledStudentIds = course.student_ids || []
+      enrolledStudentIds.forEach((studentId: string, idx: number) => {
+        const studentName = course.student_names?.[idx] || students.find(s => s.id === studentId)?.name || `Student ${studentId}`
+        const attendance = course.attendance?.[studentId] || {}
+        const isPaid = course.payments?.students?.[studentId] ? 'Paid' : 'Pending'
+        
+        const week1 = attendance.week1 ? 'P' : 'A'
+        const week2 = attendance.week2 ? 'P' : 'A'
+        const week3 = attendance.week3 ? 'P' : 'A'
+        const week4 = attendance.week4 ? 'P' : 'A'
+
+        reportContent += `${studentName.padEnd(30)} | ${week1.padEnd(8)} | ${week2.padEnd(8)} | ${week3.padEnd(8)} | ${week4.padEnd(8)} | ${isPaid.padEnd(10)}
+`
+      })
+
+      // Attendance Summary
+      let totalPresent = 0
+      let totalAbsent = 0
+      enrolledStudentIds.forEach((studentId: string) => {
+        const attendance = course.attendance?.[studentId] || {}
+        Object.values(attendance).forEach((present) => {
+          if (present) totalPresent++
+          else totalAbsent++
+        })
+      })
+
+      reportContent += `
+${'─'.repeat(100)}
+ATTENDANCE SUMMARY:
+  Total Present: ${totalPresent}
+  Total Absent: ${totalAbsent}
+  Attendance Rate: ${enrolledStudentIds.length > 0 ? Math.round((totalPresent / (totalPresent + totalAbsent)) * 100) || 0 : 0}%
+
+`
+
+      // Payment Summary
+      const paidCount = enrolledStudentIds.filter((id: string) => course.payments?.students?.[id]).length
+      const pendingCount = enrolledStudentIds.length - paidCount
+
+      reportContent += `
+================================================================================
+                         PAYMENT SUMMARY
+================================================================================
+Students Paid: ${paidCount}
+Students Pending: ${pendingCount}
+Collection Rate: ${enrolledStudentIds.length > 0 ? Math.round((paidCount / enrolledStudentIds.length) * 100) : 0}%
+
+`
+
+      // Financial Summary
+      reportContent += `
+================================================================================
+                         FINANCIAL SUMMARY
+================================================================================
+Total Monthly Revenue: ${totalRevenue.toLocaleString()} DA
+Teacher Earnings (${course.percentage_cut}%): ${teacherEarningsAmount.toLocaleString()} DA
+School Earnings: ${schoolEarnings.toLocaleString()} DA
+
+`
+
+      // Teacher Payout History
+      reportContent += `
+================================================================================
+                         TEACHER PAYOUT HISTORY (${currentMonth})
+================================================================================
+`
+      if (currentMonthPayouts.length > 0) {
+        reportContent += `${'Date'.padEnd(15)} | ${'Amount'.padEnd(15)} | ${'Status'.padEnd(12)} | ${'Approved By'.padEnd(20)}
+${'─'.repeat(70)}
+`
+        currentMonthPayouts.forEach((payout: any) => {
+          const payoutDate = new Date(payout.created_at || payout.payment_date).toLocaleDateString()
+          reportContent += `${payoutDate.padEnd(15)} | ${(payout.amount?.toLocaleString() + ' DA').padEnd(15)} | ${(payout.status || 'N/A').padEnd(12)} | ${(payout.approved_by || '-').padEnd(20)}
+`
+        })
+      } else {
+        reportContent += `No payouts recorded for this month.
+`
+      }
+
+      reportContent += `
+================================================================================
+                         END OF REPORT
+================================================================================
+`
+
+      // Create and download the file
+      const blob = new Blob([reportContent], { type: 'text/plain' })
+      const url = window.URL.createObjectURL(blob)
+      const link = document.createElement('a')
+      link.href = url
+      link.download = `Course_Report_${course.subject}_${course.school_year}_${currentDate.toISOString().split('T')[0]}.txt`
+      document.body.appendChild(link)
+      link.click()
+      document.body.removeChild(link)
+      window.URL.revokeObjectURL(url)
+
+      toast({
+        title: "Report exported",
+        description: "Course report has been downloaded.",
+      })
+    } catch (error) {
+      console.error("Error exporting report:", error)
+      toast({
+        title: "Export failed",
+        description: "Failed to export course report.",
+        variant: "destructive",
+      })
+    }
+  }
 
   useEffect(() => {
     // Load course and student data
@@ -375,12 +562,18 @@ function CourseDetailContent() {
       {/* Header */}
       <header className="bg-white shadow-sm border-b">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center h-16">
-            <Button variant="ghost" size="sm" onClick={() => router.back()} className="mr-4">
-              <ArrowLeft className="h-4 w-4 mr-2" />
-              Back
+          <div className="flex items-center justify-between h-16">
+            <div className="flex items-center">
+              <Button variant="ghost" size="sm" onClick={() => router.back()} className="mr-4">
+                <ArrowLeft className="h-4 w-4 mr-2" />
+                Back
+              </Button>
+              <h1 className="text-xl font-semibold text-gray-900">Course Details</h1>
+            </div>
+            <Button variant="outline" size="sm" onClick={exportCourseReport}>
+              <FileText className="h-4 w-4 mr-2" />
+              Export Report
             </Button>
-            <h1 className="text-xl font-semibold text-gray-900">Course Details</h1>
           </div>
         </div>
       </header>
@@ -606,7 +799,7 @@ function CourseDetailContent() {
                           <Button
                             variant={course?.payments?.students?.[studentId] ? "default" : "destructive"}
                             size="sm"
-                            onClick={() => toggleStudentPayment(studentId)}
+                            onClick={() => toggleStudentPayment(studentId.toString())}
                           >
                             {course?.payments?.students?.[studentId] ? "Paid" : "Pay"}
                           </Button>

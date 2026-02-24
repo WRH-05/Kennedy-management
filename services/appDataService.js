@@ -164,6 +164,14 @@ export const paymentService = {
   async updatePayoutStatus(payoutId, status, approverName = null) {
     return await supabaseDataService.payments.updatePayoutStatus(payoutId, status, approverName)
   },
+
+  /**
+   * Delete a payout (for denying pending payouts)
+   * @param {string} payoutId
+   */
+  async deletePayout(payoutId) {
+    return await supabaseDataService.payments.deletePayout(payoutId)
+  },
 }
 
 // Attendance Services - Direct Supabase calls

@@ -12,6 +12,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Badge } from "@/components/ui/badge"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
 import { Users, Plus, Archive, MoreHorizontal, Pencil } from "lucide-react"
 import { studentService, archiveService } from "@/services/appDataService"
 import { useToast } from "@/hooks/use-toast"
@@ -427,26 +428,80 @@ export default function StudentsTab({
                     <TableCell>{student.specialty || "-"}</TableCell>
                     {showCourses && (
                       <TableCell>
-                        {studentCourses.map((course, idx) => (
-                          <Badge key={idx} variant="secondary" className="mr-1">
-                            {course.subject}
-                          </Badge>
-                        ))}
+                        {(() => {
+                          if (studentCourses.length === 0) {
+                            return <span className="text-gray-500">No courses</span>
+                          }
+                          
+                          const firstCourse = studentCourses[0]
+                          const remainingCount = studentCourses.length - 1
+                          
+                          return (
+                            <div className="flex items-center gap-1">
+                              <Badge variant="secondary">{firstCourse.subject}</Badge>
+                              {remainingCount > 0 && (
+                                <TooltipProvider>
+                                  <Tooltip>
+                                    <TooltipTrigger asChild>
+                                      <Badge variant="outline" className="cursor-pointer">+{remainingCount}</Badge>
+                                    </TooltipTrigger>
+                                    <TooltipContent>
+                                      <div className="flex flex-col gap-1">
+                                        {studentCourses.slice(1).map((course, idx) => (
+                                          <span key={idx}>{course.subject}</span>
+                                        ))}
+                                      </div>
+                                    </TooltipContent>
+                                  </Tooltip>
+                                </TooltipProvider>
+                              )}
+                            </div>
+                          )
+                        })()}
                       </TableCell>
                     )}
                     {showPaymentStatus && (
                       <TableCell>
                         <div className="flex items-center justify-between">
                           <div>
-                            {studentCourses.map((course, idx) => (
-                              <Badge
-                                key={idx}
-                                variant={course.payments?.students?.[student.id] ? "default" : "destructive"}
-                                className="mr-1"
-                              >
-                                {course.payments?.students?.[student.id] ? "Paid" : "Pending"}
-                              </Badge>
-                            ))}
+                            {(() => {
+                              if (studentCourses.length === 0) {
+                                return <span className="text-gray-500">-</span>
+                              }
+                              
+                              const firstCourse = studentCourses[0]
+                              const firstIsPaid = firstCourse.payments?.students?.[student.id]
+                              const remainingCount = studentCourses.length - 1
+                              
+                              return (
+                                <div className="flex items-center gap-1">
+                                  <Badge variant={firstIsPaid ? "default" : "destructive"}>
+                                    {firstIsPaid ? "Paid" : "Pending"}
+                                  </Badge>
+                                  {remainingCount > 0 && (
+                                    <TooltipProvider>
+                                      <Tooltip>
+                                        <TooltipTrigger asChild>
+                                          <Badge variant="outline" className="cursor-pointer">+{remainingCount}</Badge>
+                                        </TooltipTrigger>
+                                        <TooltipContent>
+                                          <div className="flex flex-col gap-1">
+                                            {studentCourses.slice(1).map((course, idx) => {
+                                              const isPaid = course.payments?.students?.[student.id]
+                                              return (
+                                                <span key={idx} className={isPaid ? "text-green-600" : "text-red-600"}>
+                                                  {course.subject}: {isPaid ? "Paid" : "Pending"}
+                                                </span>
+                                              )
+                                            })}
+                                          </div>
+                                        </TooltipContent>
+                                      </Tooltip>
+                                    </TooltipProvider>
+                                  )}
+                                </div>
+                              )
+                            })()}
                           </div>
                           <DropdownMenu>
                             <DropdownMenuTrigger asChild>
