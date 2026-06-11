@@ -156,19 +156,6 @@ export default function LoginForm() {
                 Sign In
               </Button>
             </form>
-            
-            <div className="mt-6 text-center">
-              <p className="text-sm text-gray-600">
-                Need an account?{' '}
-                <Button
-                  variant="link"
-                  className="p-0 h-auto"
-                  onClick={() => router.push('/auth/create-school')}
-                >
-                  Create a school
-                </Button>
-              </p>
-            </div>
           </CardContent>
         </Card>
       </div>
