@@ -1,6 +1,6 @@
 "use client"
 
-import React, { useState, useEffect } from 'react'
+import React, { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -12,56 +12,10 @@ import { useAuth } from '@/contexts/AuthContext'
 
 export default function LoginForm() {
   const router = useRouter()
-  const { signIn, user } = useAuth()
-  const [formData, setFormData] = useState({
-    email: '',
-    password: ''
-  })
+  const { signIn } = useAuth()
+  const [formData, setFormData] = useState({ email: '', password: '' })
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
-
-  // Watch for authentication changes and redirect
-  useEffect(() => {
-    console.log('LoginForm useEffect - User state:', { 
-      hasUser: !!user, 
-      hasProfile: !!user?.profile, 
-      role: user?.profile?.role, 
-      loading 
-    })
-    
-    if (user?.profile?.role) {
-      console.log('User authenticated, redirecting based on role:', user.profile.role)
-      // Set loading to false and redirect
-      setLoading(false)
-      
-      switch (user.profile.role) {
-        case 'owner':
-        case 'manager':
-          console.log('Redirecting to /manager')
-          router.push('/manager')
-          break
-        case 'receptionist':
-          console.log('Redirecting to /receptionist')
-          router.push('/receptionist')
-          break
-        default:
-          console.log('Unknown role, redirecting to home')
-          router.push('/')
-      }
-    } else if (user && !user.profile) {
-      console.log('⚠️ User found but no profile - checking if email is confirmed')
-      if (user.needsEmailConfirmation) {
-        console.log('📧 User needs email confirmation, redirecting to check-email')
-        setLoading(false)
-        router.push('/auth/check-email')
-      } else {
-        console.log('User verified but no profile loaded yet - waiting for profile creation')
-        // Don't redirect immediately, give time for profile to load
-        // setLoading(false)
-        // router.push('/auth/confirm')
-      }
-    }
-  }, [user, loading, router])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -69,34 +23,46 @@ export default function LoginForm() {
     setError(null)
 
     try {
+      // 1. Await the direct result from your auth provider
       const result = await signIn(formData.email, formData.password)
-      console.log('Sign in completed:', result)
       
-      // Add extra time for auth state to propagate
-      console.log('⏳ Waiting for auth state to update...')
-      await new Promise(resolve => setTimeout(resolve, 2000))
-      
-      // Check if we got a user back
-      if (result?.user || result?.session?.user) {
-        console.log('👤 User confirmed in result, should redirect soon')
+      // Extract the user and profile directly from the response
+      const currentUser = result?.user || result?.session?.user
+      const role = currentUser?.profile?.role
+
+      if (role) {
+        // 2. Route immediately based on the explicit result data
+        switch (role) {
+          case 'owner':
+          case 'manager':
+            router.push('/manager')
+            break
+          case 'receptionist':
+            router.push('/receptionist')
+            break
+          default:
+            router.push('/')
+        }
+      } else if (currentUser && !currentUser.profile) {
+        if (currentUser.needsEmailConfirmation) {
+          router.push('/auth/check-email')
+        } else {
+          setError('Account is verified, but no profile was found.')
+          setLoading(false)
+        }
       } else {
-        console.log('⚠️ No user in result, auth context should handle it')
+        throw new Error('Invalid login response. Please try again.')
       }
-      
-      // Don't set loading to false here - let the redirect handle it
+
     } catch (err: any) {
       console.error('Login failed:', err)
       setError(err.message || 'Failed to sign in')
-      setLoading(false) // Only set loading to false on error
+      setLoading(false) // Always unlock the form on failure
     }
-    // Note: Don't set loading to false on success - let the redirect handle it
   }
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setFormData(prev => ({
-      ...prev,
-      [e.target.name]: e.target.value
-    }))
+    setFormData(prev => ({ ...prev, [e.target.name]: e.target.value }))
   }
 
   return (
