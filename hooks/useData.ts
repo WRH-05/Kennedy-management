@@ -188,6 +188,26 @@ export function useTeacherPaymentData() {
   }
 }
 
+export function useRevenue() {
+  return useSWR("dashboard/revenue", () => paymentService.getRevenueData())
+}
+
+export function usePayouts() {
+  return useSWR("dashboard/payouts", () => paymentService.getAllPayouts())
+}
+
+export function usePendingArchives() {
+  return {
+    data: {
+      student: new Set<string>(),
+      teacher: new Set<string>(),
+      course: new Set<string>()
+    },
+    isLoading: false
+  }
+}
+
+
 // ============================================================================
 // COMBINED DASHBOARD DATA HOOK
 // ============================================================================
