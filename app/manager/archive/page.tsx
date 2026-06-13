@@ -1,5 +1,5 @@
 "use client"
-import { revalidateData } from "@/hooks/useData"
+import { revalidateData } from "@/hooks/swr-config"
 import ArchiveTab from "@/components/tabs/ArchiveTab"
 import SummaryCards from "@/components/dashboard/SummaryCards"
 

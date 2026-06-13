@@ -1,5 +1,5 @@
 import { supabase } from "@/lib/supabase"
-
+import { profileService } from "./profileService"
 export const archiveService = {
     // Get all archive requests
     async getAllArchiveRequests() {
@@ -62,7 +62,7 @@ export const archiveService = {
     async createArchiveRequest(entityType, entityId, entityName, reason = null) {
         try {
 
-            const userProfile = await getCurrentUserProfile()
+            const userProfile = await profileService.getCurrentUserProfile()
             if (!userProfile) throw new Error('No user profile')
 
             // Check if there's already a pending request for this entity
@@ -84,7 +84,6 @@ export const archiveService = {
             const { data, error } = await supabase
                 .from('archive_requests')
                 .insert([{
-                    school_id: schoolId,
                     entity_type: entityType,
                     entity_id: entityId,
                     entity_name: entityName,
@@ -107,7 +106,7 @@ export const archiveService = {
     async approveArchiveRequest(requestId) {
         try {
 
-            const userProfile = await getCurrentUserProfile()
+            const userProfile = await profileService.getCurrentUserProfile()
             if (!userProfile) throw new Error('No user profile')
 
             // Get the archive request first
@@ -168,7 +167,7 @@ export const archiveService = {
     async denyArchiveRequest(requestId) {
         try {
 
-            const userProfile = await getCurrentUserProfile()
+            const userProfile = await profileService.getCurrentUserProfile()
             if (!userProfile) throw new Error('No user profile')
 
             const { data, error } = await supabase

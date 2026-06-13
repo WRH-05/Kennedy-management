@@ -113,6 +113,7 @@ export const studentService = {
 
   // Unarchive student
   async unarchiveStudent(id) {
+    
     try {
       const { data, error } = await supabase
         .from('students')
@@ -123,12 +124,13 @@ export const studentService = {
         .eq('id', id)
         .select()
         .single()
-
+        console.log(data)
       if (error) throw error
-      return data
+      return data 
     } catch (error) {
-      // Error handled
-      throw error
+      
+      throw error;
+
     }
   },
 }

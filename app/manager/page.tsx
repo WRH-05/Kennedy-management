@@ -42,6 +42,22 @@ export default function DashboardHubPage() {
           </div>
           <ArrowRight className="h-5 w-5 text-gray-400 group-hover:translate-x-1 transition-transform" />
         </Link>
+
+        <Link href="/manager/archive" className="p-6 bg-white rounded-lg border shadow-sm hover:shadow-md transition group flex justify-between items-center">
+          <div>
+            <h3 className="font-semibold text-lg flex items-center gap-2"><DollarSign className="h-5 w-5 text-amber-500" /> Manange Archives</h3>
+            <p className="text-sm text-gray-500">Check Archives</p>
+          </div>
+          <ArrowRight className="h-5 w-5 text-gray-400 group-hover:translate-x-1 transition-transform" />
+        </Link>
+
+        <Link href="/manager/payouts" className="p-6 bg-white rounded-lg border shadow-sm hover:shadow-md transition group flex justify-between items-center">
+          <div>
+            <h3 className="font-semibold text-lg flex items-center gap-2"><DollarSign className="h-5 w-5 text-amber-500" /> Manange Payouts</h3>
+            <p className="text-sm text-gray-500">Time for money baby</p>
+          </div>
+          <ArrowRight className="h-5 w-5 text-gray-400 group-hover:translate-x-1 transition-transform" />
+        </Link>
       </div>
     </div>
   )
