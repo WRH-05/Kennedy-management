@@ -7,7 +7,10 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Badge } from "@/components/ui/badge"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 import { Archive, Check, X, Undo, MoreHorizontal } from "lucide-react"
-import { studentService, teacherService, courseService, archiveService } from "@/services/appDataService"
+import { studentService } from "@/services/studentService"
+import { teacherService } from "@/services/teacherService"
+import { courseService } from "@/services/courseService"
+import { archiveService } from "@/services/archiveService"
 import { useAuth } from "@/contexts/AuthContext"
 
 interface ArchiveTabProps {

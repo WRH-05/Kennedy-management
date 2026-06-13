@@ -13,7 +13,8 @@ import { Badge } from "@/components/ui/badge"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 import { Users, Plus, Archive, MoreHorizontal, Pencil } from "lucide-react"
-import { studentService, archiveService } from "@/services/appDataService"
+import { studentService } from "@/services/studentService"
+import { archiveService } from "@/services/archiveService"
 import { useToast } from "@/hooks/use-toast"
 
 interface StudentsTabProps {

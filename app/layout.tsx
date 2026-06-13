@@ -7,7 +7,6 @@ import ErrorBoundary from "@/components/ErrorBoundary"
 import SWRProvider from "@/components/providers/SWRProvider"
 import { Toaster } from "@/components/ui/toaster"
 
-// Import token cleanup utility for development debugging
 if (process.env.NODE_ENV === 'development') {
   import('@/utils/token-cleanup')
 }

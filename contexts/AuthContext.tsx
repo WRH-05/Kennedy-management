@@ -1,39 +1,34 @@
 "use client"
 
-import React, { createContext, useContext, useEffect, useState } from 'react'
+import React, { createContext, useContext, useEffect, useState, useCallback, useMemo } from 'react'
 import { authService } from '@/services/authService'
 import { useSessionManager } from '@/hooks/useSessionManager'
 import { SessionResult, clearSessionCache } from '@/utils/supabase-session'
+
+
+interface Profile {
+  id: string
+  school_id: string
+  role: 'owner' | 'manager' | 'receptionist'
+  full_name: string
+  phone?: string
+  avatar_url?: string
+}
 
 interface User {
   id: string
   email?: string
   needsEmailConfirmation?: boolean
-  profile: {
-    id: string
-    school_id: string
-    role: 'owner' | 'manager' | 'receptionist'
-    full_name: string
-    phone?: string
-    avatar_url?: string
-    schools: {
-      id: string
-      name: string
-      address?: string
-      phone?: string
-      email?: string
-      logo_url?: string
-    }
-  } | null
+  profile: Profile
 }
 
 interface AuthContextType {
   user: User | null
   loading: boolean
-  signIn: (email: string, password: string) => Promise<any>
-  signUp: (email: string, password: string, token: string, fullName?: string, phone?: string) => Promise<any>
+  signIn: (email: string, password: string) => Promise<unknown>
+  signUp: (email: string, password: string, token: string, fullName?: string, phone?: string) => Promise<unknown>
   signOut: () => Promise<void>
-  updateProfile: (updates: any) => Promise<any>
+  updateProfile: (updates: Partial<Profile>) => Promise<unknown>
   hasRole: (roles: string | string[]) => boolean
   canAccess: (resource: string) => boolean
   refreshSession: () => void
@@ -41,7 +36,6 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined)
 
-// Permission map for role-based access
 const ROLE_PERMISSIONS: Record<string, string[]> = {
   owner: ['*'],
   manager: ['students', 'teachers', 'courses', 'payments', 'attendance', 'revenue', 'archives'],
@@ -51,10 +45,13 @@ const ROLE_PERMISSIONS: Record<string, string[]> = {
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const { sessionData, isValidating, refreshSession } = useSessionManager()
   const [user, setUser] = useState<User | null>(null)
+  // Use structural primitive values to safely decide when to update user state
+  const sessionUserId = sessionData?.user?.id
+  const sessionProfileId = sessionData?.profile?.id
+  const isValid = sessionData?.valid
 
-  // Convert session data to user format
   useEffect(() => {
-    if (sessionData?.valid && sessionData.user && sessionData.profile) {
+    if (isValid && sessionData?.user && sessionData?.profile) {
       setUser({
         id: sessionData.user.id,
         email: sessionData.user.email,
@@ -65,84 +62,80 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           role: sessionData.profile.role,
           full_name: sessionData.profile.full_name,
           phone: sessionData.profile.phone,
-          avatar_url: sessionData.profile.avatar_url,
-          schools: sessionData.school
+          avatar_url: sessionData.profile.avatar_url
         }
       })
-    } else if (sessionData && !sessionData.valid) {
+    } else if (sessionData && !isValid) {
       setUser(null)
     }
-  }, [sessionData])
+  // Runs only if the explicit user data or validation status pivots
+  }, [sessionUserId, sessionProfileId, isValid, sessionData])
 
-  const signIn = async (email: string, password: string) => {
+  const signIn = useCallback(async (email: string, password: string) => {
+    // Ensure any internal exceptions bubbles up to the form's catch block
     const result = await authService.signIn(email, password)
-    // Wait briefly for auth state to update, then refresh
-    await new Promise(resolve => setTimeout(resolve, 500))
-    refreshSession()
+    
+    // Smooth transition allowance for hooks to capture session data
+    await new Promise(resolve => setTimeout(resolve, 250))
+    await refreshSession()
+    
     return result
-  }
+  }, [refreshSession])
 
-  const signUp = async (email: string, password: string, token: string, fullName?: string, phone?: string) => {
+  const signUp = useCallback(async (email: string, password: string, token: string, fullName?: string, phone?: string) => {
     return await authService.signUp(email, password, token, fullName, phone)
-  }
+  }, [])
 
-  const signOut = async () => {
+  const signOut = useCallback(async () => {
     try {
-      // Clear user state immediately for responsive UI
       setUser(null)
-      
-      // Clear session cache
       clearSessionCache()
-      
-      // Sign out from Supabase
       await authService.signOut()
-      
-      // Redirect to login page
-      if (typeof window !== 'undefined') {
-        window.location.href = '/auth/login'
-      }
     } catch (error) {
       console.error('Sign out error:', error)
-      // Even if there's an error, redirect to login
+    } finally {
       if (typeof window !== 'undefined') {
         window.location.href = '/auth/login'
       }
     }
-  }
+  }, [])
 
-  const updateProfile = async (updates: any) => {
+  const updateProfile = useCallback(async (updates: Partial<Profile>) => {
     const result = await authService.updateProfile(updates)
     refreshSession()
     return result
-  }
+  }, [refreshSession])
 
-  const hasRole = (roles: string | string[]): boolean => {
+  const hasRole = useCallback((roles: string | string[]): boolean => {
     if (!user?.profile?.role) return false
     const roleArray = Array.isArray(roles) ? roles : [roles]
     return roleArray.includes(user.profile.role)
-  }
+  }, [user?.profile?.role])
 
-  const canAccess = (resource: string): boolean => {
+  const canAccess = useCallback((resource: string): boolean => {
     if (!user?.profile?.role) return false
     const permissions = ROLE_PERMISSIONS[user.profile.role] || []
     return permissions.includes('*') || permissions.includes(resource)
-  }
+  }, [user?.profile?.role])
 
-  // Simplified loading state - only show loading on initial load
   const isLoading = isValidating && sessionData === null
 
+  // Memoize the value object so children aren't forced to re-render 
+  // on unrelated component refreshes
+  const contextValue = useMemo(() => ({
+    user,
+    loading: isLoading,
+    signIn,
+    signUp,
+    signOut,
+    updateProfile,
+    hasRole,
+    canAccess,
+    refreshSession
+  }), [user, isLoading, signIn, signUp, signOut, updateProfile, hasRole, canAccess, refreshSession])
+
   return (
-    <AuthContext.Provider value={{
-      user,
-      loading: isLoading,
-      signIn,
-      signUp,
-      signOut,
-      updateProfile,
-      hasRole,
-      canAccess,
-      refreshSession
-    }}>
+    <AuthContext.Provider value={contextValue}>
       {renderContent(sessionData, isLoading, refreshSession, children)}
     </AuthContext.Provider>
   )
@@ -223,8 +216,6 @@ function renderContent(
       </div>
     )
   }
-
-  // Normal rendering
   return <>{children}</>
 }
 

@@ -43,7 +43,6 @@ export function useSessionManager() {
     
     try {
       const session = await validateSession(force)
-      
       if (mountedRef.current) {
         initialLoadDoneRef.current = true
         

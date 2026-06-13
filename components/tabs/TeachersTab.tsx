@@ -12,7 +12,8 @@ import { Badge } from "@/components/ui/badge"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 import { GraduationCap, Plus, Archive, MoreHorizontal, Pencil } from "lucide-react"
-import { teacherService, archiveService } from "@/services/appDataService"
+import { teacherService  } from "@/services/teacherService"
+import { archiveService } from "@/services/archiveService"
 import { useToast } from "@/hooks/use-toast"
 
 interface TeachersTabProps {

@@ -13,7 +13,8 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 import { Checkbox } from "@/components/ui/checkbox"
 import { BookOpen, Plus, Archive, MoreHorizontal, Pencil } from "lucide-react"
-import { courseService, teacherService, archiveService } from "@/services/appDataService"
+import { courseService } from "@/services/courseService"
+import { archiveService } from "@/services/archiveService"
 import { useToast } from "@/hooks/use-toast"
 
 interface CoursesTabProps {
