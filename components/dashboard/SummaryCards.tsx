@@ -2,10 +2,11 @@
 import { useMemo } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { TrendingUp, DollarSign, Users } from "lucide-react"
-import { useDashboardData, useRevenue, usePayouts } from "@/hooks/useData"
+import { useRevenue, usePayouts } from "@/hooks/usePayments"
+import { useStudents } from "@/hooks/useStudents"
 
 export default function SummaryCards() {
-  const { students: allStudents } = useDashboardData()
+  const { students: allStudents } = useStudents()
   const { data: revenueData } = useRevenue()
   const { data: payoutsData } = usePayouts()
 

@@ -2,7 +2,10 @@
 import { useState, useMemo } from "react"
 import { useRouter } from "next/navigation"
 import { useAuth } from "@/contexts/AuthContext"
-import { useDashboardData } from "@/hooks/useData"
+import { useDashboardData } from "@/hooks/usePayments"
+import { useStudents } from "@/hooks/useStudents"
+import { useTeachers } from "@/hooks/useTeachers"
+import { useCourses } from "@/hooks/useCourses"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
@@ -11,8 +14,17 @@ import { Search, LogOut, Calendar, RefreshCw } from "lucide-react"
 export default function DashboardHeader() {
   const router = useRouter()
   const { user, signOut } = useAuth()
-  const { students: allStudents, teachers: allTeachers, courses: allCourses, refreshAll } = useDashboardData()
   const [searchQuery, setSearchQuery] = useState("")
+
+  const { students: allStudents, isLoading: isStudentLoading, mutate: mutateStudents } = useStudents();
+  const { teachers: allTeachers, isLoading: isTeacherLoading, mutate: mutateTeachers } = useTeachers();
+  const { courses: allCourses, isLoading: isCoursesLoading, mutate: mutateCourses } = useCourses();
+
+  const refreshAll = () => {
+    mutateStudents();
+    mutateTeachers();
+    mutateCourses();
+  }
 
   const students = useMemo(() => 
     (allStudents || []).filter((student: any) => !student.archived), 
@@ -142,7 +154,7 @@ export default function DashboardHeader() {
             </Button>
             <span className="text-sm text-gray-600">Welcome, {user?.profile?.full_name || 'Manager'}</span>
             <span className="text-xs text-gray-500 bg-gray-100 px-2 py-1 rounded">
-              {user?.profile?.schools?.name || 'School'}
+              {'School'}
             </span>
             <Button variant="outline" size="sm" onClick={handleSignOut}>
               <LogOut className="h-4 w-4 mr-2" />

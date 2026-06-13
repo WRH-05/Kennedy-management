@@ -18,7 +18,7 @@ export const paymentService = {
     },
 
     // Update payout status
-    async updatePayoutStatus(id, status, approverName = null) {
+    async updatePayoutStatus(id, status, approverName) {
         try {
 
             const updateData = {

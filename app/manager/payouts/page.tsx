@@ -1,7 +1,7 @@
 "use client"
-import { usePayouts } from "@/hooks/useData"
+import { usePayouts } from "@/hooks/usePayments"
 import { useAuth } from "@/contexts/AuthContext"
-import { paymentService } from "@/services/appDataService"
+import { paymentService } from "@/services/paymentService"
 import PayoutsTab from "@/components/tabs/PayoutsTab"
 import SummaryCards from "@/components/dashboard/SummaryCards"
 

@@ -1,24 +1,28 @@
 "use client"
 import { useMemo } from "react"
-import { useDashboardData, usePendingArchives, revalidateData } from "@/hooks/useData"
+import { useTeachers } from "@/hooks/useTeachers"
+import { useCourses } from "@/hooks/useCourses"
+import { usePendingArchives } from "@/hooks/usePayments"
+import { revalidateData } from "@/hooks/swr-config"
 import TeachersTab from "@/components/tabs/TeachersTab"
 import SummaryCards from "@/components/dashboard/SummaryCards"
 
 export default function TeachersPage() {
-  const { teachers: allTeachers, courses, isLoading } = useDashboardData()
+  const { courses, isLoading: isCourseLoading } = useCourses()
+  const { teachers: allTeachers, isLoading: isTeacherLoading } = useTeachers()
   const { data: pendingArchiveMap } = usePendingArchives()
 
-  const teachers = useMemo(() => 
-    (allTeachers || []).filter((teacher: any) => !teacher.archived), 
+  const teachers = useMemo(() =>
+    (allTeachers || []).filter((teacher: any) => !teacher.archived),
     [allTeachers]
   )
 
-  if (isLoading) return <div className="p-8 text-center text-gray-500">Loading Teachers Directory...</div>
+  if (isCourseLoading || isTeacherLoading) return <div className="p-8 text-center text-gray-500">Loading Teachers Directory...</div>
 
   return (
     <div className="space-y-6">
       <SummaryCards />
-      <TeachersTab 
+      <TeachersTab
         teachers={teachers}
         courses={courses || []}
         onTeachersUpdate={() => revalidateData('teachers')}
