@@ -40,17 +40,31 @@ export default function StudentsTab({
   const { toast } = useToast()
   const [showAddStudentDialog, setShowAddStudentDialog] = useState(false)
   const [isSubmitting, setIsSubmitting] = useState(false)
+
+  type Student = {
+    name: string,
+    schoolLevel: string,
+    schoolYear: string,
+    specialty: string | null,
+    address: string,
+    birth_date: string,
+    phone: string,
+    email: string,
+    photos: boolean,
+    copyOfId: boolean,
+    registrationForm: boolean,
+    registration_fee_paid: boolean,
+  }
   
-  const [newStudent, setNewStudent] = useState({
+  const [newStudent, setNewStudent] = useState<Student>({
     name: "",
     schoolLevel: "",
     schoolYear: "",
-    specialty: "",
+    specialty: null,
     address: "",
     birth_date: "",
     phone: "",
     email: "",
-    school: "",
     photos: false,
     copyOfId: false,
     registrationForm: false,
@@ -108,7 +122,7 @@ export default function StudentsTab({
       ...newStudent,
       schoolLevel: level,
       schoolYear: "",
-      specialty: "",
+      specialty: null,
     })
   }
 
@@ -117,7 +131,7 @@ export default function StudentsTab({
     setNewStudent({
       ...newStudent,
       schoolYear: year,
-      specialty: "",
+      specialty: null,
     })
   }
 
@@ -137,7 +151,6 @@ export default function StudentsTab({
         birth_date: newStudent.birth_date,
         phone: newStudent.phone,
         email: newStudent.email,
-        school: newStudent.school,
         registration_fee_paid: newStudent.registration_fee_paid,
       }
       console.log("Student object to add:", student)
@@ -149,12 +162,11 @@ export default function StudentsTab({
         name: "",
         schoolLevel: "",
         schoolYear: "",
-        specialty: "",
+        specialty: null,
         address: "",
         birth_date: "",
         phone: "",
         email: "",
-        school: "",
         photos: false,
         copyOfId: false,
         registrationForm: false,
@@ -271,7 +283,7 @@ export default function StudentsTab({
                       <div className="space-y-2">
                         <Label htmlFor="specialty">Specialty/Stream</Label>
                         <Select
-                          value={newStudent.specialty}
+                          value={newStudent.specialty || undefined}
                           onValueChange={(value) => setNewStudent({ ...newStudent, specialty: value })}
                         >
                           <SelectTrigger>
@@ -322,15 +334,6 @@ export default function StudentsTab({
                         type="email"
                         value={newStudent.email}
                         onChange={(e) => setNewStudent({ ...newStudent, email: e.target.value })}
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="school">School They Attend</Label>
-                      <Input
-                        id="school"
-                        value={newStudent.school}
-                        onChange={(e) => setNewStudent({ ...newStudent, school: e.target.value })}
-                        required
                       />
                     </div>
                   </div>
@@ -397,7 +400,7 @@ export default function StudentsTab({
         </div>
       </CardHeader>
       <CardContent>
-        <div className="max-h-[455px] overflow-auto scrollbar-thin">
+        <div className="max-h-113.75 overflow-auto scrollbar-thin">
           <Table>
             <TableHeader>
               <TableRow>

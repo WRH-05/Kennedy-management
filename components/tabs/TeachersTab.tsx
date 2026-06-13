@@ -312,7 +312,7 @@ export default function TeachersTab({
         </div>
       </CardHeader>
       <CardContent>
-        <div className="max-h-[455px] overflow-auto scrollbar-thin">
+        <div className="max-h-113.75 overflow-auto scrollbar-thin">
           <Table>
             <TableHeader>
               <TableRow>
@@ -327,7 +327,7 @@ export default function TeachersTab({
                     <TableHead>Total Earnings</TableHead>
                   </>
                 )}
-                <TableHead className="w-[50px]"></TableHead>
+                <TableHead className="w-12.5"></TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>

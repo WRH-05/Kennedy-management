@@ -24,7 +24,10 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
-import { courseService, studentService, teacherService, paymentService, attendanceService } from "@/services/appDataService"
+import { courseService } from "@/services/courseService"
+import { studentService } from "@/services/studentService"
+import { paymentService } from "@/services/paymentService"
+import { teacherService } from "@/services/teacherService"
 import { useAuth } from "@/contexts/AuthContext"
 import AuthGuard from "@/components/auth/AuthGuard"
 import { useToast } from "@/hooks/use-toast"
@@ -563,7 +566,7 @@ function CourseDetailContent() {
                           <Button
                             variant={course?.payments?.students?.[studentId] ? "default" : "destructive"}
                             size="sm"
-                            onClick={() => toggleStudentPayment(studentId)}
+                            onClick={() => toggleStudentPayment(studentId.toString())}
                           >
                             {course?.payments?.students?.[studentId] ? "Paid" : "Pay"}
                           </Button>

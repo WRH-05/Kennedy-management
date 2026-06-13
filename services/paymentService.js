@@ -1,5 +1,5 @@
 import { supabase } from "@/lib/supabase"
-
+import { profileService } from "./profileService.js"
 export const paymentService = {
     // Get all teacher payouts
     async getAllPayouts() {
@@ -209,7 +209,7 @@ export const paymentService = {
         try {
 
             // Get current user profile for tracking
-            const userProfile = await getCurrentUserProfile()
+            const userProfile = await profileService.getCurrentUserProfile()
 
             // Get course info for price and details
             const { data: courseData, error: courseError } = await supabase
@@ -294,7 +294,7 @@ export const paymentService = {
                     await supabase
                         .from('revenue')
                         .insert({
-                            school_id: schoolId,
+                            
                             student_id: studentId,
                             course_id: courseId,
                             student_name: studentData.name,
@@ -318,7 +318,7 @@ export const paymentService = {
                     .insert([{
                         course_id: courseId,
                         student_id: studentId,
-                        school_id: schoolId,
+                        
                         amount: courseData.price || 0,
                         month: currentMonth,
                         status: 'paid',
@@ -362,7 +362,7 @@ export const paymentService = {
                     await supabase
                         .from('revenue')
                         .insert({
-                            school_id: schoolId,
+                            
                             student_id: studentId,
                             course_id: courseId,
                             student_name: studentData.name,
@@ -391,7 +391,7 @@ export const paymentService = {
         try {
 
             // Get current user profile for tracking
-            const userProfile = await getCurrentUserProfile()
+            const userProfile = await profileService.getCurrentUserProfile()
 
             const currentMonth = new Date().toLocaleString('default', { month: 'long', year: 'numeric' })
 
@@ -454,7 +454,7 @@ export const paymentService = {
                     .from('teacher_payouts')
                     .insert([{
                         teacher_id: teacherId,
-                        school_id: schoolId,
+                        
                         professor_name: teacherData?.name || 'Unknown',
                         percentage: percentage,
                         amount: amount,

@@ -19,7 +19,8 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
-import { teacherService, courseService } from "@/services/appDataService"
+import { teacherService } from "@/services/teacherService"
+import { courseService } from "@/services/courseService"
 import { useAuth } from "@/contexts/AuthContext"
 import AuthGuard from "@/components/auth/AuthGuard"
 
