@@ -1,13 +1,11 @@
 "use client"
 import SummaryCards from "@/components/dashboard/SummaryCards"
 import Link from "next/link"
-import { ArrowRight, Users, BookOpen, DollarSign } from "lucide-react"
-
+import { ArrowRight, Users, BookOpen, DollarSign, Archive, LibraryBig, Banknote  } from "lucide-react"
 export default function DashboardHubPage() {
   return (
     <div className="space-y-8">
       {/* Show the global metrics at the top */}
-      <SummaryCards />
 
       {/* Grid of quick navigation shortcuts */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
@@ -37,7 +35,7 @@ export default function DashboardHubPage() {
 
         <Link href="/manager/courses" className="p-6 bg-white rounded-lg border shadow-sm hover:shadow-md transition group flex justify-between items-center">
           <div>
-            <h3 className="font-semibold text-lg flex items-center gap-2"><DollarSign className="h-5 w-5 text-amber-500" /> Manange Courses</h3>
+            <h3 className="font-semibold text-lg flex items-center gap-2"><LibraryBig className="h-5 w-5 text-red-500" /> Manange Courses</h3>
             <p className="text-sm text-gray-500">Edit courses</p>
           </div>
           <ArrowRight className="h-5 w-5 text-gray-400 group-hover:translate-x-1 transition-transform" />
@@ -45,7 +43,7 @@ export default function DashboardHubPage() {
 
         <Link href="/manager/archive" className="p-6 bg-white rounded-lg border shadow-sm hover:shadow-md transition group flex justify-between items-center">
           <div>
-            <h3 className="font-semibold text-lg flex items-center gap-2"><DollarSign className="h-5 w-5 text-amber-500" /> Manange Archives</h3>
+            <h3 className="font-semibold text-lg flex items-center gap-2"><Archive className="h-5 w-5 text-amber-800" /> Manange Archives</h3>
             <p className="text-sm text-gray-500">Check Archives</p>
           </div>
           <ArrowRight className="h-5 w-5 text-gray-400 group-hover:translate-x-1 transition-transform" />
@@ -53,7 +51,7 @@ export default function DashboardHubPage() {
 
         <Link href="/manager/payouts" className="p-6 bg-white rounded-lg border shadow-sm hover:shadow-md transition group flex justify-between items-center">
           <div>
-            <h3 className="font-semibold text-lg flex items-center gap-2"><DollarSign className="h-5 w-5 text-amber-500" /> Manange Payouts</h3>
+            <h3 className="font-semibold text-lg flex items-center gap-2"><Banknote className="h-5 w-5 text-amber-500" /> Manange Payouts</h3>
             <p className="text-sm text-gray-500">Time for money baby</p>
           </div>
           <ArrowRight className="h-5 w-5 text-gray-400 group-hover:translate-x-1 transition-transform" />

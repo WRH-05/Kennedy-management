@@ -23,7 +23,6 @@ export default function CoursesPage() {
 
   return (
     <div className="space-y-6">
-      <SummaryCards />
       <CoursesTab 
         courses={courses}
         teachers={teachers}

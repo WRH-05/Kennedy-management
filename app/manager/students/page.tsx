@@ -38,7 +38,7 @@ export default function StudentsPage() {
 
   return (
     <div className="space-y-6">
-      <SummaryCards />
+
       <StudentsTab
         students={students}
         courses={courses || []}

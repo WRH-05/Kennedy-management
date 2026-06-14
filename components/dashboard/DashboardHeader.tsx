@@ -9,7 +9,7 @@ import { useCourses } from "@/hooks/useCourses"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
-import { Search, LogOut, Calendar, RefreshCw } from "lucide-react"
+import { Search, LogOut, Calendar } from "lucide-react"
 
 export default function DashboardHeader() {
   const router = useRouter()
@@ -89,7 +89,7 @@ export default function DashboardHeader() {
     <header className="bg-white shadow-sm border-b">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between items-center h-16">
-          <h1 className="text-xl font-semibold text-gray-900">Manager Dashboard</h1>
+          <h1 className="text-xl font-semibold text-gray-900"><a href="/">Manager Dashboard</a></h1>
           
           <div className="flex-1 max-w-md mx-4 relative">
             <div className="relative">
@@ -145,17 +145,11 @@ export default function DashboardHeader() {
           </div>
 
           <div className="flex items-center space-x-4">
-            <Button onClick={() => refreshAll()} variant="outline" size="sm" title="Refresh data">
-              <RefreshCw className="h-4 w-4" />
-            </Button>
             <Button onClick={handleMonthlyRollover} variant="outline">
               <Calendar className="h-4 w-4 mr-2" />
               Monthly Rollover
             </Button>
             <span className="text-sm text-gray-600">Welcome, {user?.profile?.full_name || 'Manager'}</span>
-            <span className="text-xs text-gray-500 bg-gray-100 px-2 py-1 rounded">
-              {'School'}
-            </span>
             <Button variant="outline" size="sm" onClick={handleSignOut}>
               <LogOut className="h-4 w-4 mr-2" />
               Sign Out

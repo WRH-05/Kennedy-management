@@ -11,7 +11,17 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Alert, AlertDescription } from "@/components/ui/alert"
-import { ArrowLeft, Download, User, BookOpen, Upload, AlertTriangle, CheckCircle } from "lucide-react"
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog"
+import { ArrowLeft, Download, User, BookOpen, AlertTriangle, CheckCircle } from "lucide-react"
 import { studentService } from "@/services/studentService"
 import { courseService } from "@/services/courseService"
 import { useAuth } from "@/contexts/AuthContext"
@@ -23,9 +33,12 @@ function StudentDashboardContent() {
   const studentId = params.id as string
   const { user } = useAuth()
   const [student, setStudent] = useState<any>(null)
+  const [editedStudent, setEditedStudent] = useState<any>(null)
   const [courses, setCourses] = useState<any[]>([])
-  const [uploadingDoc, setUploadingDoc] = useState("")
   const [loading, setLoading] = useState(true)
+  const [isEditing, setIsEditing] = useState(false)
+  const [showSaveConfirmation, setShowSaveConfirmation] = useState(false)
+  const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
     // Load student data
@@ -39,16 +52,8 @@ function StudentDashboardContent() {
           router.push(redirectPath)
           return
         }
-        // Add default documents structure if not present
-        setStudent({
-          ...studentData,
-          documents: studentData.documents || {
-            idCard: { uploaded: false, filename: null },
-            birthCertificate: { uploaded: false, filename: null },
-            schoolCertificate: { uploaded: false, filename: null },
-            photos: { uploaded: false, filename: null },
-          }
-        })
+        setStudent(studentData)
+        setEditedStudent(JSON.parse(JSON.stringify(studentData)))
 
         // Load courses for this student
         const studentCourses = await courseService.getCoursesByStudentId(studentId)
@@ -64,43 +69,40 @@ function StudentDashboardContent() {
     loadStudentData()
   }, [studentId, router, user])
 
-  const [uploadError, setUploadError] = useState<string | null>(null)
+  const handleEdit = () => {
+    setIsEditing(true)
+  }
 
-  const handleFileUpload = (docType: string, event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0]
-    if (!file) return
+  const handleSave = () => {
+    setShowSaveConfirmation(true)
+  }
 
-    setUploadError(null)
-
-    // Validate file type
-    if (file.type !== "application/pdf") {
-      setUploadError("Only PDF files are allowed")
-      return
-    }
-
-    // Validate filename format (YYYYMMDD_Last_First_DocType.pdf)
-    const filenameRegex = /^\d{8}_[A-Za-z]+_[A-Za-z]+_[A-Za-z]+\.pdf$/
-    if (!filenameRegex.test(file.name)) {
-      setUploadError("Filename must follow format: YYYYMMDD_Last_First_DocType.pdf")
-      return
-    }
-
-    // Simulate upload
-    setUploadingDoc(docType)
-    setTimeout(() => {
-      const updatedStudent = {
-        ...student,
-        documents: {
-          ...student.documents,
-          [docType]: {
-            uploaded: true,
-            filename: file.name,
-          },
-        },
-      }
+  const confirmSave = async () => {
+    try {
+      if (!editedStudent) return
+      setLoading(true)
+      setError(null)
+      const updatedStudent = await studentService.updateStudent(studentId, editedStudent)
       setStudent(updatedStudent)
-      setUploadingDoc("")
-    }, 1000)
+      setEditedStudent(JSON.parse(JSON.stringify(updatedStudent)))
+      setIsEditing(false)
+      setShowSaveConfirmation(false)
+    } catch (err) {
+      console.error("Error updating student:", err)
+      setError("Failed to update student")
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const handleCancel = () => {
+    setEditedStudent(student ? JSON.parse(JSON.stringify(student)) : null)
+    setIsEditing(false)
+  }
+
+  const handleInputChange = (field: string, value: any) => {
+    if (!editedStudent) return
+    setEditedStudent({ ...editedStudent, [field]: value })
   }
 
   const downloadStudentCard = () => {
@@ -126,23 +128,32 @@ function StudentDashboardContent() {
 
   // Calculate alerts
   const missedPayments = 0 // Payment tracking to be implemented with payments table
-  const missingDocuments = student?.documents 
-    ? Object.entries(student.documents)
-        .filter(([_, doc]: [string, any]) => !doc.uploaded)
-        .map(([docType, _]) => docType)
-    : []
 
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Header */}
       <header className="bg-white shadow-sm border-b">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center h-16">
-            <Button variant="ghost" size="sm" onClick={() => router.back()} className="mr-4">
-              <ArrowLeft className="h-4 w-4 mr-2" />
-              Back
-            </Button>
-            <h1 className="text-xl font-semibold text-gray-900">Student Dashboard</h1>
+          <div className="flex items-center justify-between h-16">
+            <div className="flex items-center">
+              <Button variant="ghost" size="sm" onClick={() => router.back()} className="mr-4">
+                <ArrowLeft className="h-4 w-4 mr-2" />
+                Back
+              </Button>
+              <h1 className="text-xl font-semibold text-gray-900">Student Dashboard</h1>
+            </div>
+            {user?.profile?.role && ["owner", "manager", "receptionist"].includes(user.profile.role) && (
+              <div className="flex items-center space-x-2">
+                {!isEditing ? (
+                  <Button onClick={handleEdit}>Edit Student</Button>
+                ) : (
+                  <>
+                    <Button onClick={handleSave}>Save</Button>
+                    <Button variant="outline" onClick={handleCancel}>Cancel</Button>
+                  </>
+                )}
+              </div>
+            )}
           </div>
         </div>
       </header>
@@ -159,45 +170,116 @@ function StudentDashboardContent() {
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
-                <div>
-                  <h3 className="font-semibold text-lg">{student.name}</h3>
-                  <p className="text-gray-600">
-                    {student.school_level && <span className="capitalize">{student.school_level} - </span>}
-                    {student.school_year}{student.specialty && ` - ${student.specialty}`}
-                  </p>
-                </div>
-                <div className="space-y-2">
-                  {student.school_level && (
-                    <p>
-                      <span className="font-medium">Level:</span> <span className="capitalize">{student.school_level}</span>
-                    </p>
-                  )}
-                  <p>
-                    <span className="font-medium">School Year:</span> {student.school_year}
-                  </p>
-                  {student.specialty && (
-                    <p>
-                      <span className="font-medium">Specialty:</span> {student.specialty}
-                    </p>
-                  )}
-                  <p>
-                    <span className="font-medium">School:</span> {student.school}
-                  </p>
-                  <p>
-                    <span className="font-medium">Birth Date:</span> {student.birth_date}
-                  </p>
-                  <p>
-                    <span className="font-medium">Phone:</span> {student.phone}
-                  </p>
-                  <p>
-                    <span className="font-medium">Email:</span> {student.email}
-                  </p>
-                  <p>
-                    <span className="font-medium">Address:</span> {student.address}
-                  </p>
-                  <p>
-                    <span className="font-medium">Registration Date:</span> {student.registrationDate}
-                  </p>
+                <div className="space-y-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="name">Full Name</Label>
+                    {isEditing ? (
+                      <Input
+                        id="name"
+                        value={editedStudent?.name ?? ""}
+                        onChange={(e) => handleInputChange("name", e.target.value)}
+                      />
+                    ) : (
+                      <h3 className="font-semibold text-lg">{student.name}</h3>
+                    )}
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="school_year">School Year</Label>
+                    {isEditing ? (
+                      <Input
+                        id="school_year"
+                        value={editedStudent?.school_year ?? ""}
+                        onChange={(e) => handleInputChange("school_year", e.target.value)}
+                      />
+                    ) : (
+                      <p className="text-gray-600">{student.school_year}</p>
+                    )}
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="specialty">Specialty</Label>
+                    {isEditing ? (
+                      <Input
+                        id="specialty"
+                        value={editedStudent?.specialty ?? ""}
+                        onChange={(e) => handleInputChange("specialty", e.target.value)}
+                      />
+                    ) : (
+                      <p className="text-gray-600">{student.specialty || 'Not provided'}</p>
+                    )}
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="school">School</Label>
+                    {isEditing ? (
+                      <Input
+                        id="school"
+                        value={editedStudent?.school ?? ""}
+                        onChange={(e) => handleInputChange("school", e.target.value)}
+                      />
+                    ) : (
+                      <p className="text-gray-600">{student.school}</p>
+                    )}
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="birth_date">Birth Date</Label>
+                    {isEditing ? (
+                      <Input
+                        id="birth_date"
+                        value={editedStudent?.birth_date ?? ""}
+                        onChange={(e) => handleInputChange("birth_date", e.target.value)}
+                      />
+                    ) : (
+                      <p className="text-gray-600">{student.birth_date}</p>
+                    )}
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="phone">Phone</Label>
+                    {isEditing ? (
+                      <Input
+                        id="phone"
+                        value={editedStudent?.phone ?? ""}
+                        onChange={(e) => handleInputChange("phone", e.target.value)}
+                      />
+                    ) : (
+                      <p className="text-gray-600">{student.phone}</p>
+                    )}
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="email">Email</Label>
+                    {isEditing ? (
+                      <Input
+                        id="email"
+                        type="email"
+                        value={editedStudent?.email ?? ""}
+                        onChange={(e) => handleInputChange("email", e.target.value)}
+                      />
+                    ) : (
+                      <p className="text-gray-600">{student.email}</p>
+                    )}
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="address">Address</Label>
+                    {isEditing ? (
+                      <Input
+                        id="address"
+                        value={editedStudent?.address ?? ""}
+                        onChange={(e) => handleInputChange("address", e.target.value)}
+                      />
+                    ) : (
+                      <p className="text-gray-600">{student.address}</p>
+                    )}
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label>Registration Date</Label>
+                    <p className="text-gray-600">{student.created_at ? new Date(student.created_at).toLocaleDateString() : 'N/A'}</p>
+                  </div>
                 </div>
                 <div className="pt-4 border-t">
                   <div className="flex justify-between items-center mb-2">
@@ -215,6 +297,20 @@ function StudentDashboardContent() {
                 </Button>
               </CardContent>
             </Card>
+            <AlertDialog open={showSaveConfirmation} onOpenChange={setShowSaveConfirmation}>
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>Confirm Changes</AlertDialogTitle>
+                  <AlertDialogDescription>
+                    Are you sure you want to save the changes to this student's profile?
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel>Cancel</AlertDialogCancel>
+                  <AlertDialogAction onClick={confirmSave}>Save Changes</AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
 
             {/* Status Alerts */}
             <Card>
@@ -225,73 +321,20 @@ function StudentDashboardContent() {
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-3">
-                {missedPayments > 0 && (
+                {missedPayments > 0 ? (
                   <Alert>
                     <AlertTriangle className="h-4 w-4" />
                     <AlertDescription>{missedPayments} course(s) have missed payments</AlertDescription>
                   </Alert>
-                )}
-                {missingDocuments.length > 0 && (
-                  <Alert>
-                    <AlertTriangle className="h-4 w-4" />
-                    <AlertDescription>Missing documents: {missingDocuments.join(", ")}</AlertDescription>
-                  </Alert>
-                )}
-                {missedPayments === 0 && missingDocuments.length === 0 && (
+                ) : (
                   <Alert>
                     <CheckCircle className="h-4 w-4" />
-                    <AlertDescription>All payments up to date and documents complete</AlertDescription>
+                    <AlertDescription>All payments up to date</AlertDescription>
                   </Alert>
                 )}
               </CardContent>
             </Card>
 
-            {/* Documents Upload */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center">
-                  <Upload className="h-5 w-5 mr-2" />
-                  Documents Upload
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="text-sm text-gray-600 mb-4">
-                  Upload PDF files only. Filename format: YYYYMMDD_Last_First_DocType.pdf
-                </div>
-
-                {uploadError && (
-                  <Alert>
-                    <AlertTriangle className="h-4 w-4" />
-                    <AlertDescription>{uploadError}</AlertDescription>
-                  </Alert>
-                )}
-
-                {student?.documents && Object.entries(student.documents).map(([docType, doc]: [string, any]) => (
-                  <div key={docType} className="space-y-2">
-                    <Label className="capitalize">{docType.replace(/([A-Z])/g, " $1").trim()}</Label>
-                    <div className="flex items-center space-x-2">
-                      {doc.uploaded ? (
-                        <div className="flex items-center space-x-2 text-green-600">
-                          <CheckCircle className="h-4 w-4" />
-                          <span className="text-sm">{doc.filename}</span>
-                        </div>
-                      ) : (
-                        <div className="flex items-center space-x-2">
-                          <Input
-                            type="file"
-                            accept=".pdf"
-                            onChange={(e) => handleFileUpload(docType, e)}
-                            disabled={uploadingDoc === docType}
-                            className="text-sm"
-                          />
-                          {uploadingDoc === docType && <span className="text-sm text-blue-600">Uploading...</span>}
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                ))}
-              </CardContent>
-            </Card>
           </div>
 
           {/* Courses */}

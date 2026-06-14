@@ -11,7 +11,6 @@ export default function ArchivePage() {
 
   return (
     <div className="space-y-6">
-      <SummaryCards />
       <ArchiveTab isManager={true} onArchiveUpdate={handleArchiveUpdate} />
     </div>
   )

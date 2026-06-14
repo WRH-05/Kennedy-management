@@ -32,7 +32,6 @@ export default function PayoutsPage() {
 
   return (
     <div className="space-y-6">
-      <SummaryCards />
       <PayoutsTab payouts={payouts || []} onApprovePayout={approvePayout} onDenyPayout={denyPayout} />
     </div>
   )

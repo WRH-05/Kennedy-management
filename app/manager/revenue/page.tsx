@@ -10,7 +10,6 @@ export default function RevenuePage() {
 
   return (
     <div className="space-y-6">
-      <SummaryCards />
       <RevenueTab revenue={revenue || []} />
     </div>
   )
