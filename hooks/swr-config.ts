@@ -15,11 +15,21 @@ export function invalidateAllCache() {
 
 export function revalidateData(key: 'students' | 'teachers' | 'courses' | 'payments' | 'all') {
   if (key === 'all') {
-    mutate('students')
-    mutate('teachers')
-    mutate('courses')
-    mutate('payments')
-  } else {
-    mutate(key)
+    mutate(() => true, undefined, { revalidate: true })
+    return
+  }
+
+  mutate(key)
+
+  if (key === 'students') {
+    mutate((cacheKey) => typeof cacheKey === 'string' && cacheKey.startsWith('students-page-'))
+  }
+
+  if (key === 'teachers') {
+    mutate((cacheKey) => typeof cacheKey === 'string' && cacheKey.startsWith('teachers-page-'))
+  }
+
+  if (key === 'courses') {
+    mutate((cacheKey) => typeof cacheKey === 'string' && cacheKey.startsWith('courses-page-'))
   }
 }

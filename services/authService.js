@@ -9,37 +9,32 @@ const warn = (...args) => DEBUG && console.warn(...args)
 export const authService = {
   // Get current user session
   async getCurrentSession() {
-    try {
-      const { data: { session }, error } = await supabase.auth.getSession()
-      if (error) throw error
-      return session
-    } catch (error) {
-      return null
-    }
+    const { data: { session }, error } = await supabase.auth.getSession()
+    if (error) throw error
+    return session
   },
 
   // Get current user with profile and school info
   async getCurrentUser() {
-    try {
-      const { data: { user }, error: userError } = await supabase.auth.getUser()
-      
-      if (userError || !user) {
-        return null
-      }
+    const { data: { user }, error: userError } = await supabase.auth.getUser()
 
-      // Check email confirmation status
-      if (!user.email_confirmed_at) {
-        return {
-          ...user,
-          profile: null,
-          needsEmailConfirmation: true
-        }
-      }
+    if (userError || !user) {
+      return null
+    }
 
-      // Get user profile
-      const { data: profile, error: profileError } = await supabase
-        .from('profiles')
-        .select(`
+    // Check email confirmation status
+    if (!user.email_confirmed_at) {
+      return {
+        ...user,
+        profile: null,
+        needsEmailConfirmation: true
+      }
+    }
+
+    // Get user profile
+    const { data: profile, error: profileError } = await supabase
+      .from('profiles')
+      .select(`
           *,
           schools (
             id,
@@ -50,479 +45,422 @@ export const authService = {
             logo_url
           )
         `)
-        .eq('id', user.id)
-        .single()
+      .eq('id', user.id)
+      .single()
 
-      if (profileError) {
-        return {
-          ...user,
-          profile: null,
-          profileError: profileError.message
-        }
-      }
-
-      if (!profile) {
-        return {
-          ...user,
-          profile: null
-        }
-      }
-
+    if (profileError) {
       return {
         ...user,
-        profile
+        profile: null,
+        profileError: profileError.message
       }
-    } catch (error) {
-      return null
+    }
+
+    if (!profile) {
+      return {
+        ...user,
+        profile: null
+      }
+    }
+
+    return {
+      ...user,
+      profile
     }
   },
 
   // Sign up new user (only via invitation)
   async signUp(email, password, token, fullName = '', phone = '') {
-    try {
-      // First verify the invitation token
-      const { data: invitation, error: inviteError } = await supabase
-        .from('invitations')
-        .select('*')
-        .eq('token', token)
-        .eq('email', email)
-        .gt('expires_at', new Date().toISOString())
-        .is('accepted_at', null)
-        .single()
+    // First verify the invitation token
+    const { data: invitation, error: inviteError } = await supabase
+      .from('invitations')
+      .select('*')
+      .eq('token', token)
+      .eq('email', email)
+      .gt('expires_at', new Date().toISOString())
+      .is('accepted_at', null)
+      .single()
 
-      if (inviteError || !invitation) {
-        throw new Error('Invalid or expired invitation')
-      }
-
-      // Sign up the user
-      const { data, error } = await supabase.auth.signUp({
-        email,
-        password,
-        options: {
-          emailRedirectTo: `${window.location.origin}/auth/callback`,
-          data: {
-            invitation_token: token,
-            full_name: fullName || 'Invited User',
-            phone: phone || null
-          }
-        }
-      })
-
-      if (error) throw error
-      return { data, invitation }
-    } catch (error) {
-      throw error
+    if (inviteError || !invitation) {
+      throw new Error('Invalid or expired invitation')
     }
+
+    // Sign up the user
+    const { data, error } = await supabase.auth.signUp({
+      email,
+      password,
+      options: {
+        emailRedirectTo: `${window.location.origin}/auth/callback`,
+        data: {
+          invitation_token: token,
+          full_name: fullName || 'Invited User',
+          phone: phone || null
+        }
+      }
+    })
+
+    if (error) throw error
+    return { data, invitation }
   },
 
   // Sign in user
   async signIn(email, password) {
-    try {
-      const { data, error } = await supabase.auth.signInWithPassword({
-        email,
-        password
-      })
+    const { data, error } = await supabase.auth.signInWithPassword({
+      email,
+      password
+    })
 
-      if (error) throw error
-      return data
-    } catch (error) {
-      throw error
-    }
+    if (error) throw error
+    return data
   },
 
   // Sign out user
   async signOut() {
-    try {
-      const { error } = await supabase.auth.signOut()
-      if (error) throw error
-      return true
-    } catch (error) {
-      throw error
-    }
+    const { error } = await supabase.auth.signOut()
+    if (error) throw error
+    return true
   },
 
   // Create a new school (owner registration)
   // Expected schoolData: { name, address, phone, email } - all required by database
   // Expected userData: { email, full_name, phone } - all required
   async createSchoolAndOwner(schoolData, userData, password) {
-    log('Starting school creation process...')
-    
-    try {
-      // Validate required school fields (per database schema requirements)
-      const requiredSchoolFields = ['name', 'address', 'phone', 'email']
-      const missingFields = requiredSchoolFields.filter(field => 
-        !schoolData[field] || schoolData[field].trim() === ''
-      )
-      
-      if (missingFields.length > 0) {
-        throw new Error(`Missing required school fields: ${missingFields.join(', ')}`)
-      }
+    // Validate required school fields (per database schema requirements)
+    const requiredSchoolFields = ['name', 'address', 'phone', 'email']
+    const missingFields = requiredSchoolFields.filter(field =>
+      !schoolData[field] || schoolData[field].trim() === ''
+    )
 
-      // Validate required user fields
-      const requiredUserFields = ['email', 'full_name', 'phone']
-      const missingUserFields = requiredUserFields.filter(field => 
-        !userData[field] || userData[field].trim() === ''
-      )
-      
-      if (missingUserFields.length > 0) {
-        throw new Error(`Missing required user fields: ${missingUserFields.join(', ')}`)
-      }
+    if (missingFields.length > 0) {
+      throw new Error(`Missing required school fields: ${missingFields.join(', ')}`)
+    }
 
-      // Use the SECURITY DEFINER function to create school (bypasses RLS)
-      log('Creating school via RPC function...')
-      const { data: schoolId, error: schoolError } = await supabase
-        .rpc('create_school_for_owner', {
-          p_school_name: schoolData.name.trim(),
-          p_school_address: schoolData.address.trim(),
-          p_school_phone: schoolData.phone.trim(),
-          p_school_email: schoolData.email.trim()
-        })
+    // Validate required user fields
+    const requiredUserFields = ['email', 'full_name', 'phone']
+    const missingUserFields = requiredUserFields.filter(field =>
+      !userData[field] || userData[field].trim() === ''
+    )
 
-      if (schoolError) {
-        console.error('School creation failed:', schoolError)
-        throw schoolError
-      }
+    if (missingUserFields.length > 0) {
+      throw new Error(`Missing required user fields: ${missingUserFields.join(', ')}`)
+    }
 
-      if (!schoolId) {
-        throw new Error('School creation returned no ID')
-      }
-
-      log('School created:', schoolId)
-
-      // Now sign up the user with school_id in metadata
-      log('Creating user account...')
-      const { data: authData, error: authError } = await supabase.auth.signUp({
-        email: userData.email,
-        password,
-        options: {
-          emailRedirectTo: `${window.location.origin}/auth/callback`,
-          data: {
-            is_owner_signup: 'true',
-            school_id: schoolId,
-            full_name: userData.full_name,
-            phone: userData.phone
-          }
-        }
+    // Use the SECURITY DEFINER function to create school (bypasses RLS)
+    const { data: schoolId, error: schoolError } = await supabase
+      .rpc('create_school_for_owner', {
+        p_school_name: schoolData.name.trim(),
+        p_school_address: schoolData.address.trim(),
+        p_school_phone: schoolData.phone.trim(),
+        p_school_email: schoolData.email.trim()
       })
 
-      if (authError) {
-        // If user creation fails, we should clean up the school
-        // But since we might not have permissions, just throw the error
-        console.error('User signup failed:', authError)
-        throw authError
+    if (schoolError) {
+      console.error('School creation failed:', schoolError)
+      throw schoolError
+    }
+
+    if (!schoolId) {
+      throw new Error('School creation returned no ID')
+    }
+
+    log('School created:', schoolId)
+
+    // Now sign up the user with school_id in metadata
+    log('Creating user account...')
+    const { data: authData, error: authError } = await supabase.auth.signUp({
+      email: userData.email,
+      password,
+      options: {
+        emailRedirectTo: `${window.location.origin}/auth/callback`,
+        data: {
+          is_owner_signup: 'true',
+          school_id: schoolId,
+          full_name: userData.full_name,
+          phone: userData.phone
+        }
       }
+    })
 
-      log('User created:', authData.user?.id)
+    if (authError) {
+      console.error('User signup failed:', authError)
+      throw authError
+    }
 
-      // The profile will be created by database trigger on user signup
-      // We don't need to wait or fetch it here because:
-      // 1. The user needs to confirm their email first
-      // 2. RLS policies prevent reading profile before email confirmation
-      // 3. The profile creation happens via trigger which bypasses RLS
-      
-      // Just verify the trigger ran by calling the manual creation as backup
-      // This RPC function will either create the profile or return success if it exists
-      const { error: profileError } = await supabase
-        .rpc('create_owner_profile_manual', {
-          p_user_id: authData.user.id,
-          p_school_id: schoolId,
-          p_full_name: userData.full_name,
-          p_phone: userData.phone
-        })
+    log('User created:', authData.user?.id)
 
-      if (profileError) {
-        warn('Profile creation backup failed (may already exist):', profileError.message)
-        // This is not critical - the trigger may have already created it
-      }
+    // The profile will be created by database trigger on user signup
+    // We don't need to wait or fetch it here because:
+    // 1. The user needs to confirm their email first
+    // 2. RLS policies prevent reading profile before email confirmation
+    // 3. The profile creation happens via trigger which bypasses RLS
 
-      log('School and owner created:', schoolId)
-      
-      // Return minimal data - profile will be loaded after email confirmation
-      return { 
-        school: { id: schoolId }, 
-        user: authData.user, 
-        profile: null, // Will be loaded after email confirmation
-        needsEmailConfirmation: true
-      }
-    } catch (error) {
-      const errorMessage = error?.message || error?.details || 'Failed to create school and owner'
-      throw new Error(`School creation failed: ${errorMessage}`)
+    // Just verify the trigger ran by calling the manual creation as backup
+    // This RPC function will either create the profile or return success if it exists
+    const { error: profileError } = await supabase
+      .rpc('create_owner_profile_manual', {
+        p_user_id: authData.user.id,
+        p_school_id: schoolId,
+        p_full_name: userData.full_name,
+        p_phone: userData.phone
+      })
+
+    if (profileError) {
+      warn('Profile creation backup failed (may already exist):', profileError.message)
+      // This is not critical - the trigger may have already created it
+    }
+
+    log('School and owner created:', schoolId)
+
+    // Return minimal data - profile will be loaded after email confirmation
+    return {
+      school: { id: schoolId },
+      user: authData.user,
+      profile: null, // Will be loaded after email confirmation
+      needsEmailConfirmation: true
     }
   },
 
   // Send invitation
   async sendInvitation(email, role, inviterName) {
-    try {
-      // Get current user's school
-      const currentUser = await this.getCurrentUser()
-      if (!currentUser?.profile?.school_id) {
-        throw new Error('User not associated with a school')
-      }
-
-      // Check if user has permission to invite
-      if (!['owner', 'manager'].includes(currentUser.profile.role)) {
-        throw new Error('Only owners and managers can send invitations')
-      }
-
-      // Validate role - ensure it's a valid user_role enum value
-      const validRoles = ['manager', 'receptionist']
-      if (!validRoles.includes(role)) {
-        throw new Error('Invalid role. Must be "manager" or "receptionist"')
-      }
-
-      const normalizedEmail = email.toLowerCase().trim()
-
-      // Check if invitation already exists (exclude accepted)
-      const { data: existingInvite, error: checkError } = await supabase
-        .from('invitations')
-        .select('*')
-        .eq('email', normalizedEmail)
-        .eq('school_id', currentUser.profile.school_id)
-        .is('accepted_at', null)
-
-      if (checkError) {
-        console.error('Error checking existing invitations:', checkError)
-      }
-
-      // Check for pending (non-expired) invitations
-      const pendingInvite = existingInvite?.find(inv => new Date(inv.expires_at) > new Date())
-      if (pendingInvite) {
-        throw new Error('An active invitation already exists for this email')
-      }
-
-      // Create invitation
-      const { data: invitation, error } = await supabase
-        .from('invitations')
-        .insert([{
-          email: normalizedEmail,
-          role: role,
-          school_id: currentUser.profile.school_id,
-          invited_by: currentUser.id,
-          expires_at: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString() // 7 days
-        }])
-        .select()
-        .single()
-
-      if (error) {
-        console.error('Invitation creation error:', error)
-        // Handle unique constraint violation
-        if (error.code === '23505') {
-          throw new Error('An invitation already exists for this email')
-        }
-        throw new Error(`Failed to create invitation: ${error.message}`)
-      }
-
-      // Create invitation link
-      const inviteLink = `${window.location.origin}/auth/signup?token=${invitation.token}&email=${encodeURIComponent(normalizedEmail)}`
-      
-      // Get school name for the email
-      const { data: school } = await supabase
-        .from('schools')
-        .select('name')
-        .eq('id', currentUser.profile.school_id)
-        .single()
-
-      // Try to send email via edge function
-      let emailSent = false
-      try {
-        const { data: emailResult, error: emailError } = await supabase.functions.invoke('send-invite-email', {
-          body: {
-            to: normalizedEmail,
-            inviterName: inviterName || currentUser.profile?.full_name || 'A manager',
-            schoolName: school?.name || 'Unknown School',
-            role: role,
-            inviteLink: inviteLink
-          }
-        })
-        
-        if (!emailError && emailResult?.emailSent) {
-          emailSent = true
-        }
-      } catch (emailErr) {
-        console.log('Email sending not available, link will be copied instead')
-      }
-      
-      return { invitation, inviteLink, emailSent }
-    } catch (error) {
-      console.error('sendInvitation error:', error)
-      throw error
+    // Get current user's school
+    const currentUser = await this.getCurrentUser()
+    if (!currentUser?.profile?.school_id) {
+      throw new Error('User not associated with a school')
     }
+
+    // Check if user has permission to invite
+    if (!['owner', 'manager'].includes(currentUser.profile.role)) {
+      throw new Error('Only owners and managers can send invitations')
+    }
+
+    // Validate role - ensure it's a valid user_role enum value
+    const validRoles = ['manager', 'receptionist']
+    if (!validRoles.includes(role)) {
+      throw new Error('Invalid role. Must be "manager" or "receptionist"')
+    }
+
+    const normalizedEmail = email.toLowerCase().trim()
+
+    // Check if invitation already exists (exclude accepted)
+    const { data: existingInvite, error: checkError } = await supabase
+      .from('invitations')
+      .select('*')
+      .eq('email', normalizedEmail)
+      .eq('school_id', currentUser.profile.school_id)
+      .is('accepted_at', null)
+
+    if (checkError) {
+      console.error('Error checking existing invitations:', checkError)
+    }
+
+    // Check for pending (non-expired) invitations
+    const pendingInvite = existingInvite?.find(inv => new Date(inv.expires_at) > new Date())
+    if (pendingInvite) {
+      throw new Error('An active invitation already exists for this email')
+    }
+
+    // Create invitation
+    const { data: invitation, error } = await supabase
+      .from('invitations')
+      .insert([{
+        email: normalizedEmail,
+        role: role,
+        school_id: currentUser.profile.school_id,
+        invited_by: currentUser.id,
+        expires_at: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString() // 7 days
+      }])
+      .select()
+      .single()
+
+    if (error) {
+      console.error('Invitation creation error:', error)
+      // Handle unique constraint violation
+      if (error.code === '23505') {
+        throw new Error('An invitation already exists for this email')
+      }
+      throw new Error(`Failed to create invitation: ${error.message}`)
+    }
+
+    // Create invitation link
+    const inviteLink = `${window.location.origin}/auth/signup?token=${invitation.token}&email=${encodeURIComponent(normalizedEmail)}`
+
+    // Get school name for the email
+    const { data: school } = await supabase
+      .from('schools')
+      .select('name')
+      .eq('id', currentUser.profile.school_id)
+      .single()
+
+    // Try to send email via edge function
+    let emailSent = false
+    try {
+      const { data: emailResult, error: emailError } = await supabase.functions.invoke('send-invite-email', {
+        body: {
+          to: normalizedEmail,
+          inviterName: inviterName || currentUser.profile?.full_name || 'A manager',
+          schoolName: school?.name || 'Unknown School',
+          role: role,
+          inviteLink: inviteLink
+        }
+      })
+
+      if (!emailError && emailResult?.emailSent) {
+        emailSent = true
+      }
+    } catch (emailErr) {
+      console.log('Email sending not available, link will be copied instead')
+    }
+
+    return { invitation, inviteLink, emailSent }
   },
 
   // Get all invitations for current school
   async getInvitations() {
-    try {
-      const currentUser = await this.getCurrentUser()
-      if (!currentUser?.profile?.school_id) return []
+    const currentUser = await this.getCurrentUser()
+    if (!currentUser?.profile?.school_id) return []
 
-      const { data, error } = await supabase
-        .from('invitations')
-        .select('*')
-        .eq('school_id', currentUser.profile.school_id)
-        .order('created_at', { ascending: false })
+    const { data, error } = await supabase
+      .from('invitations')
+      .select('*')
+      .eq('school_id', currentUser.profile.school_id)
+      .order('created_at', { ascending: false })
 
-      if (error) throw error
-      
-      // Enrich with inviter name
-      const enriched = await Promise.all(
-        (data || []).map(async (invite) => {
-          if (invite.invited_by) {
-            const { data: inviter } = await supabase
-              .from('profiles')
-              .select('full_name')
-              .eq('id', invite.invited_by)
-              .single()
-            return { ...invite, invited_by_profile: inviter }
-          }
-          return { ...invite, invited_by_profile: null }
-        })
-      )
-      
-      return enriched
-    } catch (error) {
-      return []
-    }
+    if (error) throw error
+
+    // Enrich with inviter name
+    const enriched = await Promise.all(
+      (data || []).map(async (invite) => {
+        if (invite.invited_by) {
+          const { data: inviter } = await supabase
+            .from('profiles')
+            .select('full_name')
+            .eq('id', invite.invited_by)
+            .single()
+          return { ...invite, invited_by_profile: inviter }
+        }
+        return { ...invite, invited_by_profile: null }
+      })
+    )
+
+    return enriched
   },
 
   // Verify invitation token
   async verifyInvitation(token, email) {
-    try {
-      const { data, error } = await supabase
-        .from('invitations')
-        .select('*, schools (name)')
-        .eq('token', token)
-        .eq('email', email.toLowerCase().trim())
-        .gt('expires_at', new Date().toISOString())
-        .is('accepted_at', null)
-        .single()
+    const { data, error } = await supabase
+      .from('invitations')
+      .select('*, schools (name)')
+      .eq('token', token)
+      .eq('email', email.toLowerCase().trim())
+      .gt('expires_at', new Date().toISOString())
+      .is('accepted_at', null)
+      .single()
 
-      if (error) throw error
-      
-      // Enrich with inviter name
-      if (data && data.invited_by) {
-        const { data: inviter } = await supabase
-          .from('profiles')
-          .select('full_name')
-          .eq('id', data.invited_by)
-          .single()
-        return { ...data, invited_by_profile: inviter }
-      }
-      
-      return data ? { ...data, invited_by_profile: null } : null
-    } catch (error) {
-      return null
+    if (error) throw error
+
+    // Enrich with inviter name
+    if (data && data.invited_by) {
+      const { data: inviter } = await supabase
+        .from('profiles')
+        .select('full_name')
+        .eq('id', data.invited_by)
+        .single()
+      return { ...data, invited_by_profile: inviter }
     }
+
+    return data ? { ...data, invited_by_profile: null } : null
+
   },
 
   // Update user profile
   async updateProfile(updates) {
-    try {
-      const currentUser = await this.getCurrentUser()
-      if (!currentUser?.id) throw new Error('No authenticated user')
+    const currentUser = await this.getCurrentUser()
+    if (!currentUser?.id) throw new Error('No authenticated user')
 
-      const { data, error } = await supabase
-        .from('profiles')
-        .update(updates)
-        .eq('id', currentUser.id)
-        .select()
-        .single()
+    const { data, error } = await supabase
+      .from('profiles')
+      .update(updates)
+      .eq('id', currentUser.id)
+      .select()
+      .single()
 
-      if (error) throw error
-      return data
-    } catch (error) {
-      throw error
-    }
+    if (error) throw error
+    return data
   },
 
   // Get all users in current school
   async getSchoolUsers() {
-    try {
-      const currentUser = await this.getCurrentUser()
-      if (!currentUser?.profile?.school_id) return []
+    const currentUser = await this.getCurrentUser()
+    if (!currentUser?.profile?.school_id) return []
 
-      // Use RPC function that can access auth.users safely
-      const { data, error } = await supabase.rpc('get_school_users_with_email')
+    // Use RPC function that can access auth.users safely
+    const { data, error } = await supabase.rpc('get_school_users_with_email')
 
-      if (error) throw error
-      
-      // Transform to match expected format
-      return (data || []).map(user => ({
-        ...user,
-        invited_by_profile: user.invited_by_name ? { full_name: user.invited_by_name } : null
-      }))
-    } catch (error) {
-      return []
-    }
+    if (error) throw error
+
+    // Transform to match expected format
+    return (data || []).map(user => ({
+      ...user,
+      invited_by_profile: user.invited_by_name ? { full_name: user.invited_by_name } : null
+    }))
   },
 
   // Update user role (owners and managers only)
   async updateUserRole(userId, newRole) {
-    try {
-      const currentUser = await this.getCurrentUser()
-      if (!['owner', 'manager'].includes(currentUser?.profile?.role)) {
-        throw new Error('Only owners and managers can update user roles')
-      }
-
-      const { data, error } = await supabase
-        .from('profiles')
-        .update({ role: newRole })
-        .eq('id', userId)
-        .eq('school_id', currentUser.profile.school_id)
-        .select()
-        .single()
-
-      if (error) throw error
-      return data
-    } catch (error) {
-      throw error
+    const currentUser = await this.getCurrentUser()
+    if (!['owner', 'manager'].includes(currentUser?.profile?.role)) {
+      throw new Error('Only owners and managers can update user roles')
     }
+
+    const { data, error } = await supabase
+      .from('profiles')
+      .update({ role: newRole })
+      .eq('id', userId)
+      .eq('school_id', currentUser.profile.school_id)
+      .select()
+      .single()
+
+    if (error) throw error
+    return data
   },
 
   // Deactivate user (owners and managers only)
   async deactivateUser(userId) {
-    try {
-      const currentUser = await this.getCurrentUser()
-      if (!['owner', 'manager'].includes(currentUser?.profile?.role)) {
-        throw new Error('Only owners and managers can deactivate users')
-      }
-
-      const { data, error } = await supabase
-        .from('profiles')
-        .update({ is_active: false })
-        .eq('id', userId)
-        .eq('school_id', currentUser.profile.school_id)
-        .select()
-        .single()
-
-      if (error) throw error
-      return data
-    } catch (error) {
-      throw error
+    const currentUser = await this.getCurrentUser()
+    if (!['owner', 'manager'].includes(currentUser?.profile?.role)) {
+      throw new Error('Only owners and managers can deactivate users')
     }
+
+    const { data, error } = await supabase
+      .from('profiles')
+      .update({ is_active: false })
+      .eq('id', userId)
+      .eq('school_id', currentUser.profile.school_id)
+      .select()
+      .single()
+
+    if (error) throw error
+    return data
   },
 
   // Cancel invitation (owners and managers only) - uses delete since canceled_at column doesn't exist
   async cancelInvitation(invitationId) {
-    try {
-      const currentUser = await this.getCurrentUser()
-      if (!['owner', 'manager'].includes(currentUser?.profile?.role)) {
-        throw new Error('Only owners and managers can cancel invitations')
-      }
-
-      const { data, error } = await supabase
-        .from('invitations')
-        .delete()
-        .eq('id', invitationId)
-        .eq('school_id', currentUser.profile.school_id)
-        .is('accepted_at', null)
-        .select()
-        .single()
-
-      if (error) throw error
-      return data
-    } catch (error) {
-      throw error
+    const currentUser = await this.getCurrentUser()
+    if (!['owner', 'manager'].includes(currentUser?.profile?.role)) {
+      throw new Error('Only owners and managers can cancel invitations')
     }
+
+    const { data, error } = await supabase
+      .from('invitations')
+      .delete()
+      .eq('id', invitationId)
+      .eq('school_id', currentUser.profile.school_id)
+      .is('accepted_at', null)
+      .select()
+      .single()
+
+    if (error) throw error
+    return data
   },
 
   // Listen to auth changes

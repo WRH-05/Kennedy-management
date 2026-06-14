@@ -1,31 +1,55 @@
 "use client"
 
-import { useMemo } from "react"
-import { useStudents } from "@/hooks/useStudents"
+import { useMemo, useState } from "react"
 import { useCourses } from "@/hooks/useCourses"
+import { usePaginatedStudents } from "@/hooks/useStudents"
 import { usePendingArchives } from "@/hooks/usePayments"
-import { revalidateData } from "@/hooks/swr-config"
-
 import StudentsTab from "@/components/tabs/StudentsTab"
-import SummaryCards from "@/components/dashboard/SummaryCards"
+import { Pagination, PaginationContent, PaginationItem, PaginationLink, PaginationPrevious, PaginationNext, PaginationEllipsis } from "@/components/ui/pagination"
 
-// Added a quick interface to avoid using 'any' on the student filter
-interface Student {
-  id: string | number
-  name: string
-  archived: boolean
-  [key: string]: any
+const PAGE_SIZE = 6
+
+function getPageItems(page: number, totalPages: number) {
+  const pages: Array<number | 'ellipsis'> = []
+
+  if (totalPages <= 7) {
+    for (let index = 1; index <= totalPages; index += 1) {
+      pages.push(index)
+    }
+    return pages
+  }
+
+  const left = Math.max(2, page - 1)
+  const right = Math.min(totalPages - 1, page + 1)
+
+  pages.push(1)
+
+  if (left > 2) {
+    pages.push('ellipsis')
+  }
+
+  for (let index = left; index <= right; index += 1) {
+    pages.push(index)
+  }
+
+  if (right < totalPages - 1) {
+    pages.push('ellipsis')
+  }
+
+  pages.push(totalPages)
+
+  return pages
 }
 
 export default function StudentsPage() {
-  const { students: allStudents, isLoading: studentLoading } = useStudents()
+  const [page, setPage] = useState(1)
+  const { students, total, isLoading: studentLoading, mutate } = usePaginatedStudents(page, PAGE_SIZE)
   const { courses, isLoading: courseLoading } = useCourses()
   const { data: pendingArchiveMap } = usePendingArchives()
 
-  // Filter out archived students safely
-  const students = useMemo(() =>
-    (allStudents || []).filter((student: Student) => !student.archived),
-    [allStudents]
+  const studentList = useMemo(
+    () => (students || []).filter((student: any) => !student.archived),
+    [students]
   )
 
   if (studentLoading || courseLoading) {
@@ -36,18 +60,48 @@ export default function StudentsPage() {
     )
   }
 
+  const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE))
+
   return (
     <div className="space-y-6">
-
       <StudentsTab
-        students={students}
+        students={studentList}
         courses={courses || []}
-        onStudentsUpdate={() => revalidateData('students')}
+        onStudentsUpdate={() => mutate()}
         canAdd={true}
         showCourses={true}
         showPaymentStatus={true}
-        pendingArchiveIds={pendingArchiveMap?.student || new Set()} // Fallback just in case map is undefined
+        pendingArchiveIds={pendingArchiveMap?.student || new Set()}
       />
+
+      <Pagination className="pt-4">
+        <PaginationContent>
+          <PaginationItem>
+            <PaginationPrevious disabled={page <= 1} onClick={() => setPage(Math.max(1, page - 1))} />
+          </PaginationItem>
+
+          {getPageItems(page, totalPages).map((item, index) =>
+            item === 'ellipsis' ? (
+              <PaginationItem key={`ellipsis-${index}`}>
+                <PaginationEllipsis />
+              </PaginationItem>
+            ) : (
+              <PaginationItem key={item}>
+                <PaginationLink
+                  isActive={item === page}
+                  onClick={() => setPage(item)}
+                >
+                  {item}
+                </PaginationLink>
+              </PaginationItem>
+            )
+          )}
+
+          <PaginationItem>
+            <PaginationNext disabled={page >= totalPages} onClick={() => setPage(Math.min(totalPages, page + 1))} />
+          </PaginationItem>
+        </PaginationContent>
+      </Pagination>
     </div>
   )
 }

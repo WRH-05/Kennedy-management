@@ -20,6 +20,26 @@ export function useCourses() {
   }
 }
 
+export function usePaginatedCourses(page: number, pageSize: number) {
+  const key = `courses-page-${page}-size-${pageSize}`
+  const { data, error, isLoading, isValidating } = useSWR(
+    key,
+    () => courseService.getAllCourseInstances(page, pageSize),
+    swrConfig
+  )
+
+  return {
+    courses: data?.data || [],
+    total: data?.total ?? 0,
+    page: data?.page ?? page,
+    pageSize: data?.pageSize ?? pageSize,
+    isLoading,
+    isValidating,
+    error,
+    mutate: () => mutate(key),
+  }
+}
+
 export function useCourse(id: string | number) {
   const { data, error, isLoading, isValidating } = useSWR(
     id ? `course-${id}` : null,
