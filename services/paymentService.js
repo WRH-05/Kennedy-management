@@ -439,8 +439,9 @@ export const paymentService = {
 
     // Get student payments
     async getStudentPayments() {
+        // There is no direct `payments` table in current schema; use `student_payments`.
         const { data, error } = await supabase
-            .from('payments')
+            .from('student_payments')
             .select(`
           *,
           students(name),

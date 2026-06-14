@@ -7,7 +7,8 @@ export const profileService = {
 
         const { data: profile, error: profileError } = await supabase
             .from('profiles')
-            .select('id, full_name, role')
+            // include school_id when available so services can scope queries
+            .select('id, full_name, role, school_id')
             .eq('id', user.id)
             .single()
 

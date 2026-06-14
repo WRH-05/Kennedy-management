@@ -124,6 +124,11 @@ function TeacherProfileContent() {
   const canEdit = user?.profile?.role === "receptionist" || user?.profile?.role === "manager" || user?.profile?.role === "owner"
   const activeCourses = courses.filter((course) => course.status === "active")
   const completedCourses = courses.filter((course) => course.status === "completed")
+  let numberOfActiveStudents = 0
+   
+  activeCourses.forEach((course)=>{
+    numberOfActiveStudents += course.student_ids?.length;
+  })
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -329,7 +334,7 @@ function TeacherProfileContent() {
                 <div className="text-center p-4 bg-purple-50 rounded-lg">
                   <p className="text-sm text-gray-600">Total Students</p>
                   <p className="text-2xl font-bold text-purple-600">
-                    {activeCourses.reduce((total, course) => total + (course.enrolled_students?.length || 0), 0)}
+                    {numberOfActiveStudents}
                   </p>
                 </div>
                 <div className="text-center p-4 bg-orange-50 rounded-lg">

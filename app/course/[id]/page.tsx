@@ -28,6 +28,7 @@ import { courseService } from "@/services/courseService"
 import { studentService } from "@/services/studentService"
 import { paymentService } from "@/services/paymentService"
 import { teacherService } from "@/services/teacherService"
+import { attendanceService } from "@/services/attendanceService"
 import { useAuth } from "@/contexts/AuthContext"
 import AuthGuard from "@/components/auth/AuthGuard"
 import { useToast } from "@/hooks/use-toast"
@@ -49,7 +50,7 @@ function CourseDetailContent() {
     open: false,
     title: "",
     description: "",
-    action: () => {},
+    action: () => { },
   })
 
   useEffect(() => {
@@ -97,18 +98,18 @@ function CourseDetailContent() {
           }
         }
 
-        courseData.payments = { 
-          students: studentPayments, 
-          teacherPaid: teacherPaidStatus 
+        courseData.payments = {
+          students: studentPayments,
+          teacherPaid: teacherPaidStatus
         }
-        
+
         if (!courseData.attendance) {
           courseData.attendance = {}
         }
 
         setCourse(courseData)
         setStudents(studentsData)
-        
+
       } catch (error) {
         console.error("Error loading course data:", error)
         const redirectPath = user?.profile?.role === 'receptionist' ? '/receptionist' : '/manager'
@@ -121,7 +122,8 @@ function CourseDetailContent() {
     loadData()
   }, [courseId, router, user])
 
-  const updateWeeklyAttendance = (studentId: number, week: string, present: boolean) => {
+  const updateWeeklyAttendance = async (studentId: number, week: string, present: boolean) => {
+    // Optimistic UI update
     setCourse((prev: any) => ({
       ...prev,
       attendance: {
@@ -132,6 +134,29 @@ function CourseDetailContent() {
         },
       },
     }))
+
+    try {
+      await attendanceService.updateAttendance(courseId, studentId, week, present)
+    } catch (error) {
+      console.error('Failed to persist attendance:', error)
+      // Revert optimistic update on error
+      setCourse((prev: any) => ({
+        ...prev,
+        attendance: {
+          ...prev.attendance,
+          [studentId]: {
+            ...prev.attendance?.[studentId],
+            [week]: !present,
+          },
+        },
+      }))
+
+      toast({
+        title: 'Attendance update failed',
+        description: (error as Error)?.message || 'Could not save attendance',
+        variant: 'destructive',
+      })
+    }
   }
 
   const toggleStudentPayment = async (studentId: string) => {
@@ -144,7 +169,7 @@ function CourseDetailContent() {
         try {
           // Call the payment service to toggle and persist the payment
           await paymentService.toggleStudentPayment(courseId, studentId)
-          
+
           // Update local state after successful database update
           setCourse((prev: any) => ({
             ...prev,
@@ -153,14 +178,14 @@ function CourseDetailContent() {
               students: {
                 ...prev.payments?.students,
                 [studentId]: !currentStatus,
+              },
             },
-          },
-        }))
+          }))
         } catch (error) {
           console.error("Error toggling student payment:", error)
           alert("Failed to update payment status: " + (error as Error).message)
         }
-        setConfirmDialog({ open: false, title: "", description: "", action: () => {} })
+        setConfirmDialog({ open: false, title: "", description: "", action: () => { } })
       },
     })
   }
@@ -176,7 +201,7 @@ function CourseDetailContent() {
     }
 
     const teacherEarningsAmount = Math.round((course?.price * (course?.student_ids?.length || 0) * (course?.percentage_cut || 0)) / 100)
-    
+
     setConfirmDialog({
       open: true,
       title: "Create Payout Request",
@@ -185,17 +210,17 @@ function CourseDetailContent() {
         try {
           // Use the proper teacher_payouts table
           const result = await paymentService.toggleTeacherPayment(
-            courseId, 
-            course.teacher_id, 
-            teacherEarningsAmount, 
+            courseId,
+            course.teacher_id,
+            teacherEarningsAmount,
             course.percentage_cut || 50
           )
-          
+
           toast({
             title: "Payout request created",
             description: "The payout request is pending manager approval.",
           })
-          
+
           // Update local state after successful database update
           setCourse((prev: any) => ({
             ...prev,
@@ -222,7 +247,7 @@ function CourseDetailContent() {
             })
           }
         }
-        setConfirmDialog({ open: false, title: "", description: "", action: () => {} })
+        setConfirmDialog({ open: false, title: "", description: "", action: () => { } })
       },
     })
   }
@@ -270,44 +295,58 @@ function CourseDetailContent() {
   }
 
   const removeStudentFromCourse = (studentId: number) => {
-    const studentName = course?.student_names?.[course?.student_ids?.findIndex((id: number) => id === studentId)] || `Student ${studentId}`
+    console.log(course)
+    const studentName = students.find(s => s.id === studentId)?.name || `Student ${studentId}`
     setConfirmDialog({
       open: true,
       title: "Remove Student",
       description: `Are you sure you want to remove ${studentName} from this course?`,
       action: () => {
-        setCourse((prev: any) => {
-          const studentIndex = prev?.student_ids?.findIndex((id: number) => id === studentId)
-          if (studentIndex === -1) return prev
+        setCourse(async (prev: any) => {
+          try {
 
-          const newEnrolledStudents = [...(prev?.student_ids || [])]
-          newEnrolledStudents.splice(studentIndex, 1)
+            const studentIndex = prev?.student_ids?.findIndex((id: number) => id === studentId)
+            if (studentIndex === -1) return prev
 
-          const newStudentNames = [...(prev?.student_names || [])]
-          newStudentNames.splice(studentIndex, 1)
+            const newEnrolledStudents = [...(prev?.student_ids || [])]
+            newEnrolledStudents.splice(studentIndex, 1)
 
-          const newPayments = { ...prev.payments }
-          if (newPayments?.students) {
-            delete newPayments.students[studentId]
-          }
+            await courseService.updateCourseInstance(courseId, {
+              student_ids: newEnrolledStudents
+            })
 
-          const newAttendance = { ...prev.attendance }
-          delete newAttendance[studentId]
+            const newStudentNames = [...(prev?.student_names || [])]
+            newStudentNames.splice(studentIndex, 1)
 
-          return {
-            ...prev,
-            student_ids: newEnrolledStudents,
-            student_names: newStudentNames,
-            payments: {
-              ...newPayments,
-              students: { ...(newPayments?.students || {}) },
-            },
-            attendance: {
-              ...newAttendance,
-            },
+            const newPayments = { ...prev.payments }
+            if (newPayments?.students) {
+              delete newPayments.students[studentId]
+            }
+
+            const newAttendance = { ...prev.attendance }
+            delete newAttendance[studentId]
+
+            return {
+              ...prev,
+              student_ids: newEnrolledStudents,
+              student_names: newStudentNames,
+              payments: {
+                ...newPayments,
+                students: { ...(newPayments?.students || {}) },
+              },
+              attendance: {
+                ...newAttendance,
+              },
+            }
+          } catch (error) {
+            console.error("Error removing student from course:", error)
+            alert("Failed to remove student from course: " + (error as Error).message)
+            return {
+              ...prev
+            }
           }
         })
-        setConfirmDialog({ open: false, title: "", description: "", action: () => {} })
+        setConfirmDialog({ open: false, title: "", description: "", action: () => { } })
       },
     })
   }
@@ -654,7 +693,7 @@ function CourseDetailContent() {
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel
-              onClick={() => setConfirmDialog({ open: false, title: "", description: "", action: () => {} })}
+              onClick={() => setConfirmDialog({ open: false, title: "", description: "", action: () => { } })}
             >
               Cancel
             </AlertDialogCancel>

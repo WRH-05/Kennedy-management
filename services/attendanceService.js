@@ -1,7 +1,11 @@
+import { supabase } from '@/lib/supabase'
+import { profileService } from './profileService'
+
 export const attendanceService = {
     // Update attendance for student in course
     async updateAttendance(courseId, studentId, week, attended) {
-        const schoolId = await getCurrentUserSchoolId()
+        const profile = await profileService.getCurrentUserProfile()
+        const schoolId = profile?.school_id
         if (!schoolId) throw new Error('No school access')
 
         // Check if attendance record exists
@@ -47,7 +51,8 @@ export const attendanceService = {
 
     // Get attendance for course
     async getCourseAttendance(courseId) {
-        const schoolId = await getCurrentUserSchoolId()
+        const profile = await profileService.getCurrentUserProfile()
+        const schoolId = profile?.school_id
         if (!schoolId) throw new Error('No school access')
 
         const { data, error } = await supabase
