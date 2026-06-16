@@ -48,9 +48,21 @@ export default function CoursesPage() {
   const { teachers: allTeachers, isLoading: isTeacherLoading } = useTeachers()
   const { data: pendingArchiveMap } = usePendingArchives()
 
-  const students = useMemo(() => (allStudents || []).filter((s: any) => !s.archived), [allStudents])
-  const teachers = useMemo(() => (allTeachers || []).filter((t: any) => !t.archived), [allTeachers])
-  const courses = useMemo(() => (allCourses || []).filter((c: any) => !c.archived), [allCourses])
+  const students = useMemo(() => {
+    // If it's the initial empty array (never[]), use it. Otherwise, pull from .data
+    const list = Array.isArray(allStudents) ? allStudents : allStudents?.data;
+    return (list || []).filter((s: any) => !s.archived);
+  }, [allStudents]);
+
+  const teachers = useMemo(() => {
+    const list = Array.isArray(allTeachers) ? allTeachers : allTeachers?.data;
+    return (list || []).filter((t: any) => !t.archived);
+  }, [allTeachers]);
+
+  const courses = useMemo(() => {
+    const list = Array.isArray(allCourses) ? allCourses : allCourses?.data;
+    return (list || []).filter((c: any) => !c.archived);
+  }, [allCourses]);
 
   if (isStudentLoading || isTeacherLoading || isCourseLoading) return <div className="p-8 text-center text-gray-500">Loading Courses Directory...</div>
 
@@ -58,7 +70,7 @@ export default function CoursesPage() {
 
   return (
     <div className="space-y-6">
-      <CoursesTab 
+      <CoursesTab
         courses={courses}
         teachers={teachers}
         students={students}
@@ -70,7 +82,7 @@ export default function CoursesPage() {
       <Pagination className="pt-4">
         <PaginationContent>
           <PaginationItem>
-            <PaginationPrevious disabled={page <= 1} onClick={() => setPage(Math.max(1, page - 1))} />
+            <PaginationPrevious aria-disabled={page <= 1} onClick={() => setPage(Math.max(1, page - 1))} />
           </PaginationItem>
 
           {getPageItems(page, totalPages).map((item, index) =>
@@ -91,7 +103,7 @@ export default function CoursesPage() {
           )}
 
           <PaginationItem>
-            <PaginationNext disabled={page >= totalPages} onClick={() => setPage(Math.min(totalPages, page + 1))} />
+            <PaginationNext aria-disabled={page >= totalPages} onClick={() => setPage(Math.min(totalPages, page + 1))} />
           </PaginationItem>
         </PaginationContent>
       </Pagination>

@@ -87,7 +87,7 @@ export const paymentService = {
 
     // Get student data for management
     async getStudentData(billingPeriodId) {
-        if(!billingPeriodId) return []
+        if (!billingPeriodId) return []
         const { data, error } = await supabase
             .from('student_payments')
             .select(`
@@ -167,6 +167,24 @@ export const paymentService = {
                 billing_period_id: billingPeriodId,
                 recorded_by_id: userProfile?.id || null
             }])
+            .select()
+            .single()
+
+        if (error) throw error
+        return data
+    },
+
+    async updateRecordStudentPayment(courseId, studentId, billingPeriodId, updates = {}) {
+        const userProfile = await profileService.getCurrentUserProfile()
+
+        const { data, error } = await supabase
+            .from('student_payments')
+            .update({
+                ...updates,s
+            })
+            .eq('course_id', courseId)
+            .eq('student_id', studentId)
+            .eq('billing_period_id', billingPeriodId)
             .select()
             .single()
 

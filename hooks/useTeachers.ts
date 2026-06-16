@@ -40,7 +40,7 @@ export function usePaginatedTeachers(page: number, pageSize: number) {
   }
 }
 
-export function useTeacher(id: string | number) {
+export function useTeacher(id: string) {
   const { data, error, isLoading, isValidating } = useSWR(
     id ? `teacher-${id}` : null,
     () => teacherService.getTeacherById(id),

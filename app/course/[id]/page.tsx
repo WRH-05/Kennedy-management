@@ -60,7 +60,7 @@ function CourseDetailContent() {
       let studentsBillingPeriods = await paymentService.getStudentData(selectedPeriodId);
       setBillingPeriodsOfStudents(studentsBillingPeriods);
       const studentsData: any[] = [];
-      studentsBillingPeriods.forEach((bill)=>{
+      studentsBillingPeriods.forEach((bill) => {
         studentsData.push(bill.students)
       })
       setStudents(studentsData || [])
@@ -119,7 +119,7 @@ function CourseDetailContent() {
 
       if (coursePayment) {
         newStatus = coursePayment.status === 'paid' ? 'pending' : 'paid'
-        await paymentService.updatePaymentStatus(coursePayment.id, newStatus, user?.profile?.id)
+        await paymentService.updateRecordStudentPayment(courseId, studentId, selectedPeriodId, { status: newStatus })
       } else {
         await paymentService.recordStudentPayment(courseId, parseInt(studentId), selectedPeriodId)
         newStatus = 'pending'

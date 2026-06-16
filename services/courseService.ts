@@ -1,10 +1,11 @@
 import { supabase } from "@/lib/supabase"
 import { studentService } from "./studentService"
 import { paymentService } from "./paymentService"
+import { Tables } from "@/types/database.types"
 
 export const courseService = {
     // Get all course instances (excluding archived unless specified)
-    async getAllCourseInstances(page = 1, pageSize = 0, includeArchived = false) {
+    async getAllCourseInstances(page = 1, pageSize = 0, includeArchived = false): Promise<Tables<"course_instances">[]> {
         const query = pageSize
             ? supabase.from('course_instances').select('*', { count: 'exact' })
             : supabase.from('course_instances').select('*')

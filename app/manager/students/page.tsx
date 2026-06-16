@@ -74,7 +74,14 @@ export default function StudentsPage() {
       <Pagination className="pt-4">
         <PaginationContent>
           <PaginationItem>
-            <PaginationPrevious disabled={page <= 1} onClick={() => setPage(Math.max(1, page - 1))} />
+            <PaginationPrevious
+              aria-disabled={page <= 1}
+              onClick={() => {
+                if (page > 1) {
+                  setPage(page - 1)
+                }
+              }}
+            />
           </PaginationItem>
 
           {getPageItems(page, totalPages).map((item, index) =>
@@ -95,7 +102,14 @@ export default function StudentsPage() {
           )}
 
           <PaginationItem>
-            <PaginationNext disabled={page >= totalPages} onClick={() => setPage(Math.min(totalPages, page + 1))} />
+            <PaginationNext
+              aria-disabled={page >= totalPages}
+              onClick={() => {
+                if (page < totalPages) {
+                  setPage(page + 1)
+                }
+              }}
+            />
           </PaginationItem>
         </PaginationContent>
       </Pagination>
