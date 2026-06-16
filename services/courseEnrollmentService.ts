@@ -46,7 +46,6 @@ export const courseEnrollmentService = {
       .from('course_enrollments')
       .select('*, course_instances (*)')
       .eq('student_id', student_id)
-
     if (error) throw error
     return data
   },

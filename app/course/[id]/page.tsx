@@ -205,7 +205,7 @@ function CourseDetailContent() {
           <div className="lg:col-span-2 space-y-6">
             <BillingPeriodToolbar courseId={courseId} billingPeriods={billingPeriods} selectedPeriodId={selectedPeriodId} setSelectedPeriodId={setSelectedPeriodId} onRefresh={loadData} />
             <StudentsManagementCard
-              course={course} courseId={courseId} students={students} availableStudents={availableStudents} filteredStudents={filteredStudents}
+              course={course} courseId={courseId} students={students} filteredStudents={filteredStudents}
               studentSearchQuery={studentSearchQuery} selectedPeriodId={selectedPeriodId} billingPeriods={billingPeriods} setSelectedPeriodId={setSelectedPeriodId} setStudentSearchQuery={setStudentSearchQuery} onUpdateWeeklyAttendance={updateWeeklyAttendance}
               onToggleStudentPayment={toggleStudentPayment} onRemoveStudent={removeStudentFromCourse} onRefresh={loadData}
             />

@@ -54,7 +54,6 @@ function StudentDashboardContent() {
         }
         setStudent(studentData)
         setEditedStudent(JSON.parse(JSON.stringify(studentData)))
-
         // Load courses for this student
         const studentCourses = await courseService.getCoursesByStudentId(studentId)
         setCourses(studentCourses)

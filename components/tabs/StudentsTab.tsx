@@ -12,16 +12,16 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Badge } from "@/components/ui/badge"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
-import { Users, Plus, Archive, MoreHorizontal, Pencil } from "lucide-react"
+import { Users, Plus, Archive, MoreHorizontal, Pencil, Loader2 } from "lucide-react"
 import { studentService } from "@/services/studentService"
 import { archiveService } from "@/services/archiveService"
 import { useToast } from "@/hooks/use-toast"
 import { Tables, TablesInsert } from "@/types/database.types"
 import { courseEnrollmentService } from "@/services/courseEnrollmentService"
+import { useEffect } from "react"
 
 interface StudentsTabProps {
   students: Tables<"students">[]
-  courses: Tables<"course_instances">[]
   onStudentsUpdate: (students: Tables<"students">[]) => void
   canAdd?: boolean
   showCourses?: boolean
@@ -29,9 +29,89 @@ interface StudentsTabProps {
   pendingArchiveIds?: Set<string>
 }
 
+// Sub-component to isolate async course fetching per row
+function StudentCoursesCell({ studentId }: { studentId: string }) {
+  const [courses, setCourses] = useState<any[]>([])
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    let isMounted = true
+    async function fetchCourses() {
+      try {
+        const data = await courseEnrollmentService.getCourseEnrollmentByStudentId(studentId)
+        if (isMounted) {
+          setCourses(data || [])
+        }
+      } catch (err) {
+        console.error(err)
+      } finally {
+        if (isMounted) setLoading(false)
+      }
+    }
+    fetchCourses()
+    return () => { isMounted = false }
+  }, [studentId])
+
+  if (loading) return <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+  if (!courses.length) return <span className="text-muted-foreground text-xs">No courses</span>
+
+  return (
+    <>
+      {courses.map((course, idx) => (
+        <Badge key={idx} variant="secondary" className="mr-1 mb-1">
+          {course.course_instances?.subject || "Unknown"}
+        </Badge>
+      ))}
+    </>
+  )
+}
+
+// Sub-component to isolate async payment status fetching per row
+function StudentPaymentCell({ studentId }: { studentId: string }) {
+  const [courses, setCourses] = useState<any[]>([])
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    let isMounted = true
+    async function fetchCourses() {
+      try {
+        const data = await courseEnrollmentService.getCourseEnrollmentByStudentId(studentId)
+        if (isMounted) {
+          setCourses(data || [])
+        }
+      } catch (err) {
+        console.error(err)
+      } finally {
+        if (isMounted) setLoading(false)
+      }
+    }
+    fetchCourses()
+    return () => { isMounted = false }
+  }, [studentId])
+
+  if (loading) return <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+  if (!courses.length) return <span className="text-muted-foreground text-xs">-</span>
+
+  return (
+    <div className="flex items-center gap-1 flex-wrap">
+      {courses.map((course, idx) => {
+        const isPaid = course.payments?.students?.[studentId]
+        return (
+          <Badge
+            key={idx}
+            variant={isPaid ? "default" : "destructive"}
+            className="text-[10px] px-1.5 py-0.5"
+          >
+            {isPaid ? "Paid" : "Pending"}
+          </Badge>
+        )
+      })}
+    </div>
+  )
+}
+
 export default function StudentsTab({
   students,
-  courses,
   onStudentsUpdate,
   canAdd = false,
   showCourses = true,
@@ -41,7 +121,6 @@ export default function StudentsTab({
   const router = useRouter()
   const { toast } = useToast()
   const [showAddStudentDialog, setShowAddStudentDialog] = useState(false)
-  const [studentCourses, setStudentCourses] = useState<Tables<"course_enrollments">[]>([])
   const [isSubmitting, setIsSubmitting] = useState(false)
 
   const [newStudent, setNewStudent] = useState<TablesInsert<"students">>({
@@ -59,7 +138,6 @@ export default function StudentsTab({
     archived_date: null
   })
 
-  // School years based on Algerian education system (years.json)
   const schoolYearOptions = {
     primary: [
       { code: "1 AP", name: "1st Year Primary" },
@@ -81,7 +159,6 @@ export default function StudentsTab({
     ],
   }
 
-  // Specialty options based on school year for secondary level
   const getSpecialtyOptions = (schoolYear: string) => {
     if (schoolYear === "1 AS") {
       return [
@@ -91,12 +168,10 @@ export default function StudentsTab({
     }
     if (schoolYear === "2 AS" || schoolYear === "3 AS") {
       return [
-        // Science Stream
         { code: schoolYear === "2 AS" ? "2 AS" : "3 AS", name: "Experimental Sciences" },
         { code: schoolYear === "2 AS" ? "2 MA" : "3 MA", name: "Mathematics" },
         { code: schoolYear === "2 AS" ? "2 MT" : "3 MT", name: "Technical Mathematical" },
         { code: schoolYear === "2 AS" ? "2 GE" : "3 GE", name: "Management and Economy" },
-        // Arts Stream
         { code: schoolYear === "2 AS" ? "2 LT" : "3 LT", name: "Literature and Philosophy" },
         { code: schoolYear === "2 AS" ? "2 LE" : "3 LE", name: "Foreign Languages" },
       ]
@@ -104,7 +179,6 @@ export default function StudentsTab({
     return []
   }
 
-  // Handle school level change - reset dependent fields
   const handleSchoolLevelChange = (level: string) => {
     setNewStudent({
       ...newStudent,
@@ -114,7 +188,6 @@ export default function StudentsTab({
     })
   }
 
-  // Handle school year change - reset specialty if needed
   const handleSchoolYearChange = (year: string) => {
     setNewStudent({
       ...newStudent,
@@ -129,20 +202,7 @@ export default function StudentsTab({
 
     setIsSubmitting(true)
     try {
-      console.log("Adding student:", newStudent)
-      const student = {
-        ...newStudent,
-        name: newStudent.name,
-        birth_date: newStudent.birth_date,
-        school_level: newStudent.school_level,
-        school_year: newStudent.school_year,
-        specialty: newStudent.specialty,
-        address: newStudent.address,
-        phone: newStudent.phone,
-        email: newStudent.email,
-        registration_fee_paid: newStudent.registration_fee_paid,
-      }
-      await studentService.addStudent(student)
+      await studentService.addStudent(newStudent)
       const updatedStudents = await studentService.getAllStudents()
       onStudentsUpdate(updatedStudents.data)
       setNewStudent({
@@ -162,7 +222,7 @@ export default function StudentsTab({
       setShowAddStudentDialog(false)
       toast({
         title: "Student added",
-        description: `${student.name} has been successfully added.`,
+        description: `${newStudent.name} has been successfully added.`,
       })
     } catch (error) {
       console.error("Error adding student:", error)
@@ -191,12 +251,6 @@ export default function StudentsTab({
         variant: "destructive",
       })
     }
-  }
-
-  const getStudentCourses = async (student_id: string) => {
-    // do stuff
-    const enrollment = await courseEnrollmentService.getCourseEnrollmentByStudentId(student_id)
-    setStudentCourses(enrollment)
   }
 
   return (
@@ -350,7 +404,7 @@ export default function StudentsTab({
         </div>
       </CardHeader>
       <CardContent>
-        <div className="max-h-113.75 overflow-auto scrollbar-thin">
+        <div className="max-h-[455px] overflow-auto scrollbar-thin">
           <Table>
             <TableHeader>
               <TableRow>
@@ -360,6 +414,7 @@ export default function StudentsTab({
                 <TableHead>Specialty</TableHead>
                 {showCourses && <TableHead>Enrolled Courses</TableHead>}
                 {showPaymentStatus && <TableHead>Payment Status</TableHead>}
+                <TableHead className="w-[60px]"></TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -378,78 +433,42 @@ export default function StudentsTab({
                     <TableCell className="capitalize">{student.school_level || "-"}</TableCell>
                     <TableCell>{student.school_year}</TableCell>
                     <TableCell>{student.specialty || "-"}</TableCell>
+                    
                     {showCourses && (
                       <TableCell>
-                        {studentCourses.map((course, idx) => (
-                          <Badge key={idx} variant="secondary" className="mr-1">
-                            {course.subject}
-                          </Badge>
-                        ))}
+                        <StudentCoursesCell studentId={student.id} />
                       </TableCell>
                     )}
+                    
                     {showPaymentStatus && (
                       <TableCell>
-                        <div className="flex items-center justify-between">
-                          <div>
-                            {studentCourses.map((course, idx) => (
-                              <Badge
-                                key={idx}
-                                variant={course.payments?.students?.[student.id] ? "default" : "destructive"}
-                                className="mr-1"
-                              >
-                                {course.payments?.students?.[student.id] ? "Paid" : "Pending"}
-                              </Badge>
-                            ))}
-                          </div>
-                          <DropdownMenu>
-                            <DropdownMenuTrigger asChild>
-                              <Button variant="ghost" className="h-8 w-8 p-0 opacity-0 group-hover:opacity-100 transition-opacity">
-                                <MoreHorizontal className="h-4 w-4" />
-                              </Button>
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent align="end">
-                              <DropdownMenuItem onClick={() => router.push(`/student/${student.id}`)}>
-                                <Pencil className="mr-2 h-4 w-4" />
-                                Edit
-                              </DropdownMenuItem>
-                              <DropdownMenuItem
-                                onClick={() => handleArchiveStudent(student.id, student.name)}
-                                className={pendingArchiveIds.has(student.id) ? "text-gray-400 cursor-not-allowed" : "text-orange-600"}
-                                disabled={pendingArchiveIds.has(student.id)}
-                              >
-                                <Archive className="mr-2 h-4 w-4" />
-                                {pendingArchiveIds.has(student.id) ? "Archive Pending" : "Archive"}
-                              </DropdownMenuItem>
-                            </DropdownMenuContent>
-                          </DropdownMenu>
-                        </div>
+                        <StudentPaymentCell studentId={student.id} />
                       </TableCell>
                     )}
-                    {!showPaymentStatus && (
-                      <TableCell>
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <Button variant="ghost" className="h-8 w-8 p-0 opacity-0 group-hover:opacity-100 transition-opacity">
-                              <MoreHorizontal className="h-4 w-4" />
-                            </Button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end">
-                            <DropdownMenuItem onClick={() => router.push(`/student/${student.id}`)}>
-                              <Pencil className="mr-2 h-4 w-4" />
-                              Edit
-                            </DropdownMenuItem>
-                            <DropdownMenuItem
-                              onClick={() => handleArchiveStudent(student.id, student.name)}
-                              className={pendingArchiveIds.has(student.id) ? "text-gray-400 cursor-not-allowed" : "text-orange-600"}
-                              disabled={pendingArchiveIds.has(student.id)}
-                            >
-                              <Archive className="mr-2 h-4 w-4" />
-                              {pendingArchiveIds.has(student.id) ? "Archive Pending" : "Archive"}
-                            </DropdownMenuItem>
-                          </DropdownMenuContent>
-                        </DropdownMenu>
-                      </TableCell>
-                    )}
+                    
+                    <TableCell>
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button variant="ghost" className="h-8 w-8 p-0 opacity-0 group-hover:opacity-100 transition-opacity">
+                            <MoreHorizontal className="h-4 w-4" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                          <DropdownMenuItem onClick={() => router.push(`/student/${student.id}`)}>
+                            <Pencil className="mr-2 h-4 w-4" />
+                            Edit
+                          </DropdownMenuItem>
+                          <DropdownMenuItem
+                            onClick={() => handleArchiveStudent(student.id, student.name)}
+                            className={pendingArchiveIds.has(student.id) ? "text-gray-400 cursor-not-allowed" : "text-orange-600"}
+                            disabled={pendingArchiveIds.has(student.id)}
+                          >
+                            <Archive className="mr-2 h-4 w-4" />
+                            {pendingArchiveIds.has(student.id) ? "Archive Pending" : "Archive"}
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    </TableCell>
                   </TableRow>
                 )
               })}

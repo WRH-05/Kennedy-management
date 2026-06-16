@@ -40,7 +40,7 @@ export function usePaginatedStudents(page: number, pageSize: number) {
   }
 }
 
-export function useStudent(id: string | number) {
+export function useStudent(id: string) {
   const { data, error, isLoading, isValidating } = useSWR(
     id ? `student-${id}` : null,
     () => studentService.getStudentById(id),

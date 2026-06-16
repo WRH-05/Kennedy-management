@@ -15,7 +15,6 @@ interface StudentsManagementProps {
   course: any
   courseId: string
   students: any[]
-  availableStudents: any[]
   filteredStudents: any[]
   billingPeriods: any[]
   studentSearchQuery: string
@@ -29,7 +28,7 @@ interface StudentsManagementProps {
 }
 
 export function StudentsManagementCard({
-  course, courseId, students, availableStudents, selectedPeriodId, filteredStudents, studentSearchQuery, billingPeriods, setStudentSearchQuery,
+  course, courseId, students, selectedPeriodId, filteredStudents, studentSearchQuery, billingPeriods, setStudentSearchQuery,
   onUpdateWeeklyAttendance, onToggleStudentPayment, onRemoveStudent, onRefresh, setSelectedPeriodId
 }: StudentsManagementProps) {
   const router = useRouter()
@@ -122,35 +121,23 @@ export function StudentsManagementCard({
           <TableHeader>
             <TableRow>
               <TableHead>Students</TableHead>
-              {["Week 1", "Week 2", "Week 3", "Week 4", "Payment", "Actions"].map((head) => <TableHead key={head}>{head}</TableHead>)}
             </TableRow>
           </TableHeader>
           <TableBody>
-            {course.student_ids?.map((studentId: number, idx: number) => (
-              <TableRow key={studentId}>
+            {students.map((student, idx: number) => (
+              <TableRow key={idx}>
                 <TableCell className="font-medium">
-                  <Button variant="link" className="p-0 h-auto font-medium text-left" onClick={() => router.push(`/student/${studentId}`)}>
-                    {course?.student_names?.[idx] || students.find(s => s.id === studentId)?.name || `Student ${studentId}`}
-                  </Button>
-                </TableCell>
-                {["week1", "week2", "week3", "week4"].map((week) => (
-                  <TableCell key={week}>
-                    <Select value={course?.attendance?.[studentId]?.[week] ? "p" : "a"} onValueChange={(value) => onUpdateWeeklyAttendance(studentId, week, value === "p")}>
-                      <SelectTrigger className="w-12 h-8"><SelectValue /></SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="p">P</SelectItem>
-                        <SelectItem value="a">A</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </TableCell>
-                ))}
-                <TableCell>
-                  <Button variant={course?.payments?.students?.[studentId] ? "default" : "destructive"} size="sm" onClick={() => onToggleStudentPayment(studentId.toString())}>
-                    {course?.payments?.students?.[studentId] ? "Paid" : "Pay"}
+                  <Button variant="link" className="p-0 h-auto font-medium text-left" onClick={() => router.push(`/student/${student.id}`)}>
+                    {student.name}
                   </Button>
                 </TableCell>
                 <TableCell>
-                  <Button variant="outline" size="sm" className="h-8 px-2 text-xs bg-transparent" onClick={() => onRemoveStudent(studentId)}>Remove</Button>
+                  <Button size="sm" onClick={() => onToggleStudentPayment(student.id)}>
+                    {course?.payments?.students?.[student.id] ? "Paid" : "Pay"}
+                  </Button>
+                </TableCell>
+                <TableCell>
+                  <Button variant="outline" size="sm" className="h-8 px-2 text-xs bg-transparent" onClick={() => onRemoveStudent(student.id)}>Remove</Button>
                 </TableCell>
               </TableRow>
             ))}

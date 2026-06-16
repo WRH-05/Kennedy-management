@@ -1,7 +1,6 @@
 "use client"
 
 import { useMemo, useState } from "react"
-import { useCourses } from "@/hooks/useCourses"
 import { usePaginatedStudents } from "@/hooks/useStudents"
 import { usePendingArchives } from "@/hooks/usePayments"
 import StudentsTab from "@/components/tabs/StudentsTab"
@@ -44,7 +43,6 @@ function getPageItems(page: number, totalPages: number) {
 export default function StudentsPage() {
   const [page, setPage] = useState(1)
   const { students, total, isLoading: studentLoading, mutate } = usePaginatedStudents(page, PAGE_SIZE)
-  const { courses, isLoading: courseLoading } = useCourses()
   const { data: pendingArchiveMap } = usePendingArchives()
 
   const studentList = useMemo(
@@ -52,7 +50,7 @@ export default function StudentsPage() {
     [students]
   )
 
-  if (studentLoading || courseLoading) {
+  if (studentLoading) {
     return (
       <div className="p-8 text-center text-gray-500">
         Loading Student Records...
@@ -66,7 +64,6 @@ export default function StudentsPage() {
     <div className="space-y-6">
       <StudentsTab
         students={studentList}
-        courses={courses || []}
         onStudentsUpdate={() => mutate()}
         canAdd={true}
         showCourses={true}

@@ -141,10 +141,6 @@ export default function DashboardHeader() {
           </div>
 
           <div className="flex items-center space-x-4">
-            <Button onClick={handleMonthlyRollover} variant="outline">
-              <Calendar className="h-4 w-4 mr-2" />
-              Monthly Rollover
-            </Button>
             <span className="text-sm text-gray-600">Welcome, {user?.profile?.full_name || 'Manager'}</span>
             <Button variant="outline" size="sm" onClick={handleSignOut}>
               <LogOut className="h-4 w-4 mr-2" />
