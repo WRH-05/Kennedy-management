@@ -8,8 +8,7 @@ import { SessionResult, clearSessionCache } from '@/utils/supabase-session'
 
 interface Profile {
   id: string
-  school_id: string
-  role: 'owner' | 'manager' | 'receptionist'
+  role: 'manager' | 'receptionist'
   full_name: string
   phone?: string
   avatar_url?: string
@@ -37,8 +36,7 @@ interface AuthContextType {
 const AuthContext = createContext<AuthContextType | undefined>(undefined)
 
 const ROLE_PERMISSIONS: Record<string, string[]> = {
-  owner: ['*'],
-  manager: ['students', 'teachers', 'courses', 'payments', 'attendance', 'revenue', 'archives'],
+  manager: ['students', 'teachers', 'courses', 'payments', 'attendance', 'archives', 'revenue'],
   receptionist: ['students', 'teachers', 'courses', 'attendance']
 }
 
@@ -58,7 +56,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         needsEmailConfirmation: !sessionData.user.email_confirmed_at,
         profile: {
           id: sessionData.profile.id,
-          school_id: sessionData.profile.school_id,
           role: sessionData.profile.role,
           full_name: sessionData.profile.full_name,
           phone: sessionData.profile.phone,

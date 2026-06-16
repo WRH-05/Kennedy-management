@@ -142,7 +142,7 @@ function StudentDashboardContent() {
               </Button>
               <h1 className="text-xl font-semibold text-gray-900">Student Dashboard</h1>
             </div>
-            {user?.profile?.role && ["owner", "manager", "receptionist"].includes(user.profile.role) && (
+            {user?.profile?.role && ["manager", "receptionist"].includes(user.profile.role) && (
               <div className="flex items-center space-x-2">
                 {!isEditing ? (
                   <Button onClick={handleEdit}>Edit Student</Button>
@@ -447,7 +447,7 @@ function StudentDashboardContent() {
 
 export default function StudentDashboard() {
   return (
-    <AuthGuard requiredRoles={['owner', 'manager', 'receptionist']}>
+    <AuthGuard requiredRoles={['manager', 'receptionist']}>
       <StudentDashboardContent />
     </AuthGuard>
   )

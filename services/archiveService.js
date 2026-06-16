@@ -57,7 +57,6 @@ export const archiveService = {
         const { data: existingRequest, error: checkError } = await supabase
             .from('archive_requests')
             .select('id')
-
             .eq('entity_type', entityType)
             .eq('entity_id', entityId)
             .eq('status', 'pending')
@@ -77,7 +76,6 @@ export const archiveService = {
                 entity_name: entityName,
                 reason: reason,
                 requested_by: userProfile.id,
-                requested_by_name: userProfile.full_name,
                 status: 'pending'
             }])
             .select()
@@ -85,7 +83,6 @@ export const archiveService = {
 
         if (error) throw error
         return data
-
     },
 
     // Approve archive request and perform actual archive
@@ -131,7 +128,6 @@ export const archiveService = {
             .update({
                 status: 'approved',
                 approved_by: userProfile.id,
-                approved_by_name: userProfile.full_name,
                 approved_date: new Date().toISOString(),
                 updated_at: new Date().toISOString()
             })

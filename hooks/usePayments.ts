@@ -40,7 +40,21 @@ export function useTeacherPaymentData() {
 }
 
 export function useRevenue() {
-  return useSWR("dashboard/revenue", () => paymentService.getRevenueData())
+  const { payments } = usePayments()
+  
+  // Calculate revenue from student payments
+  const revenueData = payments
+    .filter((p: any) => p.type === 'student' && p.status === 'paid')
+    .map((p: any) => ({
+      ...p,
+      paid: true
+    }))
+  
+  return {
+    data: revenueData,
+    error: null,
+    isLoading: false
+  }
 }
 
 export function usePayouts() {

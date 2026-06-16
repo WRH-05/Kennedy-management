@@ -1,31 +1,40 @@
 import { supabase } from "@/lib/supabase"
 import { profileService } from "./profileService.js"
+
 export const paymentService = {
     // Get all teacher payouts
     async getAllPayouts() {
         const { data, error } = await supabase
             .from('teacher_payouts')
-            .select('*')
+            .select(`
+                *,
+                teachers (name),
+                profiles!teacher_payouts_recorded_by_id_fkey (full_name)
+            `)
             .order('created_at', { ascending: false })
 
         if (error) throw error
-        return data || []
+
+        // Enrich with teacher name and recorded by name for backward compatibility
+        return (data || []).map((payout) => ({
+            ...payout,
+            professor_name: payout.teachers?.name || 'Unknown Teacher',
+            recorded_by_name: payout.profiles?.full_name || '-'
+        }))
     },
 
     // Update payout status
-    async updatePayoutStatus(id, status, approverName) {
+    async updatePayoutStatus(id, status, approverId) {
         const updateData = {
             status,
             updated_at: new Date().toISOString(),
             ...(status === 'approved' && {
-                approved_by: approverName || 'Manager',
-                approved_date: new Date().toISOString().split('T')[0],
-                payment_date: new Date().toISOString().split('T')[0]
+                approved_by: approverId,
+                approved_date: new Date().toISOString().split('T')[0]
             }),
-            ...(status === 'denied' && {
-                approved_by: null,
-                approved_date: null,
-                payment_date: null
+            ...(status === 'paid' && {
+                approved_by: approverId,
+                payment_date: new Date().toISOString().split('T')[0]
             })
         }
 
@@ -38,17 +47,6 @@ export const paymentService = {
 
         if (error) throw error
         return data
-    },
-
-    // Get revenue data
-    async getRevenueData() {
-        const { data, error } = await supabase
-            .from('revenue')
-            .select('*')
-            .order('created_at', { ascending: false })
-
-        if (error) throw error
-        return data || []
     },
 
     // Get pending payouts
@@ -75,12 +73,12 @@ export const paymentService = {
         return data || []
     },
 
-    // Get professor payment history
-    async getProfessorPaymentHistory(professorId) {
+    // Get teacher payment history
+    async getTeacherPaymentHistory(teacherId) {
         const { data, error } = await supabase
             .from('teacher_payouts')
             .select('*')
-            .eq('teacher_id', professorId)
+            .eq('teacher_id', teacherId)
             .order('payment_date', { ascending: false })
 
         if (error) throw error
@@ -88,15 +86,15 @@ export const paymentService = {
     },
 
     // Get student data for management
-    async getStudentData() {
+    async getStudentData(billingPeriodId) {
+        if(!billingPeriodId) return []
         const { data, error } = await supabase
-            .from('students')
+            .from('student_payments')
             .select(`
-          *,
-          student_payments (*)
-        `)
-            .eq('archived', false)
-
+                *,
+                students (*)
+            `)
+            .eq('billing_period_id', billingPeriodId)
         if (error) throw error
         return data || []
     },
@@ -106,21 +104,22 @@ export const paymentService = {
         const { data, error } = await supabase
             .from('teachers')
             .select(`
-          *,
-          teacher_payouts (*)
-        `)
+                *,
+                teacher_payouts (*)
+            `)
             .eq('archived', false)
 
         if (error) throw error
         return data || []
     },
 
-    // Update payment status
-    async updatePaymentStatus(paymentId, status, approverName = null) {
+    // Update student payment status
+    async updatePaymentStatus(paymentId, status, approverId = null) {
         const updateData = {
             status,
-            ...(approverName && {
-                approved_by: approverName,
+            updated_at: new Date().toISOString(),
+            ...(approverId && status === 'paid' && {
+                approved_by: approverId,
                 approved_date: new Date().toISOString()
             })
         }
@@ -129,7 +128,6 @@ export const paymentService = {
             .from('student_payments')
             .update(updateData)
             .eq('id', paymentId)
-
             .select()
             .single()
 
@@ -155,269 +153,47 @@ export const paymentService = {
         return allPayments
     },
 
-    // Toggle student payment for course
-    async toggleStudentPayment(courseId, studentId) {
-        // Get current user profile for tracking
+    // Record student payment for a course
+    async recordStudentPayment(courseId, studentId, billingPeriodId) {
         const userProfile = await profileService.getCurrentUserProfile()
 
-        // Get course info for price and details
-        const { data: courseData, error: courseError } = await supabase
-            .from('course_instances')
-            .select('price, subject, school_year')
-            .eq('id', courseId)
-
-            .single()
-
-        if (courseError) throw courseError
-
-        // Get student info
-        const { data: studentData, error: studentError } = await supabase
-            .from('students')
-            .select('name')
-            .eq('id', studentId)
-
-            .single()
-
-        if (studentError) throw studentError
-
-        const currentMonth = new Date().toLocaleString('default', { month: 'long', year: 'numeric' })
-
-        // Check if payment exists in student_payments
-        const { data: existingPayment, error: fetchError } = await supabase
+        const { data, error } = await supabase
             .from('student_payments')
-            .select('*')
-            .eq('course_id', courseId)
-            .eq('student_id', studentId)
-
+            .insert([{
+                course_id: courseId,
+                student_id: studentId,
+                amount: 0,
+                status: 'pending',
+                billing_period_id: billingPeriodId,
+                recorded_by_id: userProfile?.id || null
+            }])
+            .select()
             .single()
 
-        if (fetchError && fetchError.code !== 'PGRST116') throw fetchError
-
-        if (existingPayment) {
-            const newStatus = existingPayment.status === 'paid' ? 'pending' : 'paid'
-            const { data, error } = await supabase
-                .from('student_payments')
-                .update({
-                    status: newStatus,
-                    amount: courseData.price || 0,
-                    month: currentMonth,
-                    updated_at: new Date().toISOString(),
-                    ...(newStatus === 'paid' && userProfile && {
-                        recorded_by_id: userProfile.id,
-                        recorded_by_name: userProfile.full_name
-                    })
-                })
-                .eq('id', existingPayment.id)
-
-                .select()
-                .single()
-
-            if (error) throw error
-
-            // Update revenue table - check if exists first
-            const { data: existingRevenue } = await supabase
-                .from('revenue')
-                .select('id')
-
-                .eq('student_id', studentId)
-                .eq('course_id', courseId)
-                .eq('month', currentMonth)
-                .single()
-
-            if (existingRevenue) {
-                await supabase
-                    .from('revenue')
-                    .update({
-                        student_name: studentData.name,
-                        course: `${courseData.subject} - ${courseData.school_year}`,
-                        amount: courseData.price || 0,
-                        paid: newStatus === 'paid',
-                        updated_at: new Date().toISOString(),
-                        ...(newStatus === 'paid' && userProfile && {
-                            recorded_by_id: userProfile.id,
-                            recorded_by_name: userProfile.full_name
-                        })
-                    })
-                    .eq('id', existingRevenue.id)
-            } else {
-                await supabase
-                    .from('revenue')
-                    .insert({
-
-                        student_id: studentId,
-                        course_id: courseId,
-                        student_name: studentData.name,
-                        course: `${courseData.subject} - ${courseData.school_year}`,
-                        amount: courseData.price || 0,
-                        month: currentMonth,
-                        paid: newStatus === 'paid',
-                        created_at: new Date().toISOString(),
-                        updated_at: new Date().toISOString(),
-                        ...(newStatus === 'paid' && userProfile && {
-                            recorded_by_id: userProfile.id,
-                            recorded_by_name: userProfile.full_name
-                        })
-                    })
-            }
-
-            return data
-        } else {
-            const { data, error } = await supabase
-                .from('student_payments')
-                .insert([{
-                    course_id: courseId,
-                    student_id: studentId,
-
-                    amount: courseData.price || 0,
-                    month: currentMonth,
-                    status: 'paid',
-                    payment_date: new Date().toISOString(),
-                    ...(userProfile && {
-                        recorded_by_id: userProfile.id,
-                        recorded_by_name: userProfile.full_name
-                    })
-                }])
-                .select()
-                .single()
-
-            if (error) throw error
-
-            // Insert into revenue table - check if exists first
-            const { data: existingRevenue } = await supabase
-                .from('revenue')
-                .select('id')
-
-                .eq('student_id', studentId)
-                .eq('course_id', courseId)
-                .eq('month', currentMonth)
-                .single()
-
-            if (existingRevenue) {
-                await supabase
-                    .from('revenue')
-                    .update({
-                        student_name: studentData.name,
-                        course: `${courseData.subject} - ${courseData.school_year}`,
-                        amount: courseData.price || 0,
-                        paid: true,
-                        updated_at: new Date().toISOString(),
-                        ...(userProfile && {
-                            recorded_by_id: userProfile.id,
-                            recorded_by_name: userProfile.full_name
-                        })
-                    })
-                    .eq('id', existingRevenue.id)
-            } else {
-                await supabase
-                    .from('revenue')
-                    .insert({
-
-                        student_id: studentId,
-                        course_id: courseId,
-                        student_name: studentData.name,
-                        course: `${courseData.subject} - ${courseData.school_year}`,
-                        amount: courseData.price || 0,
-                        month: currentMonth,
-                        paid: true,
-                        created_at: new Date().toISOString(),
-                        updated_at: new Date().toISOString(),
-                        ...(userProfile && {
-                            recorded_by_id: userProfile.id,
-                            recorded_by_name: userProfile.full_name
-                        })
-                    })
-            }
-
-            return data
-        }
+        if (error) throw error
+        return data
     },
 
-    // Toggle teacher payment for a course (creates/updates teacher_payouts)
-    async toggleTeacherPayment(courseId, teacherId, amount, percentage) {
-        // Get current user profile for tracking
+    // Record teacher payout for a course/billing period
+    async recordTeacherPayout(teacherId, amount, percentage = 50, totalGenerated = 0, billingPeriodId = null) {
         const userProfile = await profileService.getCurrentUserProfile()
 
-        const currentMonth = new Date().toLocaleString('default', { month: 'long', year: 'numeric' })
-
-        // Get teacher info
-        const { data: teacherData, error: teacherError } = await supabase
-            .from('teachers')
-            .select('name')
-            .eq('id', teacherId)
-
-            .single()
-
-        if (teacherError) throw teacherError
-
-        // Check if payout exists for this teacher and month
-        const { data: existingPayout, error: fetchError } = await supabase
+        const { data, error } = await supabase
             .from('teacher_payouts')
-            .select('*')
-            .eq('teacher_id', teacherId)
-
-            .eq('month', currentMonth)
+            .insert([{
+                teacher_id: teacherId,
+                amount: amount || 0,
+                percentage: percentage,
+                total_generated: totalGenerated,
+                status: 'pending',
+                billing_period_id: billingPeriodId,
+                recorded_by_id: userProfile?.id || null
+            }])
+            .select()
             .single()
 
-        if (fetchError && fetchError.code !== 'PGRST116') throw fetchError
-
-        if (existingPayout) {
-            // If a pending payout already exists, throw an error to prevent duplicates
-            if (existingPayout.status === 'pending') {
-                throw new Error('PAYOUT_ALREADY_PENDING')
-            }
-            // If payout was approved/paid, allow creating a new pending request
-            const isPaidState = existingPayout.status === 'paid' || existingPayout.status === 'approved'
-            if (isPaidState) {
-                // Update to pending for re-review (e.g., amount changed)
-                const { data, error } = await supabase
-                    .from('teacher_payouts')
-                    .update({
-                        status: 'pending',
-                        amount: amount,
-                        percentage: percentage,
-                        payment_date: null, // Only set when manager approves
-                        updated_at: new Date().toISOString(),
-                        ...(userProfile && {
-                            recorded_by_id: userProfile.id,
-                            recorded_by_name: userProfile.full_name
-                        })
-                    })
-                    .eq('id', existingPayout.id)
-
-                    .select()
-                    .single()
-
-                if (error) throw error
-                return { ...data, isPaid: false, alreadyExists: true }
-            }
-            // For any other status, don't allow duplicates
-            throw new Error('PAYOUT_ALREADY_PENDING')
-        } else {
-            // Create new payout record with status 'pending' - manager must approve
-            const { data, error } = await supabase
-                .from('teacher_payouts')
-                .insert([{
-                    teacher_id: teacherId,
-
-                    professor_name: teacherData?.name || 'Unknown',
-                    percentage: percentage,
-                    amount: amount,
-                    month: currentMonth,
-                    status: 'pending',
-                    payment_date: null, // Only set when manager approves
-                    created_at: new Date().toISOString(),
-                    updated_at: new Date().toISOString(),
-                    ...(userProfile && {
-                        recorded_by_id: userProfile.id,
-                        recorded_by_name: userProfile.full_name
-                    })
-                }])
-                .select()
-                .single()
-
-            if (error) throw error
-            return { ...data, isPaid: false }
-        }
+        if (error) throw error
+        return data
     },
 
     // Check if teacher is paid for current month
@@ -428,7 +204,6 @@ export const paymentService = {
             .from('teacher_payouts')
             .select('status')
             .eq('teacher_id', teacherId)
-
             .eq('month', targetMonth)
             .single()
 
@@ -439,18 +214,92 @@ export const paymentService = {
 
     // Get student payments
     async getStudentPayments() {
-        // There is no direct `payments` table in current schema; use `student_payments`.
         const { data, error } = await supabase
             .from('student_payments')
             .select(`
-          *,
-          students(name),
-          course_instances(subject)
-        `)
-
+                *,
+                students(name),
+                course_instances(subject),
+                profiles!student_payments_recorded_by_id_fkey (full_name)
+            `)
             .order('created_at', { ascending: false })
+
+        if (error) throw error
+
+        // Enrich with recorded_by_name for backward compatibility
+        return (data || []).map((payment) => ({
+            ...payment,
+            recorded_by_name: payment.profiles?.full_name || '-'
+        }))
+    },
+
+    // Get billing periods
+    async getBillingPeriods(courseId) {
+        const { data, error } = await supabase
+            .from('billing_periods')
+            .select('*')
+            .eq('course_id', courseId)
+            .order('start_date', { ascending: false })
 
         if (error) throw error
         return data || []
     },
+
+    async createBillingPeriod(courseId, startDate, endDate) {
+        try {
+            // 1. Create the billing period row
+            const { data: billingPeriod, error: billingError } = await supabase
+                .from('billing_periods')
+                .insert([{
+                    course_id: courseId,
+                    start_date: startDate,
+                    end_date: endDate
+                }])
+                .select()
+                .single()
+
+            if (billingError) throw billingError
+
+            // 2. Fetch all active student enrollments for this specific course
+            // Adjust 'course_students' to match your actual junction table name
+            const { data: enrollments, error: enrollmentError } = await supabase
+                .from('course_enrollments')
+                .select('student_id, status')
+                .eq('course_id', courseId)
+            // Optional: Only create bills for students who aren't dropped/cancelled
+            // .eq('status', 'active') 
+
+            if (enrollmentError) throw enrollmentError
+
+            // 3. If there are students enrolled, bulk insert rows into the payments table
+            if (enrollments && enrollments.length > 0) {
+
+                // Map the enrollment data into rows matching your payments schema (Image 4)
+                const paymentRows = enrollments.map(enrollment => ({
+                    student_id: enrollment.student_id,
+                    course_id: courseId,
+                    billing_period_id: billingPeriod.id,
+                    amount: 0, // IMPORTANT: Set your base price logic here (e.g., pulling from course table)
+                    status: 'pending' // Or whatever default status string your app uses
+                }))
+
+                // Replace 'payments' with the exact name of your new image table
+                const { error: paymentInsertError } = await supabase
+                    .from('student_payments')
+                    .insert(paymentRows)
+
+                if (paymentInsertError) throw paymentInsertError
+            }
+
+            // Return the created billing period along with a success flag or confirmation
+            return {
+                ...billingPeriod,
+                payments_generated: enrollments ? enrollments.length : 0
+            }
+
+        } catch (error) {
+            console.error("Failed to create billing period and initialize payments:", error)
+            throw error
+        }
+    }
 }

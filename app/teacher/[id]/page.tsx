@@ -453,7 +453,7 @@ function TeacherProfileContent() {
 
 export default function TeacherProfile() {
   return (
-    <AuthGuard requiredRoles={['owner', 'manager', 'receptionist']}>
+    <AuthGuard requiredRoles={['manager', 'receptionist']}>
       <TeacherProfileContent />
     </AuthGuard>
   )
