@@ -34,7 +34,7 @@
     "**/*.tsx",
     ".next/types/**/*.ts",
     ".next/dev/types/**/*.ts"
-, "services/teacherService.js", "services/studentService.js", "components/tabs/CourseTab"  ],
+, "services/teacherService.ts", "services/studentService.ts", "components/tabs/CourseTab"  ],
   "exclude": [
     "node_modules"
   ]

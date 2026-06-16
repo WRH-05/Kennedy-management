@@ -12,18 +12,17 @@ export default function SummaryCards() {
 
   const revenue = revenueData || []
   const allPayoutsForTotal = payoutsData || []
-  
-  const students = useMemo(() => 
-    (allStudents || []).filter((student: any) => !student.archived), 
+  const students = useMemo(() =>
+    (allStudents && 'data' in allStudents ? allStudents.data : []),
     [allStudents]
   )
 
-  const totalRevenue = useMemo(() => 
+  const totalRevenue = useMemo(() =>
     revenue.reduce((sum: number, item: any) => sum + (item.paid && item.amount ? item.amount : 0), 0),
     [revenue]
   )
 
-  const totalPayouts = useMemo(() => 
+  const totalPayouts = useMemo(() =>
     allPayoutsForTotal.reduce((sum: number, payout: any) => sum + ((payout.status === 'approved' || payout.status === 'paid') && payout.amount ? payout.amount : 0), 0),
     [allPayoutsForTotal]
   )
@@ -42,7 +41,7 @@ export default function SummaryCards() {
           <p className="text-xs text-muted-foreground">This month</p>
         </CardContent>
       </Card>
-      
+
       <Card>
         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
           <CardTitle className="text-sm font-medium">Total Payouts</CardTitle>

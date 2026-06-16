@@ -16,26 +16,22 @@ export default function DashboardHeader() {
   const { user, signOut } = useAuth()
   const [searchQuery, setSearchQuery] = useState("")
 
-  const { students: allStudents, isLoading: isStudentLoading, mutate: mutateStudents } = useStudents();
-  const { teachers: allTeachers, isLoading: isTeacherLoading, mutate: mutateTeachers } = useTeachers();
-  const { courses: allCourses, isLoading: isCoursesLoading, mutate: mutateCourses } = useCourses();
+  const { students: allStudents } = useStudents();
+  const { teachers: allTeachers } = useTeachers();
+  const { courses: allCourses } = useCourses();
 
-  const refreshAll = () => {
-    mutateStudents();
-    mutateTeachers();
-    mutateCourses();
-  }
-
-  const students = useMemo(() => 
-    (allStudents || []).filter((student: any) => !student.archived), 
+  const students = useMemo(() =>
+    (allStudents && 'data' in allStudents ? allStudents.data : []),
     [allStudents]
   )
-  const teachers = useMemo(() => 
-    (allTeachers || []).filter((teacher: any) => !teacher.archived), 
+
+  const teachers = useMemo(() =>
+    (allTeachers && 'data' in allTeachers ? allTeachers.data : []),
     [allTeachers]
   )
-  const courses = useMemo(() => 
-    (allCourses || []).filter((course: any) => !course.archived), 
+
+  const courses = useMemo(() =>
+    (allCourses && 'data' in allCourses ? allCourses.data : []),
     [allCourses]
   )
 
@@ -49,9 +45,9 @@ export default function DashboardHeader() {
 
   const searchResults = useMemo(() => {
     if (!searchQuery.trim()) return []
-    
+
     const query = searchQuery.toLowerCase()
-    
+
     const studentResults = students
       .filter((student: any) => student.name?.toLowerCase().includes(query))
       .map((student: any) => ({ ...student, type: "student" }))
@@ -90,7 +86,7 @@ export default function DashboardHeader() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between items-center h-16">
           <h1 className="text-xl font-semibold text-gray-900"><a href="/">Manager Dashboard</a></h1>
-          
+
           <div className="flex-1 max-w-md mx-4 relative">
             <div className="relative">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
@@ -127,8 +123,8 @@ export default function DashboardHeader() {
                     )}
                     {result.type === "teacher" && (
                       <p className="text-sm text-gray-600">
-                        {result.subjects ? (Array.isArray(result.subjects) 
-                          ? result.subjects.join(", ") 
+                        {result.subjects ? (Array.isArray(result.subjects)
+                          ? result.subjects.join(", ")
                           : (typeof result.subjects === 'string' ? result.subjects : "No subjects")
                         ) : "No subjects"}
                       </p>

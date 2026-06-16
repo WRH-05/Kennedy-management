@@ -1,7 +1,8 @@
 import { supabase } from "@/lib/supabase"
 import { Tables, TablesInsert, TablesUpdate } from "@/types/database.types"
 import { PostgrestError } from "@supabase/supabase-js"
-export const studentService = {
+
+export const courseEnrollmentService = {
   // Get all students (excluding archived unless specified)
   async getAllStudents(
     page = 1,
@@ -40,20 +41,14 @@ export const studentService = {
     };
   },
 
-  // Get student by ID
-  async getStudentById(id: string): Promise<Tables<"students">[] | PostgrestError> {
-    try {
-      const { data, error } = await supabase
-        .from('students')
-        .select('*')
-        .eq('id', id)
-        .single()
+  async getCourseEnrollmentByStudentId(student_id: string): Promise<Tables<"course_enrollments">[]> {
+    const { data, error } = await supabase
+      .from('course_enrollments')
+      .select('*, course_instances (*)')
+      .eq('student_id', student_id)
 
-      if (error) throw error
-      return data
-    } catch (error) {
-      throw error
-    }
+    if (error) throw error
+    return data
   },
 
   async addStudent(studentData: TablesInsert<"students">): Promise<Tables<"students"> | PostgrestError> {

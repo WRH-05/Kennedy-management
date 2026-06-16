@@ -341,8 +341,8 @@ export type Database = {
           school: string | null
           school_year: string | null
           specialty: string | null
-          registration_fee_paid: boolean | null
-          archived: boolean | null
+          registration_fee_paid: boolean
+          archived: boolean
           archived_date: string | null
           created_at: string | null
           updated_at: string | null
@@ -350,35 +350,35 @@ export type Database = {
         }
         Insert: {
           name: string
-          birth_date?: string | null
-          phone?: string | null
-          email?: string | null
-          address?: string | null
-          school?: string | null
-          school_year?: string | null
-          specialty?: string | null
-          registration_fee_paid?: boolean | null
-          archived?: boolean | null
-          archived_date?: string | null
+          birth_date: string | null
+          phone: string | null
+          email: string | null
+          address: string | null
+          school: string | null
+          school_year: string | null
+          specialty: string | null
+          registration_fee_paid: boolean
+          archived: boolean
+          archived_date: string | null
           created_at?: string | null
-          school_level?: string | null
+          school_level: string | null
           updated_at?: string | null
         }
         Update: {
-          id?: string
-          name?: string
-          birth_date?: string | null
-          phone?: string | null
-          email?: string | null
-          address?: string | null
-          school?: string | null
-          school_year?: string | null
-          specialty?: string | null
-          registration_fee_paid?: boolean | null
-          archived?: boolean | null
-          archived_date?: string | null
+          id: string
+          name: string
+          birth_date: string | null
+          phone: string | null
+          email: string | null
+          address: string | null
+          school: string | null
+          school_year: string | null
+          specialty: string | null
+          registration_fee_paid: boolean
+          archived: boolean
+          archived_date: string | null
           created_at?: string | null
-          school_level?: string | null
+          school_level: string | null
           updated_at?: string | null
         }
         Relationships: []

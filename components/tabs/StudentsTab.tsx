@@ -16,22 +16,23 @@ import { Users, Plus, Archive, MoreHorizontal, Pencil } from "lucide-react"
 import { studentService } from "@/services/studentService"
 import { archiveService } from "@/services/archiveService"
 import { useToast } from "@/hooks/use-toast"
-import { TablesInsert } from "@/types/database.types"
+import { Tables, TablesInsert } from "@/types/database.types"
+import { courseEnrollmentService } from "@/services/courseEnrollmentService"
 
 interface StudentsTabProps {
-  students: any[]
-  courses: any[]
-  onStudentsUpdate: (students: any[]) => void
+  students: Tables<"students">[]
+  courses: Tables<"course_instances">[]
+  onStudentsUpdate: (students: Tables<"students">[]) => void
   canAdd?: boolean
   showCourses?: boolean
   showPaymentStatus?: boolean
   pendingArchiveIds?: Set<string>
 }
 
-export default function StudentsTab({ 
-  students, 
-  courses, 
-  onStudentsUpdate, 
+export default function StudentsTab({
+  students,
+  courses,
+  onStudentsUpdate,
   canAdd = false,
   showCourses = true,
   showPaymentStatus = true,
@@ -40,33 +41,22 @@ export default function StudentsTab({
   const router = useRouter()
   const { toast } = useToast()
   const [showAddStudentDialog, setShowAddStudentDialog] = useState(false)
+  const [studentCourses, setStudentCourses] = useState<Tables<"course_enrollments">[]>([])
   const [isSubmitting, setIsSubmitting] = useState(false)
 
-  type Student = {
-    name: string,
-    schoolLevel: string,
-    schoolYear: string,
-    specialty: string | null,
-    address: string,
-    birth_date: string,
-    phone: string,
-    email: string,
-    photos: boolean,
-    copyOfId: boolean,
-    registrationForm: boolean,
-    registration_fee_paid: boolean,
-  }
-  
   const [newStudent, setNewStudent] = useState<TablesInsert<"students">>({
     name: "",
-    school_level: "",
-    school_year: "",
-    specialty: null,
-    address: "",
     birth_date: "",
     phone: "",
     email: "",
+    address: "",
+    school: "",
+    school_level: "",
+    school_year: "",
+    specialty: null,
     registration_fee_paid: false,
+    archived: false,
+    archived_date: null
   })
 
   // School years based on Algerian education system (years.json)
@@ -135,40 +125,39 @@ export default function StudentsTab({
 
   const handleAddStudent = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (isSubmitting) return // Prevent double submission
-    
+    if (isSubmitting) return
+
     setIsSubmitting(true)
     try {
       console.log("Adding student:", newStudent)
       const student = {
+        ...newStudent,
         name: newStudent.name,
+        birth_date: newStudent.birth_date,
         school_level: newStudent.school_level,
         school_year: newStudent.school_year,
         specialty: newStudent.specialty,
         address: newStudent.address,
-        birth_date: newStudent.birth_date,
         phone: newStudent.phone,
         email: newStudent.email,
         registration_fee_paid: newStudent.registration_fee_paid,
       }
-      console.log("Student object to add:", student)
       await studentService.addStudent(student)
-      console.log("Student added successfully")
       const updatedStudents = await studentService.getAllStudents()
-      onStudentsUpdate(updatedStudents)
+      onStudentsUpdate(updatedStudents.data)
       setNewStudent({
         name: "",
-        schoolLevel: "",
-        schoolYear: "",
-        specialty: null,
-        address: "",
         birth_date: "",
         phone: "",
         email: "",
-        photos: false,
-        copyOfId: false,
-        registrationForm: false,
+        address: "",
+        school: "",
+        school_level: "",
+        school_year: "",
+        specialty: null,
         registration_fee_paid: false,
+        archived: false,
+        archived_date: null
       })
       setShowAddStudentDialog(false)
       toast({
@@ -187,12 +176,9 @@ export default function StudentsTab({
     }
   }
 
-  const handleArchiveStudent = async (studentId: number, studentName: string) => {
+  const handleArchiveStudent = async (student_id: string, studentName: string) => {
     try {
-      // Create archive request in database
-      await archiveService.createArchiveRequest('student', studentId, studentName)
-      
-      // Show visual feedback (request created, will be processed by manager)
+      await archiveService.createArchiveRequest('student', student_id, studentName)
       toast({
         title: "Archive request submitted",
         description: "Waiting for manager approval.",
@@ -207,8 +193,10 @@ export default function StudentsTab({
     }
   }
 
-  const getStudentCourses = (studentId: number) => {
-    return courses.filter((course) => course.student_ids?.includes(studentId))
+  const getStudentCourses = async (student_id: string) => {
+    // do stuff
+    const enrollment = await courseEnrollmentService.getCourseEnrollmentByStudentId(student_id)
+    setStudentCourses(enrollment)
   }
 
   return (
@@ -245,7 +233,7 @@ export default function StudentsTab({
                     <div className="space-y-2">
                       <Label htmlFor="schoolLevel">School Level</Label>
                       <Select
-                        value={newStudent.schoolLevel}
+                        value={newStudent.school_level || ''}
                         onValueChange={handleSchoolLevelChange}
                       >
                         <SelectTrigger>
@@ -261,15 +249,15 @@ export default function StudentsTab({
                     <div className="space-y-2">
                       <Label htmlFor="schoolYear">School Year</Label>
                       <Select
-                        value={newStudent.schoolYear}
+                        value={newStudent.school_year || ''}
                         onValueChange={handleSchoolYearChange}
-                        disabled={!newStudent.schoolLevel}
+                        disabled={!newStudent.school_level}
                       >
                         <SelectTrigger>
-                          <SelectValue placeholder={newStudent.schoolLevel ? "Select school year" : "Select level first"} />
+                          <SelectValue placeholder={newStudent.school_level ? "Select school year" : "Select level first"} />
                         </SelectTrigger>
                         <SelectContent>
-                          {newStudent.schoolLevel && schoolYearOptions[newStudent.schoolLevel as keyof typeof schoolYearOptions]?.map((year) => (
+                          {newStudent.school_level && schoolYearOptions[newStudent.school_level as keyof typeof schoolYearOptions]?.map((year) => (
                             <SelectItem key={year.code} value={year.code}>
                               {year.code} - {year.name}
                             </SelectItem>
@@ -277,7 +265,7 @@ export default function StudentsTab({
                         </SelectContent>
                       </Select>
                     </div>
-                    {newStudent.schoolLevel === "secondary" && newStudent.schoolYear && (
+                    {newStudent.school_level === "secondary" && newStudent.school_year && (
                       <div className="space-y-2">
                         <Label htmlFor="specialty">Specialty/Stream</Label>
                         <Select
@@ -288,7 +276,7 @@ export default function StudentsTab({
                             <SelectValue placeholder="Select specialty" />
                           </SelectTrigger>
                           <SelectContent>
-                            {getSpecialtyOptions(newStudent.schoolYear).map((spec) => (
+                            {getSpecialtyOptions(newStudent.school_year).map((spec) => (
                               <SelectItem key={spec.code} value={spec.code}>
                                 {spec.code} - {spec.name}
                               </SelectItem>
@@ -301,7 +289,7 @@ export default function StudentsTab({
                       <Label htmlFor="address">Address</Label>
                       <Input
                         id="address"
-                        value={newStudent.address}
+                        value={newStudent.address || ""}
                         onChange={(e) => setNewStudent({ ...newStudent, address: e.target.value })}
                         required
                       />
@@ -311,7 +299,7 @@ export default function StudentsTab({
                       <Input
                         id="birth_date"
                         type="date"
-                        value={newStudent.birth_date}
+                        value={newStudent.birth_date || ""}
                         onChange={(e) => setNewStudent({ ...newStudent, birth_date: e.target.value })}
                         required
                       />
@@ -320,7 +308,7 @@ export default function StudentsTab({
                       <Label htmlFor="phone">Phone Number</Label>
                       <Input
                         id="phone"
-                        value={newStudent.phone}
+                        value={newStudent.phone || ""}
                         onChange={(e) => setNewStudent({ ...newStudent, phone: e.target.value })}
                         required
                       />
@@ -330,45 +318,9 @@ export default function StudentsTab({
                       <Input
                         id="email"
                         type="email"
-                        value={newStudent.email}
+                        value={newStudent.email || ""}
                         onChange={(e) => setNewStudent({ ...newStudent, email: e.target.value })}
                       />
-                    </div>
-                  </div>
-
-                  <div className="space-y-4">
-                    <Label>Document Checklist</Label>
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                      <div className="flex items-center space-x-2">
-                        <Checkbox
-                          id="photos"
-                          checked={newStudent.photos}
-                          onCheckedChange={(checked) =>
-                            setNewStudent({ ...newStudent, photos: checked as boolean })
-                          }
-                        />
-                        <Label htmlFor="photos">Photos</Label>
-                      </div>
-                      <div className="flex items-center space-x-2">
-                        <Checkbox
-                          id="copyOfId"
-                          checked={newStudent.copyOfId}
-                          onCheckedChange={(checked) =>
-                            setNewStudent({ ...newStudent, copyOfId: checked as boolean })
-                          }
-                        />
-                        <Label htmlFor="copyOfId">Copy of ID</Label>
-                      </div>
-                      <div className="flex items-center space-x-2">
-                        <Checkbox
-                          id="registrationForm"
-                          checked={newStudent.registrationForm}
-                          onCheckedChange={(checked) =>
-                            setNewStudent({ ...newStudent, registrationForm: checked as boolean })
-                          }
-                        />
-                        <Label htmlFor="registrationForm">Registration Form</Label>
-                      </div>
                     </div>
                   </div>
 
@@ -412,7 +364,6 @@ export default function StudentsTab({
             </TableHeader>
             <TableBody>
               {students.map((student) => {
-                const studentCourses = getStudentCourses(student.id)
                 return (
                   <TableRow key={student.id} className="group">
                     <TableCell className="font-medium">
