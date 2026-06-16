@@ -16,6 +16,7 @@ import { Users, Plus, Archive, MoreHorizontal, Pencil } from "lucide-react"
 import { studentService } from "@/services/studentService"
 import { archiveService } from "@/services/archiveService"
 import { useToast } from "@/hooks/use-toast"
+import { TablesInsert } from "@/types/database.types"
 
 interface StudentsTabProps {
   students: any[]
@@ -56,18 +57,15 @@ export default function StudentsTab({
     registration_fee_paid: boolean,
   }
   
-  const [newStudent, setNewStudent] = useState<Student>({
+  const [newStudent, setNewStudent] = useState<TablesInsert<"students">>({
     name: "",
-    schoolLevel: "",
-    schoolYear: "",
+    school_level: "",
+    school_year: "",
     specialty: null,
     address: "",
     birth_date: "",
     phone: "",
     email: "",
-    photos: false,
-    copyOfId: false,
-    registrationForm: false,
     registration_fee_paid: false,
   })
 
@@ -120,8 +118,8 @@ export default function StudentsTab({
   const handleSchoolLevelChange = (level: string) => {
     setNewStudent({
       ...newStudent,
-      schoolLevel: level,
-      schoolYear: "",
+      school_level: level,
+      school_year: "",
       specialty: null,
     })
   }
@@ -130,7 +128,7 @@ export default function StudentsTab({
   const handleSchoolYearChange = (year: string) => {
     setNewStudent({
       ...newStudent,
-      schoolYear: year,
+      school_year: year,
       specialty: null,
     })
   }
@@ -144,8 +142,8 @@ export default function StudentsTab({
       console.log("Adding student:", newStudent)
       const student = {
         name: newStudent.name,
-        school_level: newStudent.schoolLevel,
-        school_year: newStudent.schoolYear,
+        school_level: newStudent.school_level,
+        school_year: newStudent.school_year,
         specialty: newStudent.specialty,
         address: newStudent.address,
         birth_date: newStudent.birth_date,

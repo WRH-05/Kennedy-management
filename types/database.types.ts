@@ -332,54 +332,53 @@ export type Database = {
       }
       students: {
         Row: {
-          address: string | null
-          archived: boolean | null
-          archived_date: string | null
-          birth_date: string | null
-          created_at: string | null
-          email: string | null
           id: string
           name: string
+          birth_date: string | null
           phone: string | null
-          registration_fee_paid: boolean | null
+          email: string | null
+          address: string | null
           school: string | null
-          school_level: string | null
           school_year: string | null
           specialty: string | null
+          registration_fee_paid: boolean | null
+          archived: boolean | null
+          archived_date: string | null
+          created_at: string | null
           updated_at: string | null
+          school_level: string | null
         }
         Insert: {
-          address?: string | null
-          archived?: boolean | null
-          archived_date?: string | null
-          birth_date?: string | null
-          created_at?: string | null
-          email?: string | null
-          id?: string
           name: string
+          birth_date?: string | null
           phone?: string | null
-          registration_fee_paid?: boolean | null
+          email?: string | null
+          address?: string | null
           school?: string | null
-          school_level?: string | null
           school_year?: string | null
           specialty?: string | null
+          registration_fee_paid?: boolean | null
+          archived?: boolean | null
+          archived_date?: string | null
+          created_at?: string | null
+          school_level?: string | null
           updated_at?: string | null
         }
         Update: {
-          address?: string | null
-          archived?: boolean | null
-          archived_date?: string | null
-          birth_date?: string | null
-          created_at?: string | null
-          email?: string | null
           id?: string
           name?: string
+          birth_date?: string | null
           phone?: string | null
-          registration_fee_paid?: boolean | null
+          email?: string | null
+          address?: string | null
           school?: string | null
-          school_level?: string | null
           school_year?: string | null
           specialty?: string | null
+          registration_fee_paid?: boolean | null
+          archived?: boolean | null
+          archived_date?: string | null
+          created_at?: string | null
+          school_level?: string | null
           updated_at?: string | null
         }
         Relationships: []
@@ -440,26 +439,26 @@ export type Database = {
       }
       teachers: {
         Row: {
-          address: string | null
-          archived: boolean | null
-          archived_date: string | null
-          created_at: string | null
-          email: string | null
           id: string
           name: string
           phone: string | null
+          email: string | null
+          address: string | null
           school: string | null
           school_years: string[] | null
           subjects: string[] | null
+          archived: boolean | null
+          archived_date: string | null
+          created_at: string | null
           updated_at: string | null
         }
         Insert: {
+          id?: string
           address?: string | null
           archived?: boolean | null
           archived_date?: string | null
           created_at?: string | null
           email?: string | null
-          id?: string
           name: string
           phone?: string | null
           school?: string | null
