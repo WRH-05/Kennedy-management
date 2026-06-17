@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useMemo } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -11,6 +11,7 @@ import { Plus } from "lucide-react"
 import { ScheduleSlotRow } from "./ScheduleSlotRow"
 import { courseService } from "@/services/courseService"
 import { useToast } from "@/hooks/use-toast"
+import { useTeachers } from "@/hooks/useTeachers"
 
 interface ScheduleSlot {
   dayOfWeek: string
@@ -19,19 +20,16 @@ interface ScheduleSlot {
 }
 
 interface AddCourseDialogProps {
-  teachers: any[]
-  students: any[]
   onCourseAdded: (updatedCourses: any[]) => void
 }
 
 const DAYS_OF_WEEK = ["monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday"]
 
-export function AddCourseDialog({ teachers, students, onCourseAdded }: AddCourseDialogProps) {
+export function AddCourseDialog({ onCourseAdded }: AddCourseDialogProps) {
   const { toast } = useToast()
   const [isOpen, setIsOpen] = useState(false)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [selectedPrivateStudents, setSelectedPrivateStudents] = useState<string[]>([])
-
   const [newCourse, setNewCourse] = useState({
     teacherId: "",
     teacherName: "",
@@ -42,6 +40,12 @@ export function AddCourseDialog({ teachers, students, onCourseAdded }: AddCourse
     price: 500,
   })
 
+  const { teachers: allTeachers, isLoading: loading } = useTeachers()
+  const teachers = useMemo(() => {
+    const list = Array.isArray(allTeachers) ? allTeachers : allTeachers?.data;
+    return list;
+  }, [allTeachers]);
+
   const [scheduleSlots, setScheduleSlots] = useState<ScheduleSlot[]>([
     { dayOfWeek: "", startHour: "09:00", duration: 2 },
   ])
@@ -49,10 +53,6 @@ export function AddCourseDialog({ teachers, students, onCourseAdded }: AddCourse
   const [teacherSearchQuery, setTeacherSearchQuery] = useState("")
   const [showTeacherResults, setShowTeacherResults] = useState(false)
   const [filteredTeachers, setFilteredTeachers] = useState<any[]>([])
-  
-  const [studentSearchQuery, setStudentSearchQuery] = useState("")
-  const [showStudentResults, setShowStudentResults] = useState(false)
-  const [filteredStudents, setFilteredStudents] = useState<any[]>([])
 
   useEffect(() => {
     if (teacherSearchQuery.trim()) {
@@ -66,20 +66,6 @@ export function AddCourseDialog({ teachers, students, onCourseAdded }: AddCourse
       setShowTeacherResults(false)
     }
   }, [teacherSearchQuery, teachers])
-
-  useEffect(() => {
-    if (studentSearchQuery.trim()) {
-      const filtered = students.filter((s) =>
-        s.name.toLowerCase().includes(studentSearchQuery.toLowerCase()) &&
-        !selectedPrivateStudents.includes(s.id)
-      )
-      setFilteredStudents(filtered)
-      setShowStudentResults(true)
-    } else {
-      setFilteredStudents([])
-      setShowStudentResults(false)
-    }
-  }, [studentSearchQuery, students, selectedPrivateStudents])
 
   const handleUpdateSlot = (index: number, fields: Partial<ScheduleSlot>) => {
     setScheduleSlots(scheduleSlots.map((slot, i) => (i === index ? { ...slot, ...fields } : slot)))
@@ -120,7 +106,7 @@ export function AddCourseDialog({ teachers, students, onCourseAdded }: AddCourse
 
       await courseService.addCourseInstance(coursePayload, scheduleSlots)
       const updatedCourses = await courseService.getAllCourseInstances()
-      onCourseAdded(updatedCourses)
+      onCourseAdded(updatedCourses.data)
 
       // Reset
       setNewCourse({
@@ -167,7 +153,7 @@ export function AddCourseDialog({ teachers, students, onCourseAdded }: AddCourse
         </DialogHeader>
         <form onSubmit={handleAddCourse} className="space-y-4">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            
+
             {/* Teacher Search */}
             <div className="space-y-2 md:col-span-2">
               <Label htmlFor="teacherSearch">Teacher</Label>
@@ -282,67 +268,6 @@ export function AddCourseDialog({ teachers, students, onCourseAdded }: AddCourse
               </Select>
             </div>
 
-            {/* Private Students Handling */}
-            {newCourse.courseType === "Private" && (
-              <div className="space-y-2 md:col-span-2">
-                <Label>Select Students (max 2)</Label>
-                <div className="relative">
-                  <Input
-                    placeholder="Search for a student..."
-                    value={studentSearchQuery}
-                    onChange={(e) => setStudentSearchQuery(e.target.value)}
-                    disabled={selectedPrivateStudents.length >= 2}
-                  />
-                  {showStudentResults && filteredStudents.length > 0 && (
-                    <div className="absolute top-full left-0 right-0 mt-1 bg-white border rounded-md shadow-lg z-50 max-h-40 overflow-y-auto">
-                      {filteredStudents.map((student) => (
-                        <div
-                          key={student.id}
-                          className="px-4 py-2 hover:bg-gray-50 cursor-pointer border-b last:border-b-0"
-                          onClick={() => {
-                            if (selectedPrivateStudents.length < 2) {
-                              setSelectedPrivateStudents([...selectedPrivateStudents, student.id])
-                              setStudentSearchQuery("")
-                              setShowStudentResults(false)
-                            }
-                          }}
-                        >
-                          <div className="font-medium">{student.name}</div>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </div>
-                <div className="flex flex-wrap gap-2 mt-2">
-                  {selectedPrivateStudents.map((id) => {
-                    const student = students.find((s) => s.id === id)
-                    return student ? (
-                      <Badge
-                        key={id}
-                        variant="secondary"
-                        className="cursor-pointer hover:bg-red-100"
-                        onClick={() => setSelectedPrivateStudents(selectedPrivateStudents.filter((sid) => sid !== id))}
-                      >
-                        {student.name} ×
-                      </Badge>
-                    ) : null
-                  })}
-                </div>
-              </div>
-            )}
-
-            <div className="space-y-2 md:col-span-2">
-              <Label htmlFor="price">
-                {newCourse.courseType === "Group" ? "Monthly Price" : "Session Price"} (DA)
-              </Label>
-              <Input
-                id="price"
-                type="number"
-                value={newCourse.price}
-                onChange={(e) => setNewCourse({ ...newCourse, price: Number.parseInt(e.target.value) })}
-                required
-              />
-            </div>
 
             {/* Dynamic Multi-Schedule Sub-Section */}
             <div className="space-y-3 md:col-span-2 border border-slate-100 p-4 rounded-lg bg-slate-50/50">

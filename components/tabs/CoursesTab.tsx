@@ -10,8 +10,6 @@ import { useToast } from "@/hooks/use-toast"
 
 interface CoursesTabProps {
   courses: any[]
-  teachers: any[]
-  students: any[]
   onCoursesUpdate: (courses: any[]) => void
   canAdd?: boolean
   pendingArchiveIds?: Set<string>
@@ -19,8 +17,6 @@ interface CoursesTabProps {
 
 export default function CoursesTab({
   courses,
-  teachers,
-  students,
   onCoursesUpdate,
   canAdd = false,
   pendingArchiveIds = new Set(),
@@ -54,8 +50,6 @@ export default function CoursesTab({
           </CardTitle>
           {canAdd && (
             <AddCourseDialog 
-              teachers={teachers} 
-              students={students} 
               onCourseAdded={onCoursesUpdate} 
             />
           )}
@@ -80,7 +74,6 @@ export default function CoursesTab({
                 <CourseTableRow
                   key={course.id}
                   course={course}
-                  students={students}
                   pendingArchiveIds={pendingArchiveIds}
                   onArchive={handleArchiveCourse}
                 />

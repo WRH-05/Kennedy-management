@@ -6,6 +6,7 @@ import { useTeachers } from "@/hooks/useTeachers"
 import { usePendingArchives } from "@/hooks/usePayments"
 import CoursesTab from "@/components/tabs/CoursesTab"
 import { Pagination, PaginationContent, PaginationItem, PaginationLink, PaginationPrevious, PaginationNext, PaginationEllipsis } from "@/components/ui/pagination"
+import { useCourseEnrollementStudentsByCourseId } from "@/hooks/useCourseEnrollement"
 
 const PAGE_SIZE = 6
 
@@ -44,27 +45,17 @@ function getPageItems(page: number, totalPages: number) {
 export default function CoursesPage() {
   const [page, setPage] = useState(1)
   const { courses: allCourses, total, isLoading: isCourseLoading, mutate } = usePaginatedCourses(page, PAGE_SIZE)
-  const { students: allStudents, isLoading: isStudentLoading } = useStudents()
-  const { teachers: allTeachers, isLoading: isTeacherLoading } = useTeachers()
   const { data: pendingArchiveMap } = usePendingArchives()
 
-  const students = useMemo(() => {
-    // If it's the initial empty array (never[]), use it. Otherwise, pull from .data
-    const list = Array.isArray(allStudents) ? allStudents : allStudents?.data;
-    return (list || []).filter((s: any) => !s.archived);
-  }, [allStudents]);
-
-  const teachers = useMemo(() => {
-    const list = Array.isArray(allTeachers) ? allTeachers : allTeachers?.data;
-    return (list || []).filter((t: any) => !t.archived);
-  }, [allTeachers]);
 
   const courses = useMemo(() => {
-    const list = Array.isArray(allCourses) ? allCourses : allCourses?.data;
-    return (list || []).filter((c: any) => !c.archived);
+    const list = allCourses;
+    return list;
   }, [allCourses]);
 
-  if (isStudentLoading || isTeacherLoading || isCourseLoading) return <div className="p-8 text-center text-gray-500">Loading Courses Directory...</div>
+
+
+  if (isCourseLoading) return <div className="p-8 text-center text-gray-500">Loading Courses Directory...</div>
 
   const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE))
 
@@ -72,8 +63,6 @@ export default function CoursesPage() {
     <div className="space-y-6">
       <CoursesTab
         courses={courses}
-        teachers={teachers}
-        students={students}
         onCoursesUpdate={() => mutate()}
         canAdd={true}
         pendingArchiveIds={pendingArchiveMap?.course || new Set()}

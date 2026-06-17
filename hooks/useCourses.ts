@@ -40,13 +40,12 @@ export function usePaginatedCourses(page: number, pageSize: number) {
   }
 }
 
-export function useCourse(id: string | number) {
+export function useCourse(id: string) {
   const { data, error, isLoading, isValidating } = useSWR(
     id ? `course-${id}` : null,
     () => courseService.getCourseInstanceById(id),
     swrConfig
   )
-
   return {
     course: data,
     isLoading,
@@ -56,7 +55,7 @@ export function useCourse(id: string | number) {
   }
 }
 
-export function useCoursesByTeacher(teacherId: string | number) {
+export function useCoursesByTeacher(teacherId: string) {
   const { data, error, isLoading, isValidating } = useSWR(
     teacherId ? `courses-teacher-${teacherId}` : null,
     () => courseService.getCoursesByTeacherId(teacherId),
@@ -72,7 +71,7 @@ export function useCoursesByTeacher(teacherId: string | number) {
   }
 }
 
-export function useCoursesByStudent(studentId: string | number) {
+export function useCoursesByStudent(studentId: string ) {
   const { data, error, isLoading, isValidating } = useSWR(
     studentId ? `courses-student-${studentId}` : null,
     () => courseService.getCoursesByStudentId(studentId),

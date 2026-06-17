@@ -1,11 +1,9 @@
 import { supabase } from "@/lib/supabase"
-import { studentService } from "./studentService"
 import { paymentService } from "./paymentService"
-import { Tables } from "@/types/database.types"
+import { Tables, TablesInsert, TablesUpdate } from "@/types/database.types"
 
 export const courseService = {
-    // Get all course instances (excluding archived unless specified)
-    async getAllCourseInstances(page = 1, pageSize = 0, includeArchived = false): Promise<Tables<"course_instances">[]> {
+    async getAllCourseInstances(page = 1, pageSize = 0, includeArchived = false): Promise<{ data: Tables<"course_instances">[]; total: number; page: number; pageSize: number }> {
         const query = pageSize
             ? supabase.from('course_instances').select('*', { count: 'exact' })
             : supabase.from('course_instances').select('*')
@@ -22,27 +20,23 @@ export const courseService = {
 
             if (error) throw error
 
-            // Enrich with student_ids
-            const enrichedData = await this.enrichCoursesWithStudents(data || [])
-
-            return {
-                data: enrichedData,
-                total: count ?? 0,
-                page,
-                pageSize,
-            }
         }
 
         const { data, error } = await query.order('created_at', { ascending: false })
 
-        if (error) throw error
+        if(error) throw error;
 
-        // Enrich with student_ids
-        return await this.enrichCoursesWithStudents(data || [])
+        const enrichedData = await this.enrichCoursesWithStudents(data || [])
+
+        return {
+            data: enrichedData,
+            total: 0,
+            page,
+            pageSize,
+        }
     },
 
-    // Get course instance by ID
-    async getCourseInstanceById(id) {
+    async getCourseInstanceById(id: string): Promise<Tables<"course_instances">> {
         const { data, error } = await supabase
             .from('course_instances')
             .select(`
@@ -56,8 +50,7 @@ export const courseService = {
         return data
     },
 
-    // Get courses by teacher ID
-    async getCoursesByTeacherId(teacherId) {
+    async getCoursesByTeacherId(teacherId: string): Promise<Tables<"course_instances">[]> {
         const { data, error } = await supabase
             .from('course_instances')
             .select('*')
@@ -69,8 +62,7 @@ export const courseService = {
         return await this.enrichCoursesWithStudents(data || [])
     },
 
-    // Get courses by student ID
-    async getCoursesByStudentId(studentId) {
+    async getCoursesByStudentId(studentId: string): Promise<Tables<"course_instances">[]> {
         const { data, error } = await supabase
             .from('course_enrollments')
             .select('course_id')
@@ -92,8 +84,7 @@ export const courseService = {
         return await this.enrichCoursesWithStudents(courses || [])
     },
 
-    // Get enrolled students for a course
-    async getCourseEnrollments(courseId) {
+    async getCourseEnrollments(courseId: string) {
         const { data, error } = await supabase
             .from('course_enrollments')
             .select('student_id, enrolled_at')
@@ -104,9 +95,7 @@ export const courseService = {
         return data || []
     },
 
-    // Enroll student in course
-    async enrollStudent(courseId, studentId, firstBillingId) {
-        // 1. Insert the enrollment
+    async enrollStudent(courseId: string, studentId: string, firstBillingId: string) {
         const { data, error } = await supabase
             .from('course_enrollments')
             .insert([{ course_id: courseId, student_id: studentId }])
@@ -120,22 +109,18 @@ export const courseService = {
             .from("billing_periods")
             .select()
             .eq("course_id", courseId)
-            .order('start_date', { ascending: false }) // Keep an eye on 'start_date' here
+            .order('start_date', { ascending: false })
 
         if (billingError) throw billingError
 
-        // 3. Find the starting billing period (Fixed: removed curly braces for implicit return)
         const firstBilling = billings.find((b) => b.id === firstBillingId);
 
-        // Safety check: ensure the billing period actually exists
         if (!firstBilling) {
             throw new Error(`Billing period with ID ${firstBillingId} not found.`);
         }
 
-        // 4. Filter future billings (Fixed: fixed return and changed start_time to start_date)
         const filteredBillings = billings.filter((b) => b.start_date >= firstBilling.start_date);
 
-        // 5. Record payments (Fixed: changed .map to .forEach, added async/await handling)
         const paymentPromises = filteredBillings.map((fb) =>
             paymentService.recordStudentPayment(courseId, studentId, fb.id)
         );
@@ -144,8 +129,7 @@ export const courseService = {
         return data
     },
 
-    // Unenroll student from course
-    async unenrollStudent(courseId, studentId) {
+    async unenrollStudent(courseId: string, studentId: string) {
         const { error } = await supabase
             .from('course_enrollments')
             .delete()
@@ -156,8 +140,7 @@ export const courseService = {
         return true
     },
 
-    // Get or create course sessions
-    async getCourseSessions(courseId) {
+    async getCourseSessions(courseId: string) {
         const { data, error } = await supabase
             .from('course_sessions')
             .select('*')
@@ -168,8 +151,7 @@ export const courseService = {
         return data || []
     },
 
-    // Create course session
-    async createCourseSession(courseId, startsAt, endsAt = null) {
+    async createCourseSession(courseId: string, startsAt: Date, endsAt = null) {
         const { data, error } = await supabase
             .from('course_sessions')
             .insert([{ course_id: courseId, starts_at: startsAt, ends_at: endsAt }])
@@ -180,9 +162,7 @@ export const courseService = {
         return data
     },
 
-    // Add new course instance
-    async addCourseInstance(instanceData, scheduleSlots) {
-        // 1. Insert the course instance details first
+    async addCourseInstance(instanceData: TablesInsert<"course_instances">, scheduleSlots: any[]) {
         const { data: courseData, error: courseError } = await supabase
             .from('course_instances')
             .insert([{
@@ -194,16 +174,13 @@ export const courseService = {
                 price: instanceData.price,
                 monthly_price: instanceData.monthly_price,
                 status: instanceData.status
-                // Note: Remove the old 'schedule' or 'duration' fields if they are no longer in 'course_instances'
             }])
             .select()
             .single()
 
         if (courseError) throw courseError
 
-        // 2. Map the frontend schedule slots to your Supabase table columns
         const schedulesToInsert = scheduleSlots.map(slot => {
-            // Calculate the end hour format (HH:MM)
             const [hours, minutes] = slot.startHour.split(":").map(Number)
             const totalMinutes = hours * 60 + minutes + (slot.duration * 60)
             const endHours = Math.floor(totalMinutes / 60).toString().padStart(2, "0")
@@ -211,22 +188,18 @@ export const courseService = {
             const endHourString = `${endHours}:${endMins}`
 
             return {
-                course_id: courseData.id,          // Link it to the newly created course uuid
-                day: slot.dayOfWeek,              // Matches 'day' (week_day custom enum or text)
-                start_time: `${slot.startHour}:00`, // Matches 'start_time' time type (HH:MM:SS)
-                end_time: `${endHourString}:00`    // Matches 'end_time' time type (HH:MM:SS)
+                course_id: courseData.id,
+                day: slot.dayOfWeek,
+                start_time: `${slot.startHour}:00`,
+                end_time: `${endHourString}:00`
             }
         })
 
-        // 3. Bulk insert the schedules into your schedule table
-        // Replace 'course_schedules' with your actual table name if it's named differently
         const { error: scheduleError } = await supabase
             .from('course_schedule')
             .insert(schedulesToInsert)
 
         if (scheduleError) {
-            // Optional: If schedule insertion fails, you might want to delete the created course 
-            // to keep data consistent (or handle it via database cascade / RPC)
             console.error("Schedule insertion failed, course created with ID:", courseData.id)
             throw scheduleError
         }
@@ -235,8 +208,7 @@ export const courseService = {
     },
 
     // Update course instance
-    async updateCourseInstance(id, updatedData, scheduleSlots = null) {
-        // 1. Update primary course fields
+    async updateCourseInstance(id: string, updatedData: TablesUpdate<"course_instances">, scheduleSlots: any[]) {
         const { data, error } = await supabase
             .from('course_instances')
             .update(updatedData)
@@ -246,9 +218,7 @@ export const courseService = {
 
         if (error) throw error
 
-        // 2. If schedule slots are provided, handle updating the junction/related table
         if (scheduleSlots) {
-            // First, purge existing schedules for this specific course instance
             const { error: deleteError } = await supabase
                 .from('course_schedule')
                 .delete()
@@ -282,8 +252,7 @@ export const courseService = {
         return data
     },
 
-    // Archive course
-    async archiveCourse(id) {
+    async archiveCourse(id: string) {
         const { data, error } = await supabase
             .from('course_instances')
             .update({
@@ -298,8 +267,7 @@ export const courseService = {
         return data
     },
 
-    // Unarchive course
-    async unarchiveCourse(id) {
+    async unarchiveCourse(id: string) {
         const { data, error } = await supabase
             .from('course_instances')
             .update({
@@ -314,14 +282,12 @@ export const courseService = {
         return data
     },
 
-    // Helper: Get enrolled student IDs for a course (for backward compatibility)
-    async getEnrolledStudentIds(courseId) {
+    async getEnrolledStudentIds(courseId: string) {
         const enrollments = await this.getCourseEnrollments(courseId)
         return enrollments.map((e) => e.student_id)
     },
 
-    // Helper: Enrich course data with student_ids for backward compatibility
-    async enrichCourseWithStudents(courseData) {
+    async enrichCourseWithStudents(courseData: Tables<"course_instances">) {
         if (!courseData) return courseData
 
         const studentIds = await this.getEnrolledStudentIds(courseData.id)
@@ -331,8 +297,7 @@ export const courseService = {
         }
     },
 
-    // Helper: Enrich multiple courses with student IDs
-    async enrichCoursesWithStudents(courses) {
+    async enrichCoursesWithStudents(courses: any[]) {
         return Promise.all(
             courses.map(course => this.enrichCourseWithStudents(course))
         )

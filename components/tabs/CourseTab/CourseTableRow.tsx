@@ -6,25 +6,30 @@ import { TableCell, TableRow } from "@/components/ui/table"
 import { Badge } from "@/components/ui/badge"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 import { MoreHorizontal, Pencil, Archive } from "lucide-react"
+import { courseEnrollmentService } from "@/services/courseEnrollmentService"
+import { useEffect, useMemo } from "react"
+import { useCourseEnrollementStudentsByCourseId } from "@/hooks/useCourseEnrollement"
 
 interface CourseTableRowProps {
   course: any
-  students: any[]
   pendingArchiveIds: Set<string>
   onArchive: (courseId: number, courseName: string) => void
 }
 
-export function CourseTableRow({ course, students, pendingArchiveIds, onArchive }: CourseTableRowProps) {
+export function CourseTableRow({ course, pendingArchiveIds, onArchive }: CourseTableRowProps) {
   const router = useRouter()
-  const enrolledStudents = students.filter((s) => course.student_ids?.includes(s.id))
+  const { students: allStudents, isLoading } = useCourseEnrollementStudentsByCourseId(course.id);
+  const students = useMemo(() => {
+    const list = Array.isArray(allStudents) ? allStudents : allStudents.data;
+    return list;
+  }, [allStudents]);
   const isArchiveDisabled = pendingArchiveIds.has(course.id)
-
   return (
     <TableRow className="group">
       <TableCell>
         <div className={`w-3 h-3 rounded-full ${course.status === "active" ? "bg-green-500" : "bg-red-500"}`} />
       </TableCell>
-      
+
       <TableCell className="font-medium">
         <Button
           variant="link"
@@ -51,7 +56,7 @@ export function CourseTableRow({ course, students, pendingArchiveIds, onArchive 
         </Badge>
       </TableCell>
 
-      <TableCell className="max-w-[220px] text-xs">
+      <TableCell className="max-w-55 text-xs">
         {course.schedule && course.schedule.includes(",") ? (
           <div className="flex flex-col gap-1">
             {course.schedule.split(",").map((s: string, idx: number) => (
@@ -65,7 +70,7 @@ export function CourseTableRow({ course, students, pendingArchiveIds, onArchive 
         )}
       </TableCell>
 
-      <TableCell>{enrolledStudents.length} students</TableCell>
+      <TableCell>{students.length} students</TableCell>
 
       <TableCell>
         <div className="flex items-center justify-between">

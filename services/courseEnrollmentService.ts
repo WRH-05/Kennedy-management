@@ -4,21 +4,20 @@ import { PostgrestError } from "@supabase/supabase-js"
 
 export const courseEnrollmentService = {
   // Get all students (excluding archived unless specified)
-  async getAllStudents(
+  async getAllStudentsEnrolledInACourse(
+    course_id: string,
     page = 1,
     pageSize = 0,
-    includeArchived = false
   ): Promise<{ data: Tables<"students">[]; total: number; page: number; pageSize: number }> {
+
+    // 1. Fixed: Filtering by course_id added. 
+    // 2. Fixed: Inner join syntax 'students!inner(*)' ensures we can filter or handle joins cleanly.
     let query = supabase
-      .from('students')
-      .select('*', { count: pageSize > 0 ? 'exact' : 'estimated' });
+      .from('course_enrollments')
+      .select('students!inner(*)', { count: pageSize > 0 ? 'exact' : 'estimated' })
+      .eq('course_id', course_id);
 
-    if (!includeArchived) {
-      query = query.eq('archived', false);
-    }
-
-    query = query.order('created_at', { ascending: false });
-
+    query = query.order('enrolled_at', { ascending: false });
 
     if (pageSize > 0) {
       const from = (page - 1) * pageSize;
@@ -26,13 +25,17 @@ export const courseEnrollmentService = {
       query = query.range(from, to);
     }
 
-
     const { data, error, count } = await query;
+
 
     if (error) throw error;
 
-    const finalData = data || [];
-
+    const finalData: Tables<"students">[] = (data || [])
+      .map((enrollment) => {
+        const student = enrollment.students as unknown as Tables<"students">;
+        return student;
+      })
+      .filter(Boolean);
     return {
       data: finalData,
       total: pageSize > 0 ? (count ?? 0) : finalData.length,
