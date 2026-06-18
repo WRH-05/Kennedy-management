@@ -5,8 +5,8 @@ import { Tables, TablesInsert, TablesUpdate } from "@/types/database.types"
 export const courseService = {
     async getAllCourseInstances(page = 1, pageSize = 0, includeArchived = false): Promise<{ data: Tables<"course_instances">[]; total: number; page: number; pageSize: number }> {
         const query = pageSize
-            ? supabase.from('course_instances').select('*', { count: 'exact' })
-            : supabase.from('course_instances').select('*')
+            ? supabase.from('course_instances').select('*, teachers(*)', { count: 'exact' })
+            : supabase.from('course_instances').select('*, teachers(*)')
 
         if (!includeArchived) {
             query.eq('archived', false)
@@ -87,7 +87,7 @@ export const courseService = {
     async getCourseEnrollments(courseId: string) {
         const { data, error } = await supabase
             .from('course_enrollments')
-            .select('student_id, enrolled_at')
+            .select('student_id, enrolled_at, status')
             .eq('course_id', courseId)
             .order('enrolled_at', { ascending: false })
 

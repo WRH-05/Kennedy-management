@@ -40,22 +40,16 @@ function TeacherProfileContent() {
   useEffect(() => {
     const loadData = async () => {
       try {
-        // Load teacher data from Supabase
         const teacherData = await teacherService.getTeacherById(teacherId)
-        if (teacherData) {
-          setTeacher(teacherData)
-          setEditedTeacher(JSON.parse(JSON.stringify(teacherData))) // Deep copy to avoid reference issues
-        } else {
-          setError("Teacher not found")
-          const redirectPath = user?.profile?.role === 'receptionist' ? '/receptionist' : '/manager'
-          router.push(redirectPath)
-          return
+        if (!teacherData) {
+          router.push('/')
         }
+        setTeacher(teacherData)
+        setEditedTeacher(JSON.parse(JSON.stringify(teacherData)))
 
-        // Load teacher's courses
         const teacherCourses = await courseService.getCoursesByTeacherId(teacherId)
+        console.log(teacherCourses);
         setCourses(teacherCourses)
-
       } catch (err) {
         console.error("Error loading teacher data:", err)
         setError("Failed to load teacher data")
@@ -125,8 +119,8 @@ function TeacherProfileContent() {
   const activeCourses = courses.filter((course) => course.status === "active")
   const completedCourses = courses.filter((course) => course.status === "completed")
   let numberOfActiveStudents = 0
-   
-  activeCourses.forEach((course)=>{
+
+  activeCourses.forEach((course) => {
     numberOfActiveStudents += course.student_ids?.length;
   })
 
@@ -268,15 +262,15 @@ function TeacherProfileContent() {
                     />
                   ) : (
                     <div className="flex flex-wrap gap-2">
-                      {teacher.subjects ? 
-                        (Array.isArray(teacher.subjects) 
-                          ? teacher.subjects 
+                      {teacher.subjects ?
+                        (Array.isArray(teacher.subjects)
+                          ? teacher.subjects
                           : (typeof teacher.subjects === 'string' ? teacher.subjects.split(',') : [])
                         ).filter((s: string) => s && s.trim()).map((subject: string, idx: number) => (
                           <Badge key={idx} variant="default">
                             {subject.trim()}
                           </Badge>
-                        )) : 
+                        )) :
                         <p className="text-gray-600">No subjects specified</p>
                       }
                     </div>
@@ -293,15 +287,15 @@ function TeacherProfileContent() {
                     />
                   ) : (
                     <div className="flex flex-wrap gap-2">
-                      {teacher.school_years ? 
-                        (Array.isArray(teacher.school_years) 
-                          ? teacher.school_years 
+                      {teacher.school_years ?
+                        (Array.isArray(teacher.school_years)
+                          ? teacher.school_years
                           : (typeof teacher.school_years === 'string' ? teacher.school_years.split(',') : [])
                         ).filter((y: string) => y && y.trim()).map((year: string, idx: number) => (
                           <Badge key={idx} variant="secondary">
                             {year.trim()}
                           </Badge>
-                        )) : 
+                        )) :
                         <p className="text-gray-600">No school years specified</p>
                       }
                     </div>
@@ -383,7 +377,7 @@ function TeacherProfileContent() {
                               </TableCell>
                               <TableCell>{course.price} DA</TableCell>
                               <TableCell>{course.schedule || 'Not scheduled'}</TableCell>
-                              <TableCell>{course.enrolled_students?.length || 0}</TableCell>
+                              <TableCell>{course.enrolled_students?.length}</TableCell>
                             </TableRow>
                           ))}
                         </TableBody>

@@ -46,7 +46,7 @@ export function CourseTableRow({ course, pendingArchiveIds, onArchive }: CourseT
           className="p-0 h-auto font-medium text-left"
           onClick={() => router.push(`/teacher/${course.teacher_id}`)}
         >
-          {course.teacher_name}
+          {course.teachers.name}
         </Button>
       </TableCell>
 
@@ -54,20 +54,6 @@ export function CourseTableRow({ course, pendingArchiveIds, onArchive }: CourseT
         <Badge variant={course.course_type === "Group" ? "default" : "secondary"}>
           {course.course_type}
         </Badge>
-      </TableCell>
-
-      <TableCell className="max-w-55 text-xs">
-        {course.schedule && course.schedule.includes(",") ? (
-          <div className="flex flex-col gap-1">
-            {course.schedule.split(",").map((s: string, idx: number) => (
-              <span key={idx} className="block bg-slate-100 px-1.5 py-0.5 rounded text-slate-700 w-fit">
-                {s.trim()}
-              </span>
-            ))}
-          </div>
-        ) : (
-          <span>{course.schedule}</span>
-        )}
       </TableCell>
 
       <TableCell>{students.length} students</TableCell>

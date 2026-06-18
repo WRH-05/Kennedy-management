@@ -64,7 +64,6 @@ export default function CoursesTab({
                 <TableHead>Course</TableHead>
                 <TableHead>Teacher</TableHead>
                 <TableHead>Type</TableHead>
-                <TableHead>Schedule</TableHead>
                 <TableHead>Students</TableHead>
                 <TableHead>Price</TableHead>
               </TableRow>

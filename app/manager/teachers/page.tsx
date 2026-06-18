@@ -4,7 +4,6 @@ import { usePaginatedTeachers } from "@/hooks/useTeachers"
 import { useCourses } from "@/hooks/useCourses"
 import { usePendingArchives } from "@/hooks/usePayments"
 import TeachersTab from "@/components/tabs/TeachersTab"
-import SummaryCards from "@/components/dashboard/SummaryCards"
 import { Pagination, PaginationContent, PaginationItem, PaginationLink, PaginationPrevious, PaginationNext, PaginationEllipsis } from "@/components/ui/pagination"
 
 const PAGE_SIZE = 6
@@ -44,13 +43,18 @@ function getPageItems(page: number, totalPages: number) {
 export default function TeachersPage() {
   const [page, setPage] = useState(1)
   const { teachers: allTeachers, total, isLoading: isTeacherLoading, mutate } = usePaginatedTeachers(page, PAGE_SIZE)
-  const { courses, isLoading: isCourseLoading } = useCourses()
+  const { courses: allCourses, isLoading: isCourseLoading } = useCourses()
   const { data: pendingArchiveMap } = usePendingArchives()
 
   const teachers = useMemo(() =>
     (allTeachers || []).filter((teacher: any) => !teacher.archived),
     [allTeachers]
   )
+
+  const courses = useMemo(() => {
+    const list = allCourses;
+    return list;
+  }, [allCourses]);
 
   if (isCourseLoading || isTeacherLoading) return <div className="p-8 text-center text-gray-500">Loading Teachers Directory...</div>
 
@@ -71,7 +75,7 @@ export default function TeachersPage() {
       <Pagination className="pt-4">
         <PaginationContent>
           <PaginationItem>
-            <PaginationPrevious disabled={page <= 1} onClick={() => setPage(Math.max(1, page - 1))} />
+            <PaginationPrevious disabled-area={page <= 1} onClick={() => setPage(Math.max(1, page - 1))} />
           </PaginationItem>
 
           {getPageItems(page, totalPages).map((item, index) =>
@@ -92,7 +96,7 @@ export default function TeachersPage() {
           )}
 
           <PaginationItem>
-            <PaginationNext disabled={page >= totalPages} onClick={() => setPage(Math.min(totalPages, page + 1))} />
+            <PaginationNext disabled-area={page >= totalPages} onClick={() => setPage(Math.min(totalPages, page + 1))} />
           </PaginationItem>
         </PaginationContent>
       </Pagination>
