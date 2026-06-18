@@ -1,4 +1,5 @@
 "use client"
+<<<<<<< HEAD
 
 import { useState, useEffect, useMemo } from "react"
 import { useRouter } from "next/navigation"
@@ -311,27 +312,17 @@ export default function ManagerDashboard() {
 
   if (isLoading) return null
 
+=======
+import SummaryCards from "@/components/dashboard/SummaryCards"
+import Link from "next/link"
+import { ArrowRight, Users, BookOpen, DollarSign, Archive, LibraryBig, Banknote  } from "lucide-react"
+export default function DashboardHubPage() {
+>>>>>>> aea348a3ffc8d0229fd536ba1b80736c470b1607
   return (
-    <AuthGuard requiredRoles={['owner', 'manager']}>
-      <div className="min-h-screen bg-gray-50">
-      {/* Header */}
-      <header className="bg-white shadow-sm border-b">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center h-16">
-            <h1 className="text-xl font-semibold text-gray-900">Manager Dashboard</h1>
-            
-            {/* Enhanced Global Search */}
-            <div className="flex-1 max-w-md mx-4 relative">
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
-                <Input
-                  placeholder="Search students, teachers, courses..."
-                  className="pl-10"
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                />
-              </div>
+    <div className="space-y-8">
+      {/* Show the global metrics at the top */}
 
+<<<<<<< HEAD
               {/* Enhanced Search Results Dropdown */}
               {showSearchResults && searchResults.length > 0 && (
                 <div className="absolute top-full left-0 right-0 mt-1 bg-white border rounded-md shadow-lg z-50 max-h-60 overflow-y-auto">
@@ -399,55 +390,27 @@ export default function ManagerDashboard() {
                 Sign Out
               </Button>
             </div>
+=======
+      {/* Grid of quick navigation shortcuts */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <Link href="/manager/students" className="p-6 bg-white rounded-lg border shadow-sm hover:shadow-md transition group flex justify-between items-center">
+          <div>
+            <h3 className="font-semibold text-lg flex items-center gap-2"><Users className="h-5 w-5 text-blue-500" /> Manage Students</h3>
+            <p className="text-sm text-gray-500">View directories and status mappings</p>
+>>>>>>> aea348a3ffc8d0229fd536ba1b80736c470b1607
           </div>
-        </div>
-      </header>
+          <ArrowRight className="h-5 w-5 text-gray-400 group-hover:translate-x-1 transition-transform" />
+        </Link>
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* Summary Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Total Revenue</CardTitle>
-              <TrendingUp className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{totalRevenue.toLocaleString()} DA</div>
-              <p className="text-xs text-muted-foreground">This month</p>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Total Payouts</CardTitle>
-              <DollarSign className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{totalPayouts.toLocaleString()} DA</div>
-              <p className="text-xs text-muted-foreground">To teachers</p>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Net Profit</CardTitle>
-              <TrendingUp className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{netProfit.toLocaleString()} DA</div>
-              <p className="text-xs text-muted-foreground">This month</p>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Active Students</CardTitle>
-              <Users className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{students.length}</div>
-              <p className="text-xs text-muted-foreground">Enrolled</p>
-            </CardContent>
-          </Card>
-        </div>
+        <Link href="/manager/teachers" className="p-6 bg-white rounded-lg border shadow-sm hover:shadow-md transition group flex justify-between items-center">
+          <div>
+            <h3 className="font-semibold text-lg flex items-center gap-2"><BookOpen className="h-5 w-5 text-green-500" /> Manage Teachers</h3>
+            <p className="text-sm text-gray-500">Track assignments and payouts</p>
+          </div>
+          <ArrowRight className="h-5 w-5 text-gray-400 group-hover:translate-x-1 transition-transform" />
+        </Link>
 
+<<<<<<< HEAD
         <Tabs defaultValue="outstanding" className="space-y-6">
           <TabsList className="grid w-full grid-cols-8">
             <TabsTrigger value="outstanding" className="flex items-center">
@@ -491,70 +454,39 @@ export default function ManagerDashboard() {
           <TabsContent value="revenue">
             <RevenueTab revenue={revenue} />
           </TabsContent>
+=======
+        <Link href="/manager/revenue" className="p-6 bg-white rounded-lg border shadow-sm hover:shadow-md transition group flex justify-between items-center">
+          <div>
+            <h3 className="font-semibold text-lg flex items-center gap-2"><DollarSign className="h-5 w-5 text-amber-500" /> Financial Logs</h3>
+            <p className="text-sm text-gray-500">Review revenue collections</p>
+          </div>
+          <ArrowRight className="h-5 w-5 text-gray-400 group-hover:translate-x-1 transition-transform" />
+        </Link>
 
-          {/* Payouts Tab */}
-          <TabsContent value="payouts">
-            <PayoutsTab payouts={payouts} onApprovePayout={approvePayout} onDenyPayout={denyPayout} />
-          </TabsContent>
+        <Link href="/manager/courses" className="p-6 bg-white rounded-lg border shadow-sm hover:shadow-md transition group flex justify-between items-center">
+          <div>
+            <h3 className="font-semibold text-lg flex items-center gap-2"><LibraryBig className="h-5 w-5 text-red-500" /> Manange Courses</h3>
+            <p className="text-sm text-gray-500">Edit courses</p>
+          </div>
+          <ArrowRight className="h-5 w-5 text-gray-400 group-hover:translate-x-1 transition-transform" />
+        </Link>
+>>>>>>> aea348a3ffc8d0229fd536ba1b80736c470b1607
 
-          {/* Students Tab */}
-          <TabsContent value="students">
-            <StudentsTab 
-              students={students}
-              courses={courses}
-              onStudentsUpdate={() => revalidateData('students')}
-              canAdd={true}
-              showCourses={true}
-              showPaymentStatus={true}
-              pendingArchiveIds={pendingArchiveIds.student}
-            />
-          </TabsContent>
+        <Link href="/manager/archive" className="p-6 bg-white rounded-lg border shadow-sm hover:shadow-md transition group flex justify-between items-center">
+          <div>
+            <h3 className="font-semibold text-lg flex items-center gap-2"><Archive className="h-5 w-5 text-amber-800" /> Manange Archives</h3>
+            <p className="text-sm text-gray-500">Check Archives</p>
+          </div>
+          <ArrowRight className="h-5 w-5 text-gray-400 group-hover:translate-x-1 transition-transform" />
+        </Link>
 
-          {/* Teachers Tab */}
-          <TabsContent value="teachers">
-            <TeachersTab 
-              teachers={teachers}
-              courses={courses}
-              onTeachersUpdate={() => revalidateData('teachers')}
-              canAdd={true}
-              showCourses={true}
-              showStats={true}
-              pendingArchiveIds={pendingArchiveIds.teacher}
-            />
-          </TabsContent>
-
-          {/* Courses Tab */}
-          <TabsContent value="courses">
-            <CoursesTab 
-              courses={courses}
-              teachers={teachers}
-              students={students}
-              onCoursesUpdate={() => revalidateData('courses')}
-              canAdd={true}
-              pendingArchiveIds={pendingArchiveIds.course}
-            />
-          </TabsContent>
-
-          {/* Archive Tab */}
-          <TabsContent value="archive">
-            <ArchiveTab isManager={true} onArchiveUpdate={async () => {
-              // Only refresh pending archive IDs, no full data refetch
-              try {
-                const pendingArchiveMap = await archiveService.getPendingArchiveEntityIds()
-                setPendingArchiveIds(pendingArchiveMap)
-              } catch (error) {
-                // Silently handle error
-              }
-            }} />
-          </TabsContent>
-
-          {/* User Management Tab */}
-          {hasRole(['owner', 'manager']) && (
-            <TabsContent value="users">
-              <UserManagementTab />
-            </TabsContent>
-          )}
-        </Tabs>
+        <Link href="/manager/payouts" className="p-6 bg-white rounded-lg border shadow-sm hover:shadow-md transition group flex justify-between items-center">
+          <div>
+            <h3 className="font-semibold text-lg flex items-center gap-2"><Banknote className="h-5 w-5 text-green-700" /> Manange Payouts</h3>
+            <p className="text-sm text-gray-500">Time for money baby</p>
+          </div>
+          <ArrowRight className="h-5 w-5 text-gray-400 group-hover:translate-x-1 transition-transform" />
+        </Link>
       </div>
 
       {/* Rollover Confirmation Dialog */}
@@ -617,6 +549,5 @@ export default function ManagerDashboard() {
         </AlertDialogContent>
       </AlertDialog>
     </div>
-    </AuthGuard>
   )
 }

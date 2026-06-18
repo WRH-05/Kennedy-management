@@ -1,9 +1,13 @@
-// Database Service Layer using Supabase
-// This service provides database operations using Supabase client
+import { studentService } from "./studentService"
+import { teacherService } from "./teacherService"
+import { courseService } from "./courseService"
+import { archiveService } from "./archiveService"
+import { paymentService } from "./paymentService"
+import { attendanceService } from "./attendanceService"
+import { profileService } from "./profileService"
 
-import { supabase } from '../lib/supabase'
-import { authService } from './authService'
 
+<<<<<<< HEAD
 // Helper function to get current user's school_id
 async function getCurrentUserSchoolId() {
   try {
@@ -1864,6 +1868,8 @@ const billingService = {
 }
 
 // Export all services
+=======
+>>>>>>> aea348a3ffc8d0229fd536ba1b80736c470b1607
 export const databaseService = {
   students: studentService,
   teachers: teacherService,
@@ -1871,7 +1877,11 @@ export const databaseService = {
   archives: archiveService,
   payments: paymentService,
   attendance: attendanceService,
+<<<<<<< HEAD
   billing: billingService,
+=======
+  profile: profileService
+>>>>>>> aea348a3ffc8d0229fd536ba1b80736c470b1607
 }
 
 export default databaseService

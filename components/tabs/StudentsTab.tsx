@@ -12,25 +12,113 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Badge } from "@/components/ui/badge"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
+<<<<<<< HEAD
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
 import { Users, Plus, Archive, MoreHorizontal, Pencil } from "lucide-react"
 import { studentService, archiveService } from "@/services/appDataService"
+=======
+import { Users, Plus, Archive, MoreHorizontal, Pencil, Loader2 } from "lucide-react"
+import { studentService } from "@/services/studentService"
+import { archiveService } from "@/services/archiveService"
+>>>>>>> aea348a3ffc8d0229fd536ba1b80736c470b1607
 import { useToast } from "@/hooks/use-toast"
+import { Tables, TablesInsert } from "@/types/database.types"
+import { courseEnrollmentService } from "@/services/courseEnrollmentService"
+import { useEffect } from "react"
 
 interface StudentsTabProps {
-  students: any[]
-  courses: any[]
-  onStudentsUpdate: (students: any[]) => void
+  students: Tables<"students">[]
+  onStudentsUpdate: (students: Tables<"students">[]) => void
   canAdd?: boolean
   showCourses?: boolean
   showPaymentStatus?: boolean
   pendingArchiveIds?: Set<string>
 }
 
-export default function StudentsTab({ 
-  students, 
-  courses, 
-  onStudentsUpdate, 
+// Sub-component to isolate async course fetching per row
+function StudentCoursesCell({ studentId }: { studentId: string }) {
+  const [courses, setCourses] = useState<any[]>([])
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    let isMounted = true
+    async function fetchCourses() {
+      try {
+        const data = await courseEnrollmentService.getCourseEnrollmentByStudentId(studentId)
+        if (isMounted) {
+          setCourses(data || [])
+        }
+      } catch (err) {
+        console.error(err)
+      } finally {
+        if (isMounted) setLoading(false)
+      }
+    }
+    fetchCourses()
+    return () => { isMounted = false }
+  }, [studentId])
+
+  if (loading) return <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+  if (!courses.length) return <span className="text-muted-foreground text-xs">No courses</span>
+
+  return (
+    <>
+      {courses.map((course, idx) => (
+        <Badge key={idx} variant="secondary" className="mr-1 mb-1">
+          {course.course_instances?.subject || "Unknown"}
+        </Badge>
+      ))}
+    </>
+  )
+}
+
+// Sub-component to isolate async payment status fetching per row
+function StudentPaymentCell({ studentId }: { studentId: string }) {
+  const [courses, setCourses] = useState<any[]>([])
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    let isMounted = true
+    async function fetchCourses() {
+      try {
+        const data = await courseEnrollmentService.getCourseEnrollmentByStudentId(studentId)
+        if (isMounted) {
+          setCourses(data || [])
+        }
+      } catch (err) {
+        console.error(err)
+      } finally {
+        if (isMounted) setLoading(false)
+      }
+    }
+    fetchCourses()
+    return () => { isMounted = false }
+  }, [studentId])
+
+  if (loading) return <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+  if (!courses.length) return <span className="text-muted-foreground text-xs">-</span>
+
+  return (
+    <div className="flex items-center gap-1 flex-wrap">
+      {courses.map((course, idx) => {
+        const isPaid = course.payments?.students?.[studentId]
+        return (
+          <Badge
+            key={idx}
+            variant={isPaid ? "default" : "destructive"}
+            className="text-[10px] px-1.5 py-0.5"
+          >
+            {isPaid ? "Paid" : "Pending"}
+          </Badge>
+        )
+      })}
+    </div>
+  )
+}
+
+export default function StudentsTab({
+  students,
+  onStudentsUpdate,
   canAdd = false,
   showCourses = true,
   showPaymentStatus = true,
@@ -40,24 +128,22 @@ export default function StudentsTab({
   const { toast } = useToast()
   const [showAddStudentDialog, setShowAddStudentDialog] = useState(false)
   const [isSubmitting, setIsSubmitting] = useState(false)
-  
-  const [newStudent, setNewStudent] = useState({
+
+  const [newStudent, setNewStudent] = useState<TablesInsert<"students">>({
     name: "",
-    schoolLevel: "",
-    schoolYear: "",
-    specialty: "",
-    address: "",
     birth_date: "",
     phone: "",
     email: "",
+    address: "",
     school: "",
-    photos: false,
-    copyOfId: false,
-    registrationForm: false,
+    school_level: "",
+    school_year: "",
+    specialty: null,
     registration_fee_paid: false,
+    archived: false,
+    archived_date: null
   })
 
-  // School years based on Algerian education system (years.json)
   const schoolYearOptions = {
     primary: [
       { code: "1 AP", name: "1st Year Primary" },
@@ -79,7 +165,6 @@ export default function StudentsTab({
     ],
   }
 
-  // Specialty options based on school year for secondary level
   const getSpecialtyOptions = (schoolYear: string) => {
     if (schoolYear === "1 AS") {
       return [
@@ -89,12 +174,10 @@ export default function StudentsTab({
     }
     if (schoolYear === "2 AS" || schoolYear === "3 AS") {
       return [
-        // Science Stream
         { code: schoolYear === "2 AS" ? "2 AS" : "3 AS", name: "Experimental Sciences" },
         { code: schoolYear === "2 AS" ? "2 MA" : "3 MA", name: "Mathematics" },
         { code: schoolYear === "2 AS" ? "2 MT" : "3 MT", name: "Technical Mathematical" },
         { code: schoolYear === "2 AS" ? "2 GE" : "3 GE", name: "Management and Economy" },
-        // Arts Stream
         { code: schoolYear === "2 AS" ? "2 LT" : "3 LT", name: "Literature and Philosophy" },
         { code: schoolYear === "2 AS" ? "2 LE" : "3 LE", name: "Foreign Languages" },
       ]
@@ -102,68 +185,50 @@ export default function StudentsTab({
     return []
   }
 
-  // Handle school level change - reset dependent fields
   const handleSchoolLevelChange = (level: string) => {
     setNewStudent({
       ...newStudent,
-      schoolLevel: level,
-      schoolYear: "",
-      specialty: "",
+      school_level: level,
+      school_year: "",
+      specialty: null,
     })
   }
 
-  // Handle school year change - reset specialty if needed
   const handleSchoolYearChange = (year: string) => {
     setNewStudent({
       ...newStudent,
-      schoolYear: year,
-      specialty: "",
+      school_year: year,
+      specialty: null,
     })
   }
 
   const handleAddStudent = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (isSubmitting) return // Prevent double submission
-    
+    if (isSubmitting) return
+
     setIsSubmitting(true)
     try {
-      console.log("Adding student:", newStudent)
-      const student = {
-        name: newStudent.name,
-        school_level: newStudent.schoolLevel,
-        school_year: newStudent.schoolYear,
-        specialty: newStudent.specialty,
-        address: newStudent.address,
-        birth_date: newStudent.birth_date,
-        phone: newStudent.phone,
-        email: newStudent.email,
-        school: newStudent.school,
-        registration_fee_paid: newStudent.registration_fee_paid,
-      }
-      console.log("Student object to add:", student)
-      await studentService.addStudent(student)
-      console.log("Student added successfully")
+      await studentService.addStudent(newStudent)
       const updatedStudents = await studentService.getAllStudents()
-      onStudentsUpdate(updatedStudents)
+      onStudentsUpdate(updatedStudents.data)
       setNewStudent({
         name: "",
-        schoolLevel: "",
-        schoolYear: "",
-        specialty: "",
-        address: "",
         birth_date: "",
         phone: "",
         email: "",
+        address: "",
         school: "",
-        photos: false,
-        copyOfId: false,
-        registrationForm: false,
+        school_level: "",
+        school_year: "",
+        specialty: null,
         registration_fee_paid: false,
+        archived: false,
+        archived_date: null
       })
       setShowAddStudentDialog(false)
       toast({
         title: "Student added",
-        description: `${student.name} has been successfully added.`,
+        description: `${newStudent.name} has been successfully added.`,
       })
     } catch (error) {
       console.error("Error adding student:", error)
@@ -177,12 +242,9 @@ export default function StudentsTab({
     }
   }
 
-  const handleArchiveStudent = async (studentId: number, studentName: string) => {
+  const handleArchiveStudent = async (student_id: string, studentName: string) => {
     try {
-      // Create archive request in database
-      await archiveService.createArchiveRequest('student', studentId, studentName)
-      
-      // Show visual feedback (request created, will be processed by manager)
+      await archiveService.createArchiveRequest('student', student_id, studentName)
       toast({
         title: "Archive request submitted",
         description: "Waiting for manager approval.",
@@ -195,10 +257,6 @@ export default function StudentsTab({
         variant: "destructive",
       })
     }
-  }
-
-  const getStudentCourses = (studentId: number) => {
-    return courses.filter((course) => course.student_ids?.includes(studentId))
   }
 
   return (
@@ -235,7 +293,7 @@ export default function StudentsTab({
                     <div className="space-y-2">
                       <Label htmlFor="schoolLevel">School Level</Label>
                       <Select
-                        value={newStudent.schoolLevel}
+                        value={newStudent.school_level || ''}
                         onValueChange={handleSchoolLevelChange}
                       >
                         <SelectTrigger>
@@ -251,15 +309,15 @@ export default function StudentsTab({
                     <div className="space-y-2">
                       <Label htmlFor="schoolYear">School Year</Label>
                       <Select
-                        value={newStudent.schoolYear}
+                        value={newStudent.school_year || ''}
                         onValueChange={handleSchoolYearChange}
-                        disabled={!newStudent.schoolLevel}
+                        disabled={!newStudent.school_level}
                       >
                         <SelectTrigger>
-                          <SelectValue placeholder={newStudent.schoolLevel ? "Select school year" : "Select level first"} />
+                          <SelectValue placeholder={newStudent.school_level ? "Select school year" : "Select level first"} />
                         </SelectTrigger>
                         <SelectContent>
-                          {newStudent.schoolLevel && schoolYearOptions[newStudent.schoolLevel as keyof typeof schoolYearOptions]?.map((year) => (
+                          {newStudent.school_level && schoolYearOptions[newStudent.school_level as keyof typeof schoolYearOptions]?.map((year) => (
                             <SelectItem key={year.code} value={year.code}>
                               {year.code} - {year.name}
                             </SelectItem>
@@ -267,18 +325,18 @@ export default function StudentsTab({
                         </SelectContent>
                       </Select>
                     </div>
-                    {newStudent.schoolLevel === "secondary" && newStudent.schoolYear && (
+                    {newStudent.school_level === "secondary" && newStudent.school_year && (
                       <div className="space-y-2">
                         <Label htmlFor="specialty">Specialty/Stream</Label>
                         <Select
-                          value={newStudent.specialty}
+                          value={newStudent.specialty || undefined}
                           onValueChange={(value) => setNewStudent({ ...newStudent, specialty: value })}
                         >
                           <SelectTrigger>
                             <SelectValue placeholder="Select specialty" />
                           </SelectTrigger>
                           <SelectContent>
-                            {getSpecialtyOptions(newStudent.schoolYear).map((spec) => (
+                            {getSpecialtyOptions(newStudent.school_year).map((spec) => (
                               <SelectItem key={spec.code} value={spec.code}>
                                 {spec.code} - {spec.name}
                               </SelectItem>
@@ -291,7 +349,7 @@ export default function StudentsTab({
                       <Label htmlFor="address">Address</Label>
                       <Input
                         id="address"
-                        value={newStudent.address}
+                        value={newStudent.address || ""}
                         onChange={(e) => setNewStudent({ ...newStudent, address: e.target.value })}
                         required
                       />
@@ -301,7 +359,7 @@ export default function StudentsTab({
                       <Input
                         id="birth_date"
                         type="date"
-                        value={newStudent.birth_date}
+                        value={newStudent.birth_date || ""}
                         onChange={(e) => setNewStudent({ ...newStudent, birth_date: e.target.value })}
                         required
                       />
@@ -310,7 +368,7 @@ export default function StudentsTab({
                       <Label htmlFor="phone">Phone Number</Label>
                       <Input
                         id="phone"
-                        value={newStudent.phone}
+                        value={newStudent.phone || ""}
                         onChange={(e) => setNewStudent({ ...newStudent, phone: e.target.value })}
                         required
                       />
@@ -320,54 +378,9 @@ export default function StudentsTab({
                       <Input
                         id="email"
                         type="email"
-                        value={newStudent.email}
+                        value={newStudent.email || ""}
                         onChange={(e) => setNewStudent({ ...newStudent, email: e.target.value })}
                       />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="school">School They Attend</Label>
-                      <Input
-                        id="school"
-                        value={newStudent.school}
-                        onChange={(e) => setNewStudent({ ...newStudent, school: e.target.value })}
-                        required
-                      />
-                    </div>
-                  </div>
-
-                  <div className="space-y-4">
-                    <Label>Document Checklist</Label>
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                      <div className="flex items-center space-x-2">
-                        <Checkbox
-                          id="photos"
-                          checked={newStudent.photos}
-                          onCheckedChange={(checked) =>
-                            setNewStudent({ ...newStudent, photos: checked as boolean })
-                          }
-                        />
-                        <Label htmlFor="photos">Photos</Label>
-                      </div>
-                      <div className="flex items-center space-x-2">
-                        <Checkbox
-                          id="copyOfId"
-                          checked={newStudent.copyOfId}
-                          onCheckedChange={(checked) =>
-                            setNewStudent({ ...newStudent, copyOfId: checked as boolean })
-                          }
-                        />
-                        <Label htmlFor="copyOfId">Copy of ID</Label>
-                      </div>
-                      <div className="flex items-center space-x-2">
-                        <Checkbox
-                          id="registrationForm"
-                          checked={newStudent.registrationForm}
-                          onCheckedChange={(checked) =>
-                            setNewStudent({ ...newStudent, registrationForm: checked as boolean })
-                          }
-                        />
-                        <Label htmlFor="registrationForm">Registration Form</Label>
-                      </div>
                     </div>
                   </div>
 
@@ -407,11 +420,11 @@ export default function StudentsTab({
                 <TableHead>Specialty</TableHead>
                 {showCourses && <TableHead>Enrolled Courses</TableHead>}
                 {showPaymentStatus && <TableHead>Payment Status</TableHead>}
+                <TableHead className="w-[60px]"></TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {students.map((student) => {
-                const studentCourses = getStudentCourses(student.id)
                 return (
                   <TableRow key={student.id} className="group">
                     <TableCell className="font-medium">
@@ -426,8 +439,10 @@ export default function StudentsTab({
                     <TableCell className="capitalize">{student.school_level || "-"}</TableCell>
                     <TableCell>{student.school_year}</TableCell>
                     <TableCell>{student.specialty || "-"}</TableCell>
+                    
                     {showCourses && (
                       <TableCell>
+<<<<<<< HEAD
                         {(() => {
                           if (studentCourses.length === 0) {
                             return <span className="text-gray-500">No courses</span>
@@ -458,10 +473,15 @@ export default function StudentsTab({
                             </div>
                           )
                         })()}
+=======
+                        <StudentCoursesCell studentId={student.id} />
+>>>>>>> aea348a3ffc8d0229fd536ba1b80736c470b1607
                       </TableCell>
                     )}
+                    
                     {showPaymentStatus && (
                       <TableCell>
+<<<<<<< HEAD
                         <div className="flex items-center justify-between">
                           <div>
                             {(() => {
@@ -550,8 +570,35 @@ export default function StudentsTab({
                             </DropdownMenuItem>
                           </DropdownMenuContent>
                         </DropdownMenu>
+=======
+                        <StudentPaymentCell studentId={student.id} />
+>>>>>>> aea348a3ffc8d0229fd536ba1b80736c470b1607
                       </TableCell>
                     )}
+                    
+                    <TableCell>
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button variant="ghost" className="h-8 w-8 p-0 opacity-0 group-hover:opacity-100 transition-opacity">
+                            <MoreHorizontal className="h-4 w-4" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                          <DropdownMenuItem onClick={() => router.push(`/student/${student.id}`)}>
+                            <Pencil className="mr-2 h-4 w-4" />
+                            Edit
+                          </DropdownMenuItem>
+                          <DropdownMenuItem
+                            onClick={() => handleArchiveStudent(student.id, student.name)}
+                            className={pendingArchiveIds.has(student.id) ? "text-gray-400 cursor-not-allowed" : "text-orange-600"}
+                            disabled={pendingArchiveIds.has(student.id)}
+                          >
+                            <Archive className="mr-2 h-4 w-4" />
+                            {pendingArchiveIds.has(student.id) ? "Archive Pending" : "Archive"}
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    </TableCell>
                   </TableRow>
                 )
               })}

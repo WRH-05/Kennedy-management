@@ -1,12 +1,10 @@
+// page.tsx
 "use client"
 
-import type React from "react"
-
-import { Label } from "@/components/ui/label"
-
-import { useState, useEffect } from "react"
+import { useState, useEffect, useCallback } from "react"
 import { useRouter, useParams } from "next/navigation"
 import { Button } from "@/components/ui/button"
+<<<<<<< HEAD
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
@@ -25,9 +23,23 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
 import { courseService, studentService, teacherService, paymentService, attendanceService, billingService } from "@/services/appDataService"
+=======
+import { ArrowLeft } from "lucide-react"
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog"
+
+import { courseService } from "@/services/courseService"
+import { studentService } from "@/services/studentService"
+import { paymentService } from "@/services/paymentService"
+import { attendanceService } from "@/services/attendanceService"
+>>>>>>> aea348a3ffc8d0229fd536ba1b80736c470b1607
 import { useAuth } from "@/contexts/AuthContext"
 import AuthGuard from "@/components/auth/AuthGuard"
 import { useToast } from "@/hooks/use-toast"
+
+import { CourseInfoCard } from "./course-info-card"
+import { PaymentSummaryCard } from "./payment-summary-card"
+import { BillingPeriodToolbar } from "./billing-period-toolbar"
+import { StudentsManagementCard } from "./students-management-card"
 
 function CourseDetailContent() {
   const router = useRouter()
@@ -35,20 +47,19 @@ function CourseDetailContent() {
   const courseId = params.id as string
   const { user } = useAuth()
   const { toast } = useToast()
+
   const [course, setCourse] = useState<any>(null)
   const [students, setStudents] = useState<any[]>([])
-  const [showAddStudentDialog, setShowAddStudentDialog] = useState(false)
-  const [selectedStudent, setSelectedStudent] = useState("")
+  const [billingPeriods, setBillingPeriods] = useState<any[]>([])
+  const [selectedPeriodId, setSelectedPeriodId] = useState<string>("")
   const [studentSearchQuery, setStudentSearchQuery] = useState("")
-  const [showStudentResults, setShowStudentResults] = useState(false)
   const [loading, setLoading] = useState(true)
+
   const [confirmDialog, setConfirmDialog] = useState({
-    open: false,
-    title: "",
-    description: "",
-    action: () => {},
+    open: false, title: "", description: "", action: () => { },
   })
 
+<<<<<<< HEAD
   // Export course report function
   const exportCourseReport = async () => {
     if (!course) return
@@ -245,167 +256,59 @@ ${'─'.repeat(70)}
           courseService.getCourseInstanceById(courseId),
           studentService.getAllStudents(),
         ])
+=======
+  const loadData = useCallback(async () => {
+    try {
+      let [courseData, billingData,] = await Promise.all([
+        courseService.getCourseInstanceById(courseId),
+        paymentService.getBillingPeriods(courseId)
+      ])
+>>>>>>> aea348a3ffc8d0229fd536ba1b80736c470b1607
 
-        if (!courseData) {
-          const redirectPath = user?.profile?.role === 'receptionist' ? '/receptionist' : '/manager'
-          router.push(redirectPath)
-          return
-        }
-
-        // Load payment status for each enrolled student
-        const studentPayments: Record<string, boolean> = {}
-        if (courseData.student_ids && courseData.student_ids.length > 0) {
-          for (const studentId of courseData.student_ids) {
-            try {
-              const paymentHistory = await paymentService.getStudentPaymentHistory(studentId)
-              // Check if there's a paid payment for this course this month
-              const currentMonth = new Date().toLocaleString('default', { month: 'long', year: 'numeric' })
-              const paidForThisCourse = paymentHistory.some(
-                (p: any) => p.course_id === courseId && p.status === 'paid' && p.month === currentMonth
-              )
-              studentPayments[studentId] = paidForThisCourse
-            } catch {
-              studentPayments[studentId] = false
-            }
-          }
-        }
-
-        // Initialize payment structures with loaded data
-        // Also check if teacher has been paid for this month
-        let teacherPaidStatus = false
-        if (courseData.teacher_id) {
-          try {
-            teacherPaidStatus = await paymentService.isTeacherPaidForMonth(courseData.teacher_id)
-          } catch {
-            teacherPaidStatus = false
-          }
-        }
-
-        courseData.payments = { 
-          students: studentPayments, 
-          teacherPaid: teacherPaidStatus 
-        }
-        
-        if (!courseData.attendance) {
-          courseData.attendance = {}
-        }
-
-        setCourse(courseData)
-        setStudents(studentsData)
-        
-      } catch (error) {
-        console.error("Error loading course data:", error)
-        const redirectPath = user?.profile?.role === 'receptionist' ? '/receptionist' : '/manager'
-        router.push(redirectPath)
-      } finally {
-        setLoading(false)
+      if (!courseData) {
+        router.push(user?.profile?.role === 'receptionist' ? '/receptionist' : '/manager')
+        return
       }
-    }
 
-    loadData()
-  }, [courseId, router, user])
+      courseData = await courseService.enrichCourseWithStudents(courseData)
+      setBillingPeriods(billingData || [])
+      if (billingData?.length > 0 && !selectedPeriodId) {
+        setSelectedPeriodId(billingData[0].id)
+      }
 
-  const updateWeeklyAttendance = (studentId: number, week: string, present: boolean) => {
-    setCourse((prev: any) => ({
-      ...prev,
-      attendance: {
-        ...prev.attendance,
-        [studentId]: {
-          ...prev.attendance?.[studentId],
-          [week]: present,
-        },
-      },
-    }))
-  }
-
-  const toggleStudentPayment = async (studentId: string) => {
-    const currentStatus = course?.payments?.students?.[studentId] || false
-    setConfirmDialog({
-      open: true,
-      title: "Confirm Payment Status",
-      description: `Mark payment as ${currentStatus ? "unpaid" : "paid"}?`,
-      action: async () => {
-        try {
-          // Call the payment service to toggle and persist the payment
-          await paymentService.toggleStudentPayment(courseId, studentId)
-          
-          // Update local state after successful database update
-          setCourse((prev: any) => ({
-            ...prev,
-            payments: {
-              ...prev.payments,
-              students: {
-                ...prev.payments?.students,
-                [studentId]: !currentStatus,
-            },
-          },
-        }))
-        } catch (error) {
-          console.error("Error toggling student payment:", error)
-          alert("Failed to update payment status: " + (error as Error).message)
-        }
-        setConfirmDialog({ open: false, title: "", description: "", action: () => {} })
-      },
-    })
-  }
-
-  const toggleTeacherPayment = async () => {
-    if (!course?.teacher_id) {
-      toast({
-        title: "Error",
-        description: "No teacher assigned to this course",
-        variant: "destructive",
+      let studentsBillingPeriods = await paymentService.getStudentData(selectedPeriodId);
+      const studentsData: any[] = [];
+      studentsBillingPeriods.forEach((bill) => {
+        studentsData.push(bill.students)
       })
-      return
+      setStudents(studentsData || [])
+      setCourse(courseData)
+    } catch (error) {
+      console.error(error)
+    } finally {
+      setLoading(false)
     }
+  }, [courseId, router, user, selectedPeriodId])
 
-    const teacherEarningsAmount = Math.round((course?.price * (course?.student_ids?.length || 0) * (course?.percentage_cut || 0)) / 100)
-    
+  useEffect(() => { loadData() }, [loadData])
+
+  const toggleTeacherPayment = () => {
+    if (!course?.teacher_id) return
+    const earnings = Math.round((course.price * (course.student_ids?.length || 0) * (course.percentage_cut || 0)) / 100)
+
     setConfirmDialog({
       open: true,
       title: "Create Payout Request",
-      description: `Create a payout request for the teacher? Amount: ${teacherEarningsAmount} DA. This will need to be approved by a manager.`,
+      description: `Create a payout request for the teacher? Amount: ${earnings} DA.`,
       action: async () => {
         try {
-          // Use the proper teacher_payouts table
-          const result = await paymentService.toggleTeacherPayment(
-            courseId, 
-            course.teacher_id, 
-            teacherEarningsAmount, 
-            course.percentage_cut || 50
-          )
-          
-          toast({
-            title: "Payout request created",
-            description: "The payout request is pending manager approval.",
-          })
-          
-          // Update local state after successful database update
-          setCourse((prev: any) => ({
-            ...prev,
-            payments: {
-              ...prev.payments,
-              teacherPaid: result.isPaid,
-              payoutPending: !result.isPaid,
-            },
-          }))
-        } catch (error) {
-          const errorMessage = (error as Error).message
-          if (errorMessage === 'PAYOUT_ALREADY_PENDING') {
-            toast({
-              title: "Payout already pending",
-              description: "A payout request for this teacher is already pending approval.",
-              variant: "destructive",
-            })
-          } else {
-            console.error("Error creating payout request:", error)
-            toast({
-              title: "Error",
-              description: "Failed to create payout request: " + errorMessage,
-              variant: "destructive",
-            })
-          }
+          await paymentService.recordTeacherPayout(course.teacher_id, earnings, course.percentage_cut || 50, course.price * (course.student_ids?.length || 0), null)
+          toast({ title: "Payout request created" })
+          setCourse((prev: any) => ({ ...prev, payments: { ...prev.payments, teacherPaid: false, payoutPending: true } }))
+        } catch {
+          toast({ title: "Error", variant: "destructive" })
         }
+<<<<<<< HEAD
         setConfirmDialog({ open: false, title: "", description: "", action: () => {} })
       },
     })
@@ -536,31 +439,29 @@ ${'─'.repeat(70)}
         }
         setConfirmDialog({ open: false, title: "", description: "", action: () => {} })
       },
+=======
+        setConfirmDialog({ open: false, title: "", description: "", action: () => { } })
+      }
+>>>>>>> aea348a3ffc8d0229fd536ba1b80736c470b1607
     })
   }
 
   if (!course || !user || loading) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="text-center">
-          <h2 className="text-xl font-semibold text-gray-900">Loading...</h2>
-        </div>
+        <h2 className="text-xl font-semibold text-gray-900">Loading...</h2>
       </div>
     )
   }
 
   const availableStudents = students.filter((student: any) => !course?.student_ids?.includes(student.id))
-
-  const teacherEarnings = Math.round((course?.price * (course?.student_ids?.length || 0) * (course?.percentage_cut || 0)) / 100)
-
-  const filteredStudents = availableStudents.filter((student: any) =>
-    student.name.toLowerCase().includes(studentSearchQuery.toLowerCase()),
-  )
+  const teacherEarnings = Math.round((course.price * (course.student_ids?.length || 0) * (course.percentage_cut || 0)) / 100)
+  const filteredStudents = availableStudents.filter((student: any) => student.name.toLowerCase().includes(studentSearchQuery.toLowerCase()))
 
   return (
     <div className="min-h-screen bg-gray-50">
-      {/* Header */}
       <header className="bg-white shadow-sm border-b">
+<<<<<<< HEAD
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-16">
             <div className="flex items-center">
@@ -575,107 +476,24 @@ ${'─'.repeat(70)}
               Export Report
             </Button>
           </div>
+=======
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex items-center h-16">
+          <Button variant="ghost" size="sm" onClick={() => router.back()} className="mr-4">
+            <ArrowLeft className="h-4 w-4 mr-2" /> Back
+          </Button>
+          <h1 className="text-xl font-semibold text-gray-900">Course Details</h1>
+>>>>>>> aea348a3ffc8d0229fd536ba1b80736c470b1607
         </div>
       </header>
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          {/* Course Info */}
           <div className="lg:col-span-1">
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center">
-                  <BookOpen className="h-5 w-5 mr-2" />
-                  Course Information
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div>
-                  <h3 className="font-semibold text-lg">{course.subject}</h3>
-                  <p className="text-gray-600">{course.school_year}</p>
-                </div>
-                <div className="space-y-2">
-                  <p>
-                    <span className="font-medium">Teacher:</span>{" "}
-                    <Button
-                      variant="link"
-                      className="p-0 h-auto font-medium"
-                      onClick={() => router.push(`/teacher/${course.teacher_id}`)}
-                    >
-                      {course.teacher_name}
-                    </Button>
-                  </p>
-                  <div>
-                    <span className="font-medium">Type:</span>
-                    <Badge variant={course.course_type === "Group" ? "default" : "secondary"} className="ml-2">
-                      {course.course_type}
-                    </Badge>
-                  </div>
-                  <p>
-                    <span className="font-medium">Schedule:</span> {course.schedule}
-                  </p>
-                  <p>
-                    <span className="font-medium">Duration:</span> {course.duration || 'N/A'}h
-                  </p>
-                  <p>
-                    <span className="font-medium">
-                      {course.course_type === "Group" ? "Monthly Price" : "Session Price"}:
-                    </span>{" "}
-                    {course.price || 0} DA
-                  </p>
-                  <p>
-                    <span className="font-medium">Teacher Cut:</span> {course.percentage_cut || 0}%
-                  </p>
-                  <p>
-                    <span className="font-medium">Enrolled Students:</span> {course.student_ids?.length || 0}
-                  </p>
-                </div>
-                <div className="pt-4 border-t">
-                  <div>
-                    <span className="font-medium">Status:</span>
-                    <Badge variant={course.status === "active" ? "default" : "secondary"} className="ml-2">
-                      {course.status}
-                    </Badge>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* Payment Status */}
-            <Card className="mt-6">
-              <CardHeader>
-                <CardTitle className="flex items-center">
-                  <DollarSign className="h-5 w-5 mr-2" />
-                  Payment Status
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="flex items-center justify-between">
-                  <Label>Teacher Payment</Label>
-                  <Button
-                    variant={course?.payments?.teacherPaid ? "default" : "destructive"}
-                    size="sm"
-                    onClick={toggleTeacherPayment}
-                  >
-                    {course?.payments?.teacherPaid ? "Paid" : "Pay"}
-                  </Button>
-                </div>
-                <div className="pt-4 border-t">
-                  <div className="flex justify-between items-center">
-                    <span className="font-medium">
-                      Total {course.course_type === "Group" ? "Monthly" : "Session"} Revenue:
-                    </span>
-                    <span className="text-lg font-bold">{(course?.price || 0) * (course?.student_ids?.length || 0)} DA</span>
-                  </div>
-                  <div className="flex justify-between items-center">
-                    <span className="font-medium">Teacher Earnings:</span>
-                    <span className="text-lg font-bold text-green-600">{teacherEarnings} DA</span>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
+            <CourseInfoCard course={course} courseId={course.id} onRefresh={loadData} />
+            <PaymentSummaryCard course={course} teacherEarnings={teacherEarnings} onToggleTeacherPayment={toggleTeacherPayment} />
           </div>
 
+<<<<<<< HEAD
           {/* Students and Attendance */}
           <div className="lg:col-span-2">
             <Card>
@@ -875,6 +693,17 @@ ${'─'.repeat(70)}
                 </div>
               </CardContent>
             </Card>
+=======
+          <div className="lg:col-span-2 space-y-6">
+            <BillingPeriodToolbar courseId={course.id} billingPeriods={billingPeriods} selectedPeriodId={selectedPeriodId} setSelectedPeriodId={setSelectedPeriodId} onRefresh={loadData} />
+            <StudentsManagementCard
+              course={course} courseId={course.id} filteredStudents={filteredStudents}
+              studentSearchQuery={studentSearchQuery} selectedPeriodId={selectedPeriodId} 
+              billingPeriods={billingPeriods} setSelectedPeriodId={setSelectedPeriodId} 
+              setStudentSearchQuery={setStudentSearchQuery}
+              onRefresh={loadData}
+            />
+>>>>>>> aea348a3ffc8d0229fd536ba1b80736c470b1607
           </div>
         </div>
       </div>
@@ -886,11 +715,7 @@ ${'─'.repeat(70)}
             <AlertDialogDescription>{confirmDialog.description}</AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel
-              onClick={() => setConfirmDialog({ open: false, title: "", description: "", action: () => {} })}
-            >
-              Cancel
-            </AlertDialogCancel>
+            <AlertDialogCancel onClick={() => setConfirmDialog({ open: false, title: "", description: "", action: () => { } })}>Cancel</AlertDialogCancel>
             <AlertDialogAction onClick={confirmDialog.action}>Confirm</AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
@@ -901,7 +726,7 @@ ${'─'.repeat(70)}
 
 export default function CourseDetail() {
   return (
-    <AuthGuard requiredRoles={['owner', 'manager', 'receptionist']}>
+    <AuthGuard requiredRoles={['manager', 'receptionist']}>
       <CourseDetailContent />
     </AuthGuard>
   )

@@ -13,7 +13,8 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
 import { GraduationCap, Plus, Archive, MoreHorizontal, Pencil } from "lucide-react"
-import { teacherService, archiveService } from "@/services/appDataService"
+import { teacherService  } from "@/services/teacherService"
+import { archiveService } from "@/services/archiveService"
 import { useToast } from "@/hooks/use-toast"
 
 interface TeachersTabProps {
@@ -31,7 +32,6 @@ export default function TeachersTab({
   courses, 
   onTeachersUpdate, 
   canAdd = false,
-  showCourses = true,
   showStats = false,
   pendingArchiveIds = new Set()
 }: TeachersTabProps) {
@@ -88,7 +88,7 @@ export default function TeachersTab({
       console.log("Teacher object to add:", teacher)
       await teacherService.addTeacher(teacher)
       console.log("Teacher added successfully")
-      const updatedTeachers = await teacherService.getAllTeachers()
+      const updatedTeachers = (await teacherService.getAllTeachers()).data
       onTeachersUpdate(updatedTeachers)
       setNewTeacher({
         name: "",
@@ -312,7 +312,7 @@ export default function TeachersTab({
         </div>
       </CardHeader>
       <CardContent>
-        <div className="max-h-[455px] overflow-auto scrollbar-thin">
+        <div className="max-h-113.75 overflow-auto scrollbar-thin">
           <Table>
             <TableHeader>
               <TableRow>
@@ -321,13 +321,7 @@ export default function TeachersTab({
                 <TableHead>School</TableHead>
                 <TableHead>School Years</TableHead>
                 <TableHead>Active Courses</TableHead>
-                {showStats && (
-                  <>
-                    <TableHead>Students</TableHead>
-                    <TableHead>Total Earnings</TableHead>
-                  </>
-                )}
-                <TableHead className="w-[50px]"></TableHead>
+                <TableHead className="w-12.5"></TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -426,12 +420,6 @@ export default function TeachersTab({
                     <TableCell>
                       <span className="text-sm text-gray-600">{teacherCourses.length} course(s)</span>
                     </TableCell>
-                    {showStats && (
-                      <>
-                        <TableCell>{teacher.students || 0}</TableCell>
-                        <TableCell>{(teacher.totalEarnings || 0).toLocaleString()} DA</TableCell>
-                      </>
-                    )}
                     <TableCell>
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild>

@@ -42,7 +42,7 @@ export default function RevenueTab({ revenue }: RevenueTabProps) {
         </CardTitle>
       </CardHeader>
       <CardContent>
-        <div className="max-h-[455px] overflow-auto scrollbar-thin">
+        <div className="max-h-113.75 overflow-auto scrollbar-thin">
         {revenue.length > 0 ? (
         <Table>
           <TableHeader>

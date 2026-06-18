@@ -7,7 +7,10 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Badge } from "@/components/ui/badge"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 import { Archive, Check, X, Undo, MoreHorizontal } from "lucide-react"
-import { studentService, teacherService, courseService, archiveService } from "@/services/appDataService"
+import { studentService } from "@/services/studentService"
+import { teacherService } from "@/services/teacherService"
+import { courseService } from "@/services/courseService"
+import { archiveService } from "@/services/archiveService"
 import { useAuth } from "@/contexts/AuthContext"
 
 interface ArchiveTabProps {
@@ -30,7 +33,7 @@ interface ArchiveRequest {
   reason?: string
 }
 
-export default function ArchiveTab({ isManager = false, onArchiveUpdate }: ArchiveTabProps) {
+export default function ArchiveTab({ isManager = false }: ArchiveTabProps) {
   const { user } = useAuth()
   const [archiveRequests, setArchiveRequests] = useState<ArchiveRequest[]>([])
   const [loading, setLoading] = useState(true)
@@ -65,10 +68,7 @@ export default function ArchiveTab({ isManager = false, onArchiveUpdate }: Archi
 
     try {
       await archiveService.approveArchiveRequest(requestId)
-      // Notify parent to update pending archive IDs without full refetch
-      if (onArchiveUpdate) {
-        onArchiveUpdate()
-      }
+      
     } catch (error) {
       console.error('Error approving archive request:', error)
       // Rollback on error
@@ -95,9 +95,6 @@ export default function ArchiveTab({ isManager = false, onArchiveUpdate }: Archi
     try {
       await archiveService.denyArchiveRequest(requestId)
       // Notify parent to update pending archive IDs without full refetch
-      if (onArchiveUpdate) {
-        onArchiveUpdate()
-      }
     } catch (error) {
       console.error('Error denying archive request:', error)
       // Rollback on error
@@ -125,9 +122,6 @@ export default function ArchiveTab({ isManager = false, onArchiveUpdate }: Archi
       // Reload archive requests
       await loadArchiveRequests()
 
-      if (onArchiveUpdate) {
-        onArchiveUpdate()
-      }
     } catch (error) {
       console.error('Error unarchiving entity:', error)
     }
@@ -163,7 +157,7 @@ export default function ArchiveTab({ isManager = false, onArchiveUpdate }: Archi
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-6">
-        <div className="max-h-[455px] overflow-auto scrollbar-thin">
+        <div className="max-h-113.75 overflow-auto scrollbar-thin">
         {/* Pending Requests */}
         <div>
           <h3 className="text-lg font-medium mb-4">Pending Archive Requests</h3>

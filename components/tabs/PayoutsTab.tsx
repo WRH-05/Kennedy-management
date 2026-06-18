@@ -1,6 +1,4 @@
 "use client"
-
-import { useState } from "react"
 import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -50,7 +48,7 @@ export default function PayoutsTab({ payouts, onApprovePayout, onDenyPayout, isM
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-6">
-        <div className="max-h-[455px] overflow-auto scrollbar-thin">
+        <div className="max-h-113.75 overflow-auto scrollbar-thin">
           {/* Pending Payouts */}
           <div>
             <h3 className="text-lg font-medium mb-4">Pending Payouts</h3>
