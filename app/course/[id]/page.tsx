@@ -1,16 +1,14 @@
 // page.tsx
 "use client"
 
-import { useState, useEffect, useCallback } from "react"
+import { useState, useEffect, useCallback, useMemo } from "react"
 import { useRouter, useParams } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { ArrowLeft } from "lucide-react"
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog"
 
 import { courseService } from "@/services/courseService"
-import { studentService } from "@/services/studentService"
 import { paymentService } from "@/services/paymentService"
-import { attendanceService } from "@/services/attendanceService"
 import { useAuth } from "@/contexts/AuthContext"
 import AuthGuard from "@/components/auth/AuthGuard"
 import { useToast } from "@/hooks/use-toast"
@@ -19,6 +17,7 @@ import { CourseInfoCard } from "./course-info-card"
 import { PaymentSummaryCard } from "./payment-summary-card"
 import { BillingPeriodToolbar } from "./billing-period-toolbar"
 import { StudentsManagementCard } from "./students-management-card"
+import { useStudents } from "@/hooks/useStudents"
 
 function CourseDetailContent() {
   const router = useRouter()
@@ -28,7 +27,6 @@ function CourseDetailContent() {
   const { toast } = useToast()
 
   const [course, setCourse] = useState<any>(null)
-  const [students, setStudents] = useState<any[]>([])
   const [billingPeriods, setBillingPeriods] = useState<any[]>([])
   const [selectedPeriodId, setSelectedPeriodId] = useState<string>("")
   const [studentSearchQuery, setStudentSearchQuery] = useState("")
@@ -38,9 +36,17 @@ function CourseDetailContent() {
     open: false, title: "", description: "", action: () => { },
   })
 
+  const { students: allStudents } = useStudents();
+
+  const students = useMemo(() =>
+    (allStudents && 'data' in allStudents ? allStudents.data : []),
+    [allStudents]
+  )
+
+
   const loadData = useCallback(async () => {
     try {
-      let [courseData, billingData,] = await Promise.all([
+      let [courseData, billingData] = await Promise.all([
         courseService.getCourseInstanceById(courseId),
         paymentService.getBillingPeriods(courseId)
       ])
@@ -61,7 +67,6 @@ function CourseDetailContent() {
       studentsBillingPeriods.forEach((bill) => {
         studentsData.push(bill.students)
       })
-      setStudents(studentsData || [])
       setCourse(courseData)
     } catch (error) {
       console.error(error)
@@ -126,9 +131,9 @@ function CourseDetailContent() {
           <div className="lg:col-span-2 space-y-6">
             <BillingPeriodToolbar courseId={course.id} billingPeriods={billingPeriods} selectedPeriodId={selectedPeriodId} setSelectedPeriodId={setSelectedPeriodId} onRefresh={loadData} />
             <StudentsManagementCard
-              course={course} courseId={course.id} filteredStudents={filteredStudents}
-              studentSearchQuery={studentSearchQuery} selectedPeriodId={selectedPeriodId} 
-              billingPeriods={billingPeriods} setSelectedPeriodId={setSelectedPeriodId} 
+              course={course} filteredStudents={filteredStudents}
+              studentSearchQuery={studentSearchQuery} selectedPeriodId={selectedPeriodId}
+              billingPeriods={billingPeriods} setSelectedPeriodId={setSelectedPeriodId}
               setStudentSearchQuery={setStudentSearchQuery}
               onRefresh={loadData}
             />

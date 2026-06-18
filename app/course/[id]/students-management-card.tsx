@@ -34,6 +34,8 @@ export function StudentsManagementCard({
   const [selectedStudent, setSelectedStudent] = useState("")
   const [showStudentResults, setShowStudentResults] = useState(false)
 
+  console.log(filteredStudents)
+
   // SWR Hooks
   const { payments, isLoading, mutate } = useStudentsData(selectedPeriodId);
   const { students: enrolledStudentsRaw, mutate: mutateEnrolled } = useCourseEnrollementStudentsByCourseId(course.id)
