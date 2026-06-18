@@ -23,6 +23,27 @@ export function usePayments() {
   }
 }
 
+export function useStudentsData(billing_period_id: string) {
+  const { data, error, isLoading, isValidating, mutate } = useSWR(
+    billing_period_id ? ['payment-students-data', billing_period_id] : null,
+    ([_, id]) => paymentService.getStudentData(id),
+    {
+      ...swrConfig,                // Keep your other configs if necessary
+      revalidateOnMount: true,     // Forces revalidation when the component mounts
+      revalidateIfStale: true,     // Always revalidate even if data is cached
+      dedupingInterval: 0,         // Disables request deduping (no caching time window)
+    }
+  )
+
+  return {
+    payments: data || [],
+    isLoading,
+    isValidating,
+    error,
+    mutate: () => mutate(['payment-students-data', billing_period_id]),
+  }
+}
+
 export function useTeacherPaymentData() {
   const { data, error, isLoading, isValidating } = useSWR(
     'teacher-payment-data',
@@ -41,15 +62,14 @@ export function useTeacherPaymentData() {
 
 export function useRevenue() {
   const { payments } = usePayments()
-  
-  // Calculate revenue from student payments
+
   const revenueData = payments
     .filter((p: any) => p.type === 'student' && p.status === 'paid')
     .map((p: any) => ({
       ...p,
       paid: true
     }))
-  
+
   return {
     data: revenueData,
     error: null,

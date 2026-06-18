@@ -30,7 +30,6 @@ function CourseDetailContent() {
   const [course, setCourse] = useState<any>(null)
   const [students, setStudents] = useState<any[]>([])
   const [billingPeriods, setBillingPeriods] = useState<any[]>([])
-  const [billingPeriodsOfStudents, setBillingPeriodsOfStudents] = useState<any[]>([])
   const [selectedPeriodId, setSelectedPeriodId] = useState<string>("")
   const [studentSearchQuery, setStudentSearchQuery] = useState("")
   const [loading, setLoading] = useState(true)
@@ -58,33 +57,11 @@ function CourseDetailContent() {
       }
 
       let studentsBillingPeriods = await paymentService.getStudentData(selectedPeriodId);
-      setBillingPeriodsOfStudents(studentsBillingPeriods);
       const studentsData: any[] = [];
       studentsBillingPeriods.forEach((bill) => {
         studentsData.push(bill.students)
       })
       setStudents(studentsData || [])
-
-      const studentPayments: Record<string, boolean> = {}
-      if (courseData.student_ids?.length > 0) {
-        const currentMonth = new Date().toLocaleString('default', { month: 'long', year: 'numeric' })
-        for (const studentId of courseData.student_ids) {
-          try {
-            const history = await paymentService.getStudentPaymentHistory(studentId)
-            studentPayments[studentId] = history.some((p: any) => p.course_id === courseId && p.status === 'paid' && p.month === currentMonth)
-          } catch {
-            studentPayments[studentId] = false
-          }
-        }
-      }
-
-      let teacherPaidStatus = false
-      if (courseData.teacher_id) {
-        try { teacherPaidStatus = await paymentService.isTeacherPaidForMonth(courseData.teacher_id) } catch { }
-      }
-
-      courseData.payments = { students: studentPayments, teacherPaid: teacherPaidStatus }
-      if (!courseData.attendance) courseData.attendance = {}
       setCourse(courseData)
     } catch (error) {
       console.error(error)
@@ -94,46 +71,6 @@ function CourseDetailContent() {
   }, [courseId, router, user, selectedPeriodId])
 
   useEffect(() => { loadData() }, [loadData])
-
-  const updateWeeklyAttendance = async (studentId: number, week: string, present: boolean) => {
-    setCourse((prev: any) => ({
-      ...prev,
-      attendance: { ...prev.attendance, [studentId]: { ...prev.attendance?.[studentId], [week]: present } },
-    }))
-    try {
-      await attendanceService.updateAttendance(courseId, studentId, week, present)
-    } catch {
-      setCourse((prev: any) => ({
-        ...prev,
-        attendance: { ...prev.attendance, [studentId]: { ...prev.attendance?.[studentId], [week]: !present } },
-      }))
-      toast({ title: 'Attendance update failed', variant: 'destructive' })
-    }
-  }
-
-  const toggleStudentPayment = async (studentId: string) => {
-    try {
-      const paymentHistory = await paymentService.getStudentPaymentHistory(studentId)
-      const coursePayment = paymentHistory.find((p: any) => p.course_id === courseId)
-      let newStatus = 'paid'
-
-      if (coursePayment) {
-        newStatus = coursePayment.status === 'paid' ? 'pending' : 'paid'
-        await paymentService.updateRecordStudentPayment(courseId, studentId, selectedPeriodId, { status: newStatus })
-      } else {
-        await paymentService.recordStudentPayment(courseId, parseInt(studentId), selectedPeriodId)
-        newStatus = 'pending'
-      }
-
-      setCourse((prev: any) => ({
-        ...prev,
-        payments: { ...prev.payments, students: { ...prev.payments?.students, [studentId]: newStatus === 'paid' } },
-      }))
-      toast({ title: "Success", description: `Payment marked as ${newStatus}` })
-    } catch {
-      toast({ title: "Error", variant: "destructive" })
-    }
-  }
 
   const toggleTeacherPayment = () => {
     if (!course?.teacher_id) return
@@ -153,22 +90,6 @@ function CourseDetailContent() {
         }
         setConfirmDialog({ open: false, title: "", description: "", action: () => { } })
       }
-    })
-  }
-
-  const removeStudentFromCourse = (studentId: number) => {
-    const studentName = students.find(s => s.id === studentId)?.name || `Student ${studentId}`
-    setConfirmDialog({
-      open: true,
-      title: "Remove Student",
-      description: `Are you sure you want to remove ${studentName} from this course?`,
-      action: async () => {
-        try {
-          await courseService.unenrollStudent(courseId, studentId)
-          await loadData()
-        } catch (error) { console.error(error) }
-        setConfirmDialog({ open: false, title: "", description: "", action: () => { } })
-      },
     })
   }
 
@@ -198,16 +119,18 @@ function CourseDetailContent() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           <div className="lg:col-span-1">
-            <CourseInfoCard course={course} courseId={courseId} onRefresh={loadData} />
+            <CourseInfoCard course={course} courseId={course.id} onRefresh={loadData} />
             <PaymentSummaryCard course={course} teacherEarnings={teacherEarnings} onToggleTeacherPayment={toggleTeacherPayment} />
           </div>
 
           <div className="lg:col-span-2 space-y-6">
-            <BillingPeriodToolbar courseId={courseId} billingPeriods={billingPeriods} selectedPeriodId={selectedPeriodId} setSelectedPeriodId={setSelectedPeriodId} onRefresh={loadData} />
+            <BillingPeriodToolbar courseId={course.id} billingPeriods={billingPeriods} selectedPeriodId={selectedPeriodId} setSelectedPeriodId={setSelectedPeriodId} onRefresh={loadData} />
             <StudentsManagementCard
-              course={course} courseId={courseId} students={students} filteredStudents={filteredStudents}
-              studentSearchQuery={studentSearchQuery} selectedPeriodId={selectedPeriodId} billingPeriods={billingPeriods} setSelectedPeriodId={setSelectedPeriodId} setStudentSearchQuery={setStudentSearchQuery} onUpdateWeeklyAttendance={updateWeeklyAttendance}
-              onToggleStudentPayment={toggleStudentPayment} onRemoveStudent={removeStudentFromCourse} onRefresh={loadData}
+              course={course} courseId={course.id} filteredStudents={filteredStudents}
+              studentSearchQuery={studentSearchQuery} selectedPeriodId={selectedPeriodId} 
+              billingPeriods={billingPeriods} setSelectedPeriodId={setSelectedPeriodId} 
+              setStudentSearchQuery={setStudentSearchQuery}
+              onRefresh={loadData}
             />
           </div>
         </div>

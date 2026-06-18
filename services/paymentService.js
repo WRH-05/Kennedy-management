@@ -180,7 +180,7 @@ export const paymentService = {
         const { data, error } = await supabase
             .from('student_payments')
             .update({
-                ...updates,s
+                ...updates
             })
             .eq('course_id', courseId)
             .eq('student_id', studentId)
@@ -284,6 +284,7 @@ export const paymentService = {
                 .from('course_enrollments')
                 .select('student_id, status')
                 .eq('course_id', courseId)
+                .eq('status', 'enrolled')
             // Optional: Only create bills for students who aren't dropped/cancelled
             // .eq('status', 'active') 
 

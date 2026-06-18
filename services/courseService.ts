@@ -132,10 +132,9 @@ export const courseService = {
     async unenrollStudent(courseId: string, studentId: string) {
         const { error } = await supabase
             .from('course_enrollments')
-            .delete()
+            .update({status: 'dropped'})
             .eq('course_id', courseId)
             .eq('student_id', studentId)
-
         if (error) throw error
         return true
     },

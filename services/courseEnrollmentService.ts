@@ -15,7 +15,8 @@ export const courseEnrollmentService = {
     let query = supabase
       .from('course_enrollments')
       .select('students!inner(*)', { count: pageSize > 0 ? 'exact' : 'estimated' })
-      .eq('course_id', course_id);
+      .eq('course_id', course_id)
+      .eq('status', 'enrolled')
 
     query = query.order('enrolled_at', { ascending: false });
 
