@@ -12,7 +12,7 @@ export function useCourses() {
   )
 
   return {
-    courses: data?.data || [],
+    courses: data || [],
     isLoading,
     isValidating,
     error,

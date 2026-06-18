@@ -21,6 +21,7 @@ export default function LoginForm() {
   useEffect(() => {
     if (user?.profile?.role) {
       switch (user.profile.role) {
+        case 'owner':
         case 'manager':
           router.push('/manager')
           break
