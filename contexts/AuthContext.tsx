@@ -145,17 +145,6 @@ function renderContent(
   refreshSession: () => void,
   children: React.ReactNode
 ) {
-  // Initial loading
-  if (isLoading) {
-    return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="text-center">
-          <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent mx-auto mb-4" />
-          <p className="text-gray-600">Loading...</p>
-        </div>
-      </div>
-    )
-  }
 
   // Only show error if we have a critical error AND no valid session data
   // Timeout errors should be silently retried, not shown to user

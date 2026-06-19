@@ -37,7 +37,6 @@ export default function AuthGuard({
         if (!requiredRoles.includes(user.profile.role)) {
           // Redirect based on user role
           switch (user.profile.role) {
-            case 'owner':
             case 'manager':
               router.push('/manager')
               break
@@ -54,7 +53,6 @@ export default function AuthGuard({
       // Auto-redirect authenticated users from auth pages
       if (user && ['/auth/login', '/auth/signup', '/auth/create-school'].includes(window.location.pathname)) {
         switch (user.profile?.role) {
-          case 'owner':
           case 'manager':
             router.push('/manager')
             break

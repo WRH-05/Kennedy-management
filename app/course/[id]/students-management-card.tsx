@@ -15,6 +15,20 @@ import { useStudents } from "@/hooks/useStudents"
 import { paymentService } from "@/services/paymentService"
 import { useCourseEnrollementStudentsByCourseId } from "@/hooks/useCourseEnrollement"
 
+const PAYMENT_STATUSES = [
+  { value: "paid", label: "Paid" },
+  { value: "pending", label: "Request Payment" },
+  { value: "unpaid", label: "Waiting for payement" },
+  { value: "cancelled", label: "Cancelled" },
+]
+
+// Enrollment status enums
+const ENROLLMENT_STATUSES = [
+  { value: "enrolled", label: "Enrolled" },
+  { value: "dropped", label: "Dropped" },
+  { value: "missing", label: "Missing" },
+]
+
 interface StudentsManagementProps {
   course: any
   filteredStudents: any[]
@@ -33,8 +47,6 @@ export function StudentsManagementCard({
   const [showAddStudentDialog, setShowAddStudentDialog] = useState(false)
   const [selectedStudent, setSelectedStudent] = useState("")
   const [showStudentResults, setShowStudentResults] = useState(false)
-
-  console.log(filteredStudents)
 
   // SWR Hooks
   const { payments, isLoading, mutate } = useStudentsData(selectedPeriodId);
@@ -59,7 +71,6 @@ export function StudentsManagementCard({
       if (!student) return
       await courseService.enrollStudent(course.id, student.id, selectedPeriodId)
       
-      // Sync all local SWR caches instantly
       await Promise.all([mutate(), mutateEnrolled()])
       onRefresh()
       
@@ -71,7 +82,7 @@ export function StudentsManagementCard({
     }
   }
 
-  const onToggleStudentPayment = async (student_id: string, status: string) => {
+  const onChangeStudentPaymentStatus = async (student_id: string, status: string) => {
     try {
       await paymentService.updateRecordStudentPayment(course.id, student_id, selectedPeriodId, {
         status
@@ -84,11 +95,14 @@ export function StudentsManagementCard({
     }
   }
 
-  const onRemoveStudent = async (student_id: string) => {
+  const onChangeEnrollmentStatus = async (student_id: string, currentStatus: string, targetStatus: string) => {
     try {
-      await courseService.unenrollStudent(course.id, student_id);
+      // Logic assumes if switching away from enrolled, we execute the unenroll payload
+      // You can update this body matching your backend service route requirements (e.g. courseService.updateStatus)
+      if (targetStatus === "dropped" || targetStatus === "missing") {
+        await courseService.unenrollStudent(course.id, student_id);
+      }
       
-      // Sync local SWR caches instantly
       await Promise.all([mutate(), mutateEnrolled()])
       onRefresh()
     } catch (error) {
@@ -114,8 +128,6 @@ export function StudentsManagementCard({
                 <DialogTitle>Add Student to Course</DialogTitle>
               </DialogHeader>
               <form onSubmit={handleAddStudent} className="space-y-4">
-                
-                {/* Search Field Container */}
                 <div className="space-y-2">
                   <Label htmlFor="studentSearch">Student Name</Label>
                   <div className="relative">
@@ -151,7 +163,6 @@ export function StudentsManagementCard({
                   </div>
                 </div>
 
-                {/* Period Select Container (Separated out for correct layout flow) */}
                 <div className="space-y-2">
                   <Label>Billing Cycle</Label>
                   {billingPeriods.length > 0 ? (
@@ -188,8 +199,8 @@ export function StudentsManagementCard({
           <TableHeader>
             <TableRow>
               <TableHead>Students</TableHead>
-              <TableHead>Status</TableHead>
-              <TableHead className="w-25">Actions</TableHead>
+              <TableHead className="w-45">Payment Status</TableHead>
+              <TableHead className="w-45">Enrollment Status</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -208,8 +219,15 @@ export function StudentsManagementCard({
             ) : (
               payments.map((p: any, idx: number) => {
                 const currentStudentId = p.students?.id;
-                // Correctly check if student exists in raw enrollment list
+                
+                // Determine current local status state string
                 const isEnrolled = enrolledStudents.some((s: any) => s.id === currentStudentId);
+                // If you have an explicit 'missing' status saved down in your payment/enrollment object schema, 
+                // swap 'p.enrollment_status' here. Otherwise fallback checks if they are in the enrollment cache array.
+                const currentEnrollmentStatus = p.enrollment_status || (isEnrolled ? "enrolled" : "dropped");
+
+                const isPaid = p.status === "paid";
+                const isFinalizedEnrollment = currentEnrollmentStatus === "dropped" || currentEnrollmentStatus === "missing";
 
                 return (
                   <TableRow key={idx}>
@@ -222,25 +240,56 @@ export function StudentsManagementCard({
                         {p.students?.name || "Unknown Student"}
                       </Button>
                     </TableCell>
+                    
+                    {/* Payment Status Dropdown Column */}
                     <TableCell>
-                      <Button 
-                        size="sm" 
-                        variant={p.status === "paid" ? "default" : "destructive"} 
-                        onClick={() => onToggleStudentPayment(currentStudentId, p.status === "paid" ? "pending" : "paid")}
+                      <Select
+                        value={p.status}
+                        disabled={isPaid}
+                        onValueChange={(newStatus) => onChangeStudentPaymentStatus(currentStudentId, newStatus)}
                       >
-                        {p.status}
-                      </Button>
+                        <SelectTrigger className="w-40 h-8 text-xs capitalize disabled:opacity-100 disabled:bg-emerald-50 disabled:text-emerald-700 disabled:border-emerald-200">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {PAYMENT_STATUSES
+                            .filter((status) => status.value !== "paid")
+                            .map((status) => (
+                              <SelectItem key={status.value} value={status.value} className="text-xs capitalize">
+                                {status.label}
+                              </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
                     </TableCell>
+
+                    {/* Enrollment Status Dropdown Column */}
                     <TableCell>
-                      <Button 
-                        variant="outline" 
-                        size="sm" 
-                        className="h-8 px-2 text-xs bg-transparent" 
-                        disabled={!isEnrolled} // Optional: prevents clicking double-drops
-                        onClick={() => onRemoveStudent(currentStudentId)}
+                      <Select
+                        value={currentEnrollmentStatus}
+                        disabled={isFinalizedEnrollment}
+                        onValueChange={(newStatus) => onChangeEnrollmentStatus(currentStudentId, currentEnrollmentStatus, newStatus)}
                       >
-                        {isEnrolled ? "Drop" : "Dropped"}
-                      </Button>
+                        <SelectTrigger 
+                          className={`w-40 h-8 text-xs capitalize disabled:opacity-100 ${
+                            currentEnrollmentStatus === "dropped" 
+                              ? "disabled:bg-rose-50 disabled:text-rose-700 disabled:border-rose-200" 
+                              : currentEnrollmentStatus === "missing"
+                              ? "disabled:bg-amber-50 disabled:text-amber-700 disabled:border-amber-200"
+                              : ""
+                          }`}
+                        >
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {ENROLLMENT_STATUSES
+                            .map((status) => (
+                              <SelectItem key={status.value} value={status.value} className="text-xs capitalize">
+                                {status.label}
+                              </SelectItem>
+                            ))}
+                        </SelectContent>
+                      </Select>
                     </TableCell>
                   </TableRow>
                 );
