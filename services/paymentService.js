@@ -1,8 +1,7 @@
 import { supabase } from "@/lib/supabase"
-import { profileService } from "./profileService.js"
+import { profileService } from "./profileService"
 
 export const paymentService = {
-    // Get all teacher payouts
     async getAllPayouts() {
         const { data, error } = await supabase
             .from('teacher_payouts')
@@ -15,7 +14,6 @@ export const paymentService = {
 
         if (error) throw error
 
-        // Enrich with teacher name and recorded by name for backward compatibility
         return (data || []).map((payout) => ({
             ...payout,
             professor_name: payout.teachers?.name || 'Unknown Teacher',
@@ -23,7 +21,6 @@ export const paymentService = {
         }))
     },
 
-    // Update payout status
     async updatePayoutStatus(id, status, approverId) {
         const updateData = {
             status,
@@ -49,7 +46,6 @@ export const paymentService = {
         return data
     },
 
-    // Get pending payouts
     async getPendingPayouts() {
         const { data, error } = await supabase
             .from('teacher_payouts')
@@ -61,7 +57,6 @@ export const paymentService = {
         return data || []
     },
 
-    // Get student payment history
     async getStudentPaymentHistory(studentId) {
         const { data, error } = await supabase
             .from('student_payments')
@@ -73,7 +68,6 @@ export const paymentService = {
         return data || []
     },
 
-    // Get teacher payment history
     async getTeacherPaymentHistory(teacherId) {
         const { data, error } = await supabase
             .from('teacher_payouts')
@@ -85,7 +79,6 @@ export const paymentService = {
         return data || []
     },
 
-    // Get student data for management
     async getStudentData(billingPeriodId) {
         if (!billingPeriodId) return []
         const { data, error } = await supabase
@@ -99,7 +92,6 @@ export const paymentService = {
         return data || []
     },
 
-    // Get teacher data for management
     async getTeacherData() {
         const { data, error } = await supabase
             .from('teachers')
@@ -113,7 +105,6 @@ export const paymentService = {
         return data || []
     },
 
-    // Update student payment status
     async updatePaymentStatus(paymentId, status, approverId = null) {
         const updateData = {
             status,
@@ -135,7 +126,6 @@ export const paymentService = {
         return data
     },
 
-    // Get all payments combined and sorted by timeline
     async getAllPayments() {
         const [studentPayments, teacherPayouts] = await Promise.all([
             supabase.from('student_payments').select('*').order('payment_date', { ascending: false }),
@@ -154,7 +144,6 @@ export const paymentService = {
     },
 
 
-    // Record student payment for a course
     async getAllStudentsPayments(
         page = 1,
         pageSize = 0,
@@ -218,7 +207,6 @@ export const paymentService = {
         };
     },
 
-    // Record student payment for a course
     async recordStudentPayment(courseId, studentId, billingPeriodId) {
         const userProfile = await profileService.getCurrentUserProfile()
 
@@ -240,7 +228,6 @@ export const paymentService = {
     },
 
     async updateRecordStudentPayment(courseId, studentId, billingPeriodId, updates = {}) {
-        const userProfile = await profileService.getCurrentUserProfile()
 
         const { data, error } = await supabase
             .from('student_payments')
@@ -323,7 +310,6 @@ export const paymentService = {
         return data
     },
 
-    // Record teacher payout for a course/billing period
     async recordTeacherPayout(teacherId, amount, percentage = 50, totalGenerated = 0, billingPeriodId = null) {
         const userProfile = await profileService.getCurrentUserProfile()
 
@@ -345,7 +331,6 @@ export const paymentService = {
         return data
     },
 
-    // Check if teacher is paid for current month
     async isTeacherPaidForMonth(teacherId, month = null) {
         const targetMonth = month || new Date().toLocaleString('default', { month: 'long', year: 'numeric' })
 
@@ -357,11 +342,9 @@ export const paymentService = {
             .single()
 
         if (error && error.code !== 'PGRST116') throw error
-        // Both 'paid' and 'approved' are terminal paid states
         return data?.status === 'paid' || data?.status === 'approved'
     },
 
-    // Get student payments
     async getStudentPayments() {
         const { data, error } = await supabase
             .from('student_payments')
@@ -375,14 +358,12 @@ export const paymentService = {
 
         if (error) throw error
 
-        // Enrich with recorded_by_name for backward compatibility
         return (data || []).map((payment) => ({
             ...payment,
             recorded_by_name: payment.profiles?.full_name || '-'
         }))
     },
 
-    // Get billing periods
     async getBillingPeriods(courseId) {
         const { data, error } = await supabase
             .from('billing_periods')
@@ -396,7 +377,6 @@ export const paymentService = {
 
     async createBillingPeriod(courseId, startDate, endDate) {
         try {
-            // 1. Create the billing period row
             const { data: billingPeriod, error: billingError } = await supabase
                 .from('billing_periods')
                 .insert([{
@@ -409,31 +389,24 @@ export const paymentService = {
 
             if (billingError) throw billingError
 
-            // 2. Fetch all active student enrollments for this specific course
-            // Adjust 'course_students' to match your actual junction table name
             const { data: enrollments, error: enrollmentError } = await supabase
                 .from('course_enrollments')
                 .select('student_id, status')
                 .eq('course_id', courseId)
                 .eq('status', 'enrolled')
-            // Optional: Only create bills for students who aren't dropped/cancelled
-            // .eq('status', 'active') 
 
             if (enrollmentError) throw enrollmentError
 
-            // 3. If there are students enrolled, bulk insert rows into the payments table
             if (enrollments && enrollments.length > 0) {
 
-                // Map the enrollment data into rows matching your payments schema (Image 4)
                 const paymentRows = enrollments.map(enrollment => ({
                     student_id: enrollment.student_id,
                     course_id: courseId,
                     billing_period_id: billingPeriod.id,
-                    amount: 0, // IMPORTANT: Set your base price logic here (e.g., pulling from course table)
-                    status: 'pending' // Or whatever default status string your app uses
+                    amount: 0,
+                    status: 'pending'
                 }))
 
-                // Replace 'payments' with the exact name of your new image table
                 const { error: paymentInsertError } = await supabase
                     .from('student_payments')
                     .insert(paymentRows)
@@ -441,7 +414,6 @@ export const paymentService = {
                 if (paymentInsertError) throw paymentInsertError
             }
 
-            // Return the created billing period along with a success flag or confirmation
             return {
                 ...billingPeriod,
                 payments_generated: enrollments ? enrollments.length : 0
