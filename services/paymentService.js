@@ -153,6 +153,71 @@ export const paymentService = {
         return allPayments
     },
 
+
+    // Record student payment for a course
+    async getAllStudentsPayments(
+        page = 1,
+        pageSize = 0,
+    ) {
+
+        let query = supabase
+            .from('student_payments')
+            .select('*, students (*), course_instances (*), billing_periods (*), profiles!student_payments_recorded_by_id_fkey(*)', { count: pageSize > 0 ? 'exact' : 'estimated' })
+
+        query = query.order('created_at', { ascending: false });
+
+
+        if (pageSize > 0) {
+            const from = (page - 1) * pageSize;
+            const to = from + pageSize - 1;
+            query = query.range(from, to);
+        }
+
+
+        const { data, error, count } = await query;
+
+        if (error) throw error
+        const finalData = data || [];
+
+        return {
+            data: finalData,
+            total: pageSize > 0 ? (count ?? 0) : finalData.length,
+            page,
+            pageSize: pageSize > 0 ? pageSize : finalData.length,
+        };
+    },
+    async getAllTeachersPayments(
+        page = 1,
+        pageSize = 0,
+    ) {
+
+        let query = supabase
+            .from('teacher_payouts')
+            .select('*, teachers (*), course_instances (*), billing_periods (*), profiles!teacher_payouts_recorded_by_id_fkey(*)', { count: pageSize > 0 ? 'exact' : 'estimated' })
+
+        query = query.order('created_at', { ascending: false });
+
+
+        if (pageSize > 0) {
+            const from = (page - 1) * pageSize;
+            const to = from + pageSize - 1;
+            query = query.range(from, to);
+        }
+
+
+        const { data, error, count } = await query;
+
+        if (error) throw error
+        const finalData = data || [];
+
+        return {
+            data: finalData,
+            total: pageSize > 0 ? (count ?? 0) : finalData.length,
+            page,
+            pageSize: pageSize > 0 ? pageSize : finalData.length,
+        };
+    },
+
     // Record student payment for a course
     async recordStudentPayment(courseId, studentId, billingPeriodId) {
         const userProfile = await profileService.getCurrentUserProfile()
@@ -185,6 +250,72 @@ export const paymentService = {
             .eq('course_id', courseId)
             .eq('student_id', studentId)
             .eq('billing_period_id', billingPeriodId)
+            .select()
+            .single()
+
+        if (error) throw error
+        return data
+    },
+    async payStudentPayment(paymentId) {
+        const userProfile = await profileService.getCurrentUserProfile()
+
+        const { data, error } = await supabase
+            .from('student_payments')
+            .update({
+                status: 'paid',
+                approved_by: userProfile.id,
+            })
+            .eq('id', paymentId)
+            .select()
+            .single()
+
+        if (error) throw error
+        return data
+    },
+    async payTeacherPayment(paymentId) {
+        const userProfile = await profileService.getCurrentUserProfile()
+
+        const { data, error } = await supabase
+            .from('teacher_payouts')
+            .update({
+                status: 'paid',
+                approved_by: userProfile.id,
+                approved_date: Date.now(),
+            })
+            .eq('id', paymentId)
+            .select()
+            .single()
+
+        if (error) throw error
+        return data
+    },
+    async denyStudentPayment(paymentId) {
+        const userProfile = await profileService.getCurrentUserProfile()
+
+        const { data, error } = await supabase
+            .from('student_payments')
+            .update({
+                status: 'cancelled',
+                approved_by: userProfile.id,
+            })
+            .eq('id', paymentId)
+            .select()
+            .single()
+
+        if (error) throw error
+        return data
+    },
+    async denyTeacherPayment(paymentId) {
+        const userProfile = await profileService.getCurrentUserProfile()
+
+        const { data, error } = await supabase
+            .from('teacher_payouts')
+            .update({
+                status: 'cancelled',
+                approved_by: userProfile.id,
+                approved_date: Date.now(),
+            })
+            .eq('id', paymentId)
             .select()
             .single()
 

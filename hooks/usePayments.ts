@@ -23,6 +23,38 @@ export function usePayments() {
   }
 }
 
+export function useStudentsPayments() {
+  const { data, error, isLoading, isValidating, mutate } = useSWR(
+    'students-payments',
+    () => paymentService.getAllStudentsPayments(),
+    swrConfig
+  )
+
+  return {
+    payments: data || [],
+    isLoading,
+    isValidating,
+    error,
+    mutate, // Returns the bound mutator for this specific key
+  }
+}
+
+export function useTeachersPayments() {
+  const { data, error, isLoading, isValidating, mutate } = useSWR(
+    'teachers-payments', // ✨ Fixed cache key collision
+    () => paymentService.getAllTeachersPayments(),
+    swrConfig
+  )
+
+  return {
+    payments: data || [],
+    isLoading,
+    isValidating,
+    error,
+    mutate, // Returns the bound mutator for this specific key
+  }
+}
+
 export function useStudentsData(billing_period_id: string) {
   const { data, error, isLoading, isValidating, mutate } = useSWR(
     billing_period_id ? ['payment-students-data', billing_period_id] : null,
