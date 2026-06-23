@@ -1,5 +1,4 @@
 import { supabase } from "@/lib/supabase"
-import { paymentService } from "./paymentService"
 import { Tables, TablesInsert, TablesUpdate } from "@/types/database.types"
 import { studentPaymentService } from "./studentPaymentService";
 
@@ -95,35 +94,14 @@ export const courseService = {
     // Transaction
     async enrollStudent(courseId: string, studentId: string, firstBillingId: string) {
         const { data } = await supabase
-            .from('course_enrollments')
-            .insert([{ course_id: courseId, student_id: studentId }])
-            .select()
-            .single()
-            .throwOnError()
+            .rpc('enroll_student_with_billing', {
+                p_course_id: courseId,
+                p_student_id: studentId,
+                p_first_billing_id: firstBillingId
+            })
+            .throwOnError();
 
-
-        const { data: billings } = await supabase
-            .from("billing_periods")
-            .select()
-            .eq("course_id", courseId)
-            .order('start_date', { ascending: false })
-            .throwOnError()
-
-
-        const firstBilling = billings.find((b) => b.id === firstBillingId);
-
-        if (!firstBilling) {
-            throw new Error(`Billing period with ID ${firstBillingId} not found.`);
-        }
-
-        const filteredBillings = billings.filter((b) => b.start_date >= firstBilling.start_date);
-
-        const paymentPromises = filteredBillings.map((fb) =>
-            studentPaymentService.recordStudentPayment(courseId, studentId, fb.id)
-        );
-        await Promise.all(paymentPromises);
-
-        return data
+        return data;
     },
 
     async unenrollStudent(courseId: string, studentId: string): Promise<boolean> {
@@ -161,9 +139,23 @@ export const courseService = {
 
     // Transaction
     async addCourseInstance(instanceData: TablesInsert<"course_instances">, scheduleSlots: any[]) {
-        const { data: courseData, error: courseError } = await supabase
-            .from('course_instances')
-            .insert([{
+        const schedulesToInsert = scheduleSlots.map(slot => {
+            const [hours, minutes] = slot.startHour.split(":").map(Number);
+            const totalMinutes = hours * 60 + minutes + (slot.duration * 60);
+            const endHours = Math.floor(totalMinutes / 60).toString().padStart(2, "0");
+            const endMins = (totalMinutes % 60).toString().padStart(2, "0");
+            const endHourString = `${endHours}:${endMins}`;
+
+            return {
+                day: slot.dayOfWeek,
+                start_time: `${slot.startHour}:00`,
+                end_time: `${endHourString}:00`
+            };
+        });
+
+        // 2. Call the atomic RPC function
+        const { data } = await supabase.rpc('add_course_instance_with_schedule', {
+            p_instance: {
                 teacher_id: instanceData.teacher_id,
                 subject: instanceData.subject,
                 school_year: instanceData.school_year,
@@ -172,81 +164,41 @@ export const courseService = {
                 price: instanceData.price,
                 monthly_price: instanceData.monthly_price,
                 status: instanceData.status
-            }])
-            .select()
-            .single()
-
-        if (courseError) throw courseError
-
-        const schedulesToInsert = scheduleSlots.map(slot => {
-            const [hours, minutes] = slot.startHour.split(":").map(Number)
-            const totalMinutes = hours * 60 + minutes + (slot.duration * 60)
-            const endHours = Math.floor(totalMinutes / 60).toString().padStart(2, "0")
-            const endMins = (totalMinutes % 60).toString().padStart(2, "0")
-            const endHourString = `${endHours}:${endMins}`
-
-            return {
-                course_id: courseData.id,
-                day: slot.dayOfWeek,
-                start_time: `${slot.startHour}:00`,
-                end_time: `${endHourString}:00`
-            }
+            },
+            p_schedules: schedulesToInsert
         })
+            .throwOnError();
 
-        const { error: scheduleError } = await supabase
-            .from('course_schedule')
-            .insert(schedulesToInsert)
-
-        if (scheduleError) {
-            console.error("Schedule insertion failed, course created with ID:", courseData.id)
-            throw scheduleError
-        }
-
-        return courseData
+        return data;
     },
 
-    // Transaction
     async updateCourseInstance(id: string, updatedData: TablesUpdate<"course_instances">, scheduleSlots: any[]) {
-        const { data } = await supabase
-            .from('course_instances')
-            .update(updatedData)
-            .eq('id', id)
-            .select()
-            .single()
-            .throwOnError()
+        let schedulesToInsert: any[] | null = null;
 
         if (scheduleSlots) {
-            const { error: deleteError } = await supabase
-                .from('course_schedule')
-                .delete()
-                .eq('course_id', id)
-
-            if (deleteError) throw deleteError
-
-            // Format and insert the new entries
-            const schedulesToInsert = scheduleSlots.map(slot => {
-                const [hours, minutes] = slot.startHour.split(":").map(Number)
-                const totalMinutes = hours * 60 + minutes + (slot.duration * 60)
-                const endHours = Math.floor(totalMinutes / 60).toString().padStart(2, "0")
-                const endMins = (totalMinutes % 60).toString().padStart(2, "0")
-                const endHourString = `${endHours}:${endMins}`
+            schedulesToInsert = scheduleSlots.map(slot => {
+                const [hours, minutes] = slot.startHour.split(":").map(Number);
+                const totalMinutes = hours * 60 + minutes + (slot.duration * 60);
+                const endHours = Math.floor(totalMinutes / 60).toString().padStart(2, "0");
+                const endMins = (totalMinutes % 60).toString().padStart(2, "0");
+                const endHourString = `${endHours}:${endMins}`;
 
                 return {
-                    course_id: id,
                     day: slot.dayOfWeek,
                     start_time: slot.startHour.includes(':00') ? slot.startHour : `${slot.startHour}:00`,
                     end_time: endHourString.includes(':00') ? endHourString : `${endHourString}:00`
-                }
-            })
-
-            const { error: insertError } = await supabase
-                .from('course_schedule')
-                .insert(schedulesToInsert)
-
-            if (insertError) throw insertError
+                };
+            });
         }
 
-        return data
+        const { data } = await supabase.rpc('update_course_instance_with_schedule', {
+            p_course_id: id,
+            p_updated_data: updatedData,
+            p_schedules: schedulesToInsert 
+        })
+        .throwOnError();
+
+        return data;
     },
 
     async archiveCourse(id: string): Promise<Tables<"course_instances">> {
