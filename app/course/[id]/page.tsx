@@ -18,6 +18,8 @@ import { PaymentSummaryCard } from "./payment-summary-card"
 import { BillingPeriodToolbar } from "./billing-period-toolbar"
 import { StudentsManagementCard } from "./students-management-card"
 import { useStudents } from "@/hooks/useStudents"
+import { studentPaymentService } from "@/services/studentPaymentService"
+import { teacherPayoutService } from "@/services/teacherPayoutService"
 
 function CourseDetailContent() {
   const router = useRouter()
@@ -62,7 +64,7 @@ function CourseDetailContent() {
         setSelectedPeriodId(billingData[0].id)
       }
 
-      let studentsBillingPeriods = await paymentService.getStudentData(selectedPeriodId);
+      let studentsBillingPeriods = await studentPaymentService.getStudentData(selectedPeriodId);
       const studentsData: any[] = [];
       studentsBillingPeriods.forEach((bill) => {
         studentsData.push(bill.students)
@@ -87,7 +89,7 @@ function CourseDetailContent() {
       description: `Create a payout request for the teacher? Amount: ${earnings} DA.`,
       action: async () => {
         try {
-          await paymentService.recordTeacherPayout(course.teacher_id, earnings, course.percentage_cut || 50, course.price * (course.student_ids?.length || 0), null)
+          await teacherPayoutService.recordTeacherPayout(course.teacher_id, earnings, course.percentage_cut || 50, course.price * (course.student_ids?.length || 0), null)
           toast({ title: "Payout request created" })
           setCourse((prev: any) => ({ ...prev, payments: { ...prev.payments, teacherPaid: false, payoutPending: true } }))
         } catch {

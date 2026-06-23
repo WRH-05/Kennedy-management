@@ -8,6 +8,8 @@ import { Badge } from "@/components/ui/badge"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 import { DollarSign, Check, X, MoreHorizontal, ChevronLeft, ChevronRight } from "lucide-react"
 import { paymentService } from "@/services/paymentService"
+import { studentPaymentService } from "@/services/studentPaymentService"
+import { teacherPayoutService } from "@/services/teacherPayoutService"
 
 interface PayoutsTabProps {
   // payoutData now accepts the full response object from your service
@@ -64,9 +66,9 @@ export default function PayoutsTab({
   const onApprovePayout = async (paymentId: string) => {
     try {
       if (type === "student") {
-        await paymentService.payStudentPayment(paymentId)
+        await studentPaymentService.payStudentPayment(paymentId)
       } else if (type === "teacher") {
-        await paymentService.payTeacherPayment(paymentId)
+        await teacherPayoutService.payTeacherPayout(paymentId)
       }
     } catch (error) {
       console.error(error)
@@ -75,9 +77,9 @@ export default function PayoutsTab({
   const onDenyPayout = async (paymentId: string) => {
     try {
       if (type === "student") {
-        await paymentService.denyStudentPayment(paymentId)
+        await studentPaymentService.denyStudentPayment(paymentId)
       } else if (type === "teacher") {
-        await paymentService.denyTeacherPayment(paymentId)
+        await teacherPayoutService.denyTeacherPayout(paymentId)
       }
     } catch (error) {
       console.error(error)

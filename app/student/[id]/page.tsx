@@ -27,6 +27,7 @@ import { courseService } from "@/services/courseService"
 import { useAuth } from "@/contexts/AuthContext"
 import AuthGuard from "@/components/auth/AuthGuard"
 import { paymentService } from "@/services/paymentService"
+import { studentPaymentService } from "@/services/studentPaymentService"
 
 function StudentDashboardContent() {
   const router = useRouter()
@@ -47,7 +48,7 @@ function StudentDashboardContent() {
       setLoading(true)
       try {
         const studentData = await studentService.getStudentById(studentId)
-        const paymentsData = await paymentService.getStudentPayments(studentId);
+        const paymentsData = await studentPaymentService.getStudentPayments(studentId);
         if (!studentData) router.push('/')
         setStudent(studentData)
         setEditedStudent(JSON.parse(JSON.stringify(studentData)))

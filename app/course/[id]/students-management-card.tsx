@@ -14,6 +14,7 @@ import { useStudentsData } from "@/hooks/usePayments"
 import { useStudents } from "@/hooks/useStudents"
 import { paymentService } from "@/services/paymentService"
 import { useCourseEnrollementStudentsByCourseId } from "@/hooks/useCourseEnrollement"
+import { studentPaymentService } from "@/services/studentPaymentService"
 
 const PAYMENT_STATUSES = [
   { value: "paid", label: "Paid" },
@@ -84,7 +85,7 @@ export function StudentsManagementCard({
 
   const onChangeStudentPaymentStatus = async (student_id: string, status: string) => {
     try {
-      await paymentService.updateRecordStudentPayment(course.id, student_id, selectedPeriodId, {
+      await studentPaymentService.updateRecordStudentPayment(course.id, student_id, selectedPeriodId, {
         status
       });
       

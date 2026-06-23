@@ -5,16 +5,12 @@ export const profileService = {
         const { data: { user }, error } = await supabase.auth.getUser()
         if (error || !user) return null
 
-        const { data: profile, error: profileError } = await supabase
+        const { data: profile } = await supabase
             .from('profiles')
             .select('id, full_name, role')
             .eq('id', user.id)
             .single()
-
-        if (profileError) {
-            console.warn('No profile found for user:', user.id)
-            return null
-        }
+            .throwOnError()
 
         return profile
     }

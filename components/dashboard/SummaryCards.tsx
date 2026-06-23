@@ -2,20 +2,26 @@
 import { useMemo } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { TrendingUp, DollarSign, Users } from "lucide-react"
-import { useRevenue, usePayouts } from "@/hooks/usePayments"
+import { useRevenue, useTeachersPayouts } from "@/hooks/usePayments"
 import { useStudents } from "@/hooks/useStudents"
 
 export default function SummaryCards() {
   const { students: allStudents } = useStudents()
   const { data: revenueData } = useRevenue()
-  const { data: payoutsData } = usePayouts()
-
+  const { payments: payoutsData } = useTeachersPayouts()
   const revenue = revenueData || []
-  const allPayoutsForTotal = payoutsData || []
+
   const students = useMemo(() =>
     (allStudents && 'data' in allStudents ? allStudents.data : []),
     [allStudents]
   )
+
+  const payouts = useMemo(() => {
+    if (payoutsData && 'data' in payoutsData) {
+      return payoutsData.data
+    }
+    return []
+  }, [payoutsData])
 
   const totalRevenue = useMemo(() =>
     revenue.reduce((sum: number, item: any) => sum + (item.paid && item.amount ? item.amount : 0), 0),
@@ -23,8 +29,11 @@ export default function SummaryCards() {
   )
 
   const totalPayouts = useMemo(() =>
-    allPayoutsForTotal.reduce((sum: number, payout: any) => sum + ((payout.status === 'approved' || payout.status === 'paid') && payout.amount ? payout.amount : 0), 0),
-    [allPayoutsForTotal]
+    payouts.reduce((sum: number, payout: any) =>
+      sum + ((payout.status === 'paid') && payout.amount ? payout.amount : 0),
+      0
+    ),
+    [payouts]
   )
 
   const netProfit = totalRevenue - totalPayouts

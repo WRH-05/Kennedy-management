@@ -6,6 +6,8 @@ import { swrConfig } from './swr-config'
 import { useStudents } from './useStudents'
 import { useTeachers } from './useTeachers'
 import { useCourses } from './useCourses'
+import { studentPaymentService } from '@/services/studentPaymentService'
+import { teacherPayoutService } from '@/services/teacherPayoutService'
 
 export function usePayments() {
   const { data, error, isLoading, isValidating } = useSWR(
@@ -26,7 +28,7 @@ export function usePayments() {
 export function useStudentsPayments() {
   const { data, error, isLoading, isValidating, mutate } = useSWR(
     'students-payments',
-    () => paymentService.getAllStudentsPayments(),
+    () => studentPaymentService.getAllStudentsPayments(),
     swrConfig
   )
 
@@ -42,7 +44,7 @@ export function useStudentsPayments() {
 export function useTeachersPayments() {
   const { data, error, isLoading, isValidating, mutate } = useSWR(
     'teachers-payments', // ✨ Fixed cache key collision
-    () => paymentService.getAllTeachersPayments(),
+    () => teacherPayoutService.getAllTeachersPayments(),
     swrConfig
   )
 
@@ -58,7 +60,7 @@ export function useTeachersPayments() {
 export function useStudentsData(billing_period_id: string) {
   const { data, error, isLoading, isValidating, mutate } = useSWR(
     billing_period_id ? ['payment-students-data', billing_period_id] : null,
-    ([_, id]) => paymentService.getStudentData(id),
+    ([_, id]) => studentPaymentService.getStudentData(id),
     {
       ...swrConfig,                // Keep your other configs if necessary
       revalidateOnMount: true,     // Forces revalidation when the component mounts
@@ -73,22 +75,6 @@ export function useStudentsData(billing_period_id: string) {
     isValidating,
     error,
     mutate: () => mutate(['payment-students-data', billing_period_id]),
-  }
-}
-
-export function useTeacherPaymentData() {
-  const { data, error, isLoading, isValidating } = useSWR(
-    'teacher-payment-data',
-    () => paymentService.getTeacherData(),
-    swrConfig
-  )
-
-  return {
-    paymentData: data || [],
-    isLoading,
-    isValidating,
-    error,
-    mutate: () => mutate('teacher-payment-data'),
   }
 }
 
@@ -109,10 +95,6 @@ export function useRevenue() {
   }
 }
 
-export function usePayouts() {
-  return useSWR("dashboard/payouts", () => paymentService.getAllPayouts())
-}
-
 export function usePendingArchives() {
   return {
     data: {
@@ -121,6 +103,23 @@ export function usePendingArchives() {
       course: new Set<string>()
     },
     isLoading: false
+  }
+}
+
+
+export function useTeachersPayouts() {
+  const { data, error, isLoading, isValidating, mutate } = useSWR(
+    'teachers-payouts',
+    () => teacherPayoutService.getAllTeachersPayouts(),
+    swrConfig
+  )
+
+  return {
+    payments: data || [],
+    isLoading,
+    isValidating,
+    error,
+    mutate, // Returns the bound mutator for this specific key
   }
 }
 

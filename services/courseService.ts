@@ -1,13 +1,14 @@
 import { supabase } from "@/lib/supabase"
 import { paymentService } from "./paymentService"
 import { Tables, TablesInsert, TablesUpdate } from "@/types/database.types"
+import { studentPaymentService } from "./studentPaymentService";
 
 export const courseService = {
     async getAllCourseInstances(
         page = 1,
         pageSize = 0,
         includeArchived = false
-    ): Promise<{ data: any[]; total: number; page: number; pageSize: number }> {
+    ): Promise<{ data: Tables<"course_instances">[]; total: number; page: number; pageSize: number }> {
 
         const query = supabase
             .from('course_instances')
@@ -41,7 +42,7 @@ export const courseService = {
     },
 
     async getCourseInstanceById(id: string): Promise<Tables<"course_instances">> {
-        const { data, error } = await supabase
+        const { data } = await supabase
             .from('course_instances')
             .select(`
             *,
@@ -67,31 +68,23 @@ export const courseService = {
     },
 
     async getCoursesByStudentId(studentId: string): Promise<Tables<"course_instances">[]> {
-        const { data } = await supabase
+        const { data: enrollments, error } = await supabase
             .from('course_enrollments')
-            .select('course_id')
+            .select(`course_id, course_instances!inner (*, teachers(*))`)
             .eq('student_id', studentId)
-            .throwOnError()
-            
+            .eq('course_instances.archived', false) // Filters out archived courses
+            .order('course_instances(created_at)', { ascending: false })
+            .throwOnError();
 
-        const courseIds = (data || []).map(e => e.course_id)
-        if (courseIds.length === 0) return []
-
-        const { data: courses } = await supabase
-            .from('course_instances')
-            .select('*, teachers(*)')
-            .in('id', courseIds)
-            .eq('archived', false)
-            .order('created_at', { ascending: false })
-            .throwOnError()
+        const courses = (enrollments || []).map(e => e.course_instances);
 
         return await this.enrichCoursesWithStudents(courses || [])
     },
 
-    async getCourseEnrollments(courseId: string) {
+    async getCourseEnrollments(courseId: string): Promise<Tables<"course_enrollments">[]> {
         const { data } = await supabase
             .from('course_enrollments')
-            .select('student_id, enrolled_at, status')
+            .select('*')
             .eq('course_id', courseId)
             .order('enrolled_at', { ascending: false })
             .throwOnError()
@@ -126,14 +119,14 @@ export const courseService = {
         const filteredBillings = billings.filter((b) => b.start_date >= firstBilling.start_date);
 
         const paymentPromises = filteredBillings.map((fb) =>
-            paymentService.recordStudentPayment(courseId, studentId, fb.id)
+            studentPaymentService.recordStudentPayment(courseId, studentId, fb.id)
         );
         await Promise.all(paymentPromises);
 
         return data
     },
 
-    async unenrollStudent(courseId: string, studentId: string) {
+    async unenrollStudent(courseId: string, studentId: string): Promise<boolean> {
         const _ = await supabase
             .from('course_enrollments')
             .update({ status: 'dropped' })
@@ -144,7 +137,7 @@ export const courseService = {
         return true
     },
 
-    async getCourseSessions(courseId: string) {
+    async getCourseSessions(courseId: string): Promise<Tables<"course_sessions">[]> {
         const { data } = await supabase
             .from('course_sessions')
             .select('*')
@@ -155,7 +148,7 @@ export const courseService = {
         return data || []
     },
 
-    async createCourseSession(courseId: string, startsAt: Date, endsAt = null) {
+    async createCourseSession(courseId: string, startsAt: Date, endsAt = null): Promise<Tables<"course_sessions">> {
         const { data } = await supabase
             .from('course_sessions')
             .insert([{ course_id: courseId, starts_at: startsAt, ends_at: endsAt }])
@@ -256,7 +249,7 @@ export const courseService = {
         return data
     },
 
-    async archiveCourse(id: string) {
+    async archiveCourse(id: string): Promise<Tables<"course_instances">> {
         const { data } = await supabase
             .from('course_instances')
             .update({
@@ -271,7 +264,7 @@ export const courseService = {
         return data
     },
 
-    async unarchiveCourse(id: string) {
+    async unarchiveCourse(id: string): Promise<Tables<"course_instances">> {
         const { data } = await supabase
             .from('course_instances')
             .update({
