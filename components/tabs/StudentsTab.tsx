@@ -414,7 +414,7 @@ export default function StudentsTab({
                 <TableHead>Specialty</TableHead>
                 {showCourses && <TableHead>Enrolled Courses</TableHead>}
                 {showPaymentStatus && <TableHead>Payment Status</TableHead>}
-                <TableHead className="w-[60px]"></TableHead>
+                <TableHead className="w-15"></TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -437,12 +437,6 @@ export default function StudentsTab({
                     {showCourses && (
                       <TableCell>
                         <StudentCoursesCell studentId={student.id} />
-                      </TableCell>
-                    )}
-                    
-                    {showPaymentStatus && (
-                      <TableCell>
-                        <StudentPaymentCell studentId={student.id} />
                       </TableCell>
                     )}
                     

@@ -23,6 +23,7 @@ import { teacherService } from "@/services/teacherService"
 import { courseService } from "@/services/courseService"
 import { useAuth } from "@/contexts/AuthContext"
 import AuthGuard from "@/components/auth/AuthGuard"
+import Link from "next/link"
 
 function TeacherProfileContent() {
   const router = useRouter()
@@ -361,14 +362,16 @@ function TeacherProfileContent() {
                             <TableHead>School Year</TableHead>
                             <TableHead>Type</TableHead>
                             <TableHead>Price</TableHead>
-                            <TableHead>Schedule</TableHead>
-                            <TableHead>Students</TableHead>
                           </TableRow>
                         </TableHeader>
                         <TableBody>
                           {activeCourses.map((course) => (
                             <TableRow key={course.id}>
-                              <TableCell className="font-medium">{course.subject}</TableCell>
+                              <TableCell className="font-medium">
+                                <Link href={`/course/${course.id}`}>
+                                  {course.subject}
+                                </Link>
+                              </TableCell>
                               <TableCell>{course.school_year}</TableCell>
                               <TableCell>
                                 <Badge variant={course.course_type === "Group" ? "default" : "secondary"}>
@@ -376,8 +379,6 @@ function TeacherProfileContent() {
                                 </Badge>
                               </TableCell>
                               <TableCell>{course.price} DA</TableCell>
-                              <TableCell>{course.schedule || 'Not scheduled'}</TableCell>
-                              <TableCell>{course.enrolled_students?.length}</TableCell>
                             </TableRow>
                           ))}
                         </TableBody>

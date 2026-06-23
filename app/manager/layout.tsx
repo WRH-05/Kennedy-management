@@ -7,7 +7,7 @@ export default function DashboardLayout({
   children: React.ReactNode
 }) {
   return (
-    <AuthGuard requiredRoles={['owner', 'manager']}>
+    <AuthGuard requiredRoles={['manager']}>
       <div className="min-h-screen bg-gray-50">
         <DashboardHeader />
         <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">

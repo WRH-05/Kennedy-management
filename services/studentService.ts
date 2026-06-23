@@ -26,9 +26,8 @@ export const studentService = {
     }
 
 
-    const { data, error, count } = await query;
+    const { data, count } = await query.throwOnError();
 
-    if (error) throw error;
 
     const finalData = data || [];
 
@@ -40,42 +39,38 @@ export const studentService = {
     };
   },
 
-  // Get student by ID
-  async getStudentById(id: string): Promise<Tables<"students">[] | PostgrestError> {
-    try {
-      const { data, error } = await supabase
-        .from('students')
-        .select('*')
-        .eq('id', id)
-        .single()
+  async getStudentById(id: string): Promise<Tables<"students">[]> {
 
-      if (error) throw error
-      return data
-    } catch (error) {
-      throw error
-    }
+    const { data } = await supabase
+      .from('students')
+      .select('*')
+      .eq('id', id)
+      .single()
+      .throwOnError()
+
+    return data
   },
 
-  async addStudent(studentData: TablesInsert<"students">): Promise<Tables<"students"> | PostgrestError> {
-    const { data, error } = await supabase
+  async addStudent(studentData: TablesInsert<"students">): Promise<Tables<"students">> {
+    const { data } = await supabase
       .from('students')
       .insert([studentData])
       .select()
       .single()
+      .throwOnError()
 
-    if (error) throw error
     return data
   },
 
-  async updateStudent(id: string, updatedData: TablesUpdate<"students">): Promise<Tables<"students"> | PostgrestError> {
-    const { data, error } = await supabase
+  async updateStudent(id: string, updatedData: TablesUpdate<"students">): Promise<Tables<"students">> {
+    const { data } = await supabase
       .from('students')
       .update(updatedData)
       .eq('id', id)
       .select()
       .single()
+      .throwOnError()
 
-    if (error) throw error
     return data
   },
 
@@ -86,13 +81,13 @@ export const studentService = {
       .eq('id', id)
       .select()
       .single()
+      .throwOnError()
 
-    if (error) throw error
     return data
   },
 
   async archiveStudent(id: string): Promise<Tables<"students"> | PostgrestError> {
-    const { data, error } = await supabase
+    const { data } = await supabase
       .from('students')
       .update({
         archived: true,
@@ -101,15 +96,15 @@ export const studentService = {
       .eq('id', id)
       .select()
       .single()
+      .throwOnError()
 
-    if (error) throw error
     return data
   },
 
   //consider removing
 
   async unarchiveStudent(id: string): Promise<Tables<"students"> | PostgrestError> {
-    const { data, error } = await supabase
+    const { data } = await supabase
       .from('students')
       .update({
         archived: false,
@@ -118,8 +113,8 @@ export const studentService = {
       .eq('id', id)
       .select()
       .single()
-    console.log(data)
-    if (error) throw error
+      .throwOnError()
+
     return data
   },
 }

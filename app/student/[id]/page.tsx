@@ -26,6 +26,7 @@ import { studentService } from "@/services/studentService"
 import { courseService } from "@/services/courseService"
 import { useAuth } from "@/contexts/AuthContext"
 import AuthGuard from "@/components/auth/AuthGuard"
+import { paymentService } from "@/services/paymentService"
 
 function StudentDashboardContent() {
   const router = useRouter()
@@ -35,23 +36,19 @@ function StudentDashboardContent() {
   const [student, setStudent] = useState<any>(null)
   const [editedStudent, setEditedStudent] = useState<any>(null)
   const [courses, setCourses] = useState<any[]>([])
+  const [payments, setPayments] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
   const [isEditing, setIsEditing] = useState(false)
   const [showSaveConfirmation, setShowSaveConfirmation] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
-    // Load student data
     const loadStudentData = async () => {
       setLoading(true)
       try {
         const studentData = await studentService.getStudentById(studentId)
-        if (!studentData) {
-          // Redirect based on user role
-          const redirectPath = user?.profile?.role === 'receptionist' ? '/receptionist' : '/manager'
-          router.push(redirectPath)
-          return
-        }
+        const paymentsData = await paymentService.getStudentPayments(studentId);
+        if (!studentData) router.push('/')
         setStudent(studentData)
         setEditedStudent(JSON.parse(JSON.stringify(studentData)))
         // Load courses for this student
@@ -355,13 +352,16 @@ function StudentDashboardContent() {
                         <TableRow>
                           <TableHead>Course</TableHead>
                           <TableHead>Teacher</TableHead>
-                          <TableHead>Schedule</TableHead>
                           <TableHead>Monthly Price</TableHead>
                           <TableHead>Payment Status</TableHead>
                         </TableRow>
                       </TableHeader>
                       <TableBody>
-                        {activeCourses.map((course) => (
+                        {activeCourses.map((course) => {
+                          const isPaymentMissing = payments.filter((p)=>{
+                            return p.course_id == course.id && p.status != 'paid'
+                          }).length > 1
+                          return(
                           <TableRow key={course.id}>
                             <TableCell className="font-medium">
                               <Button
@@ -369,7 +369,7 @@ function StudentDashboardContent() {
                                 className="p-0 h-auto font-medium text-left"
                                 onClick={() => router.push(`/course/${course.id}`)}
                               >
-                                {course.subject} - {course.schoolYear}
+                                {course.subject} - {course.school_year}
                               </Button>
                             </TableCell>
                             <TableCell>
@@ -378,18 +378,17 @@ function StudentDashboardContent() {
                                 className="p-0 h-auto font-medium text-left"
                                 onClick={() => router.push(`/teacher/${course.teacher_id}`)}
                               >
-                                {course.teacher_name}
+                                {course.teachers.name}
                               </Button>
                             </TableCell>
-                            <TableCell>{course.schedule}</TableCell>
                             <TableCell>{course.monthly_price} DA</TableCell>
                             <TableCell>
                               <Badge variant="outline">
-                                N/A
+                                {isPaymentMissing? "Missing payment" : "Paid"}
                               </Badge>
                             </TableCell>
                           </TableRow>
-                        ))}
+                        )})}
                       </TableBody>
                     </Table>
                   </div>
@@ -446,7 +445,7 @@ function StudentDashboardContent() {
 
 export default function StudentDashboard() {
   return (
-    <AuthGuard requiredRoles={['manager', 'receptionist']}>
+    <AuthGuard requiredRoles={['manager']}>
       <StudentDashboardContent />
     </AuthGuard>
   )

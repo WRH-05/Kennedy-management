@@ -3,37 +3,41 @@ import { paymentService } from "./paymentService"
 import { Tables, TablesInsert, TablesUpdate } from "@/types/database.types"
 
 export const courseService = {
-    async getAllCourseInstances(page = 1, pageSize = 0, includeArchived = false): Promise<{ data: Tables<"course_instances">[]; total: number; page: number; pageSize: number }> {
-        const query = pageSize
-            ? supabase.from('course_instances').select('*, teachers(*)', { count: 'exact' })
-            : supabase.from('course_instances').select('*, teachers(*)')
+    async getAllCourseInstances(
+        page = 1,
+        pageSize = 0,
+        includeArchived = false
+    ): Promise<{ data: any[]; total: number; page: number; pageSize: number }> {
+
+        const query = supabase
+            .from('course_instances')
+            .select('*, teachers(*)', { count: 'exact' });
 
         if (!includeArchived) {
-            query.eq('archived', false)
+            query.eq('archived', false);
         }
 
-        let result
+        query.order('created_at', { ascending: false });
+
+        // 4. Apply pagination conditionally
         if (pageSize > 0) {
-            const from = (page - 1) * pageSize
-            const to = from + pageSize - 1
-            const { data, error, count } = await query.order('created_at', { ascending: false }).range(from, to)
-
-            if (error) throw error
-
+            const from = (page - 1) * pageSize;
+            const to = from + pageSize - 1;
+            query.range(from, to);
         }
 
-        const { data, error } = await query.order('created_at', { ascending: false })
+        const { data, count } = await query.throwOnError();
 
-        if(error) throw error;
+        const enrichedData = await this.enrichCoursesWithStudents(data || []);
 
-        const enrichedData = await this.enrichCoursesWithStudents(data || [])
+        const totalCount = count !== null ? count : (data?.length || 0);
 
         return {
             data: enrichedData,
-            total: 0,
+            total: totalCount,
             page,
-            pageSize,
-        }
+            pageSize: pageSize > 0 ? pageSize : totalCount,
+        };
     },
 
     async getCourseInstanceById(id: string): Promise<Tables<"course_instances">> {
@@ -45,73 +49,73 @@ export const courseService = {
         `)
             .eq('id', id)
             .single()
+            .throwOnError()
 
-        if (error) throw error
         return data
     },
 
     async getCoursesByTeacherId(teacherId: string): Promise<Tables<"course_instances">[]> {
-        const { data, error } = await supabase
+        const { data } = await supabase
             .from('course_instances')
             .select('*')
             .eq('teacher_id', teacherId)
             .eq('archived', false)
             .order('created_at', { ascending: false })
+            .throwOnError()
 
-        if (error) throw error
         return await this.enrichCoursesWithStudents(data || [])
     },
 
     async getCoursesByStudentId(studentId: string): Promise<Tables<"course_instances">[]> {
-        const { data, error } = await supabase
+        const { data } = await supabase
             .from('course_enrollments')
             .select('course_id')
             .eq('student_id', studentId)
-
-        if (error) throw error
+            .throwOnError()
+            
 
         const courseIds = (data || []).map(e => e.course_id)
         if (courseIds.length === 0) return []
 
-        const { data: courses, error: courseError } = await supabase
+        const { data: courses } = await supabase
             .from('course_instances')
-            .select('*')
+            .select('*, teachers(*)')
             .in('id', courseIds)
             .eq('archived', false)
             .order('created_at', { ascending: false })
+            .throwOnError()
 
-        if (courseError) throw courseError
         return await this.enrichCoursesWithStudents(courses || [])
     },
 
     async getCourseEnrollments(courseId: string) {
-        const { data, error } = await supabase
+        const { data } = await supabase
             .from('course_enrollments')
             .select('student_id, enrolled_at, status')
             .eq('course_id', courseId)
             .order('enrolled_at', { ascending: false })
+            .throwOnError()
 
-        if (error) throw error
         return data || []
     },
 
+    // Transaction
     async enrollStudent(courseId: string, studentId: string, firstBillingId: string) {
-        const { data, error } = await supabase
+        const { data } = await supabase
             .from('course_enrollments')
             .insert([{ course_id: courseId, student_id: studentId }])
             .select()
             .single()
+            .throwOnError()
 
-        if (error) throw error
 
-        // 2. Fetch billing periods
-        const { data: billings, error: billingError } = await supabase
+        const { data: billings } = await supabase
             .from("billing_periods")
             .select()
             .eq("course_id", courseId)
             .order('start_date', { ascending: false })
+            .throwOnError()
 
-        if (billingError) throw billingError
 
         const firstBilling = billings.find((b) => b.id === firstBillingId);
 
@@ -130,37 +134,39 @@ export const courseService = {
     },
 
     async unenrollStudent(courseId: string, studentId: string) {
-        const { error } = await supabase
+        const _ = await supabase
             .from('course_enrollments')
-            .update({status: 'dropped'})
+            .update({ status: 'dropped' })
             .eq('course_id', courseId)
             .eq('student_id', studentId)
-        if (error) throw error
+            .throwOnError()
+
         return true
     },
 
     async getCourseSessions(courseId: string) {
-        const { data, error } = await supabase
+        const { data } = await supabase
             .from('course_sessions')
             .select('*')
             .eq('course_id', courseId)
             .order('starts_at', { ascending: false })
+            .throwOnError()
 
-        if (error) throw error
         return data || []
     },
 
     async createCourseSession(courseId: string, startsAt: Date, endsAt = null) {
-        const { data, error } = await supabase
+        const { data } = await supabase
             .from('course_sessions')
             .insert([{ course_id: courseId, starts_at: startsAt, ends_at: endsAt }])
             .select()
             .single()
+            .throwOnError()
 
-        if (error) throw error
         return data
     },
 
+    // Transaction
     async addCourseInstance(instanceData: TablesInsert<"course_instances">, scheduleSlots: any[]) {
         const { data: courseData, error: courseError } = await supabase
             .from('course_instances')
@@ -206,16 +212,15 @@ export const courseService = {
         return courseData
     },
 
-    // Update course instance
+    // Transaction
     async updateCourseInstance(id: string, updatedData: TablesUpdate<"course_instances">, scheduleSlots: any[]) {
-        const { data, error } = await supabase
+        const { data } = await supabase
             .from('course_instances')
             .update(updatedData)
             .eq('id', id)
             .select()
             .single()
-
-        if (error) throw error
+            .throwOnError()
 
         if (scheduleSlots) {
             const { error: deleteError } = await supabase
@@ -252,7 +257,7 @@ export const courseService = {
     },
 
     async archiveCourse(id: string) {
-        const { data, error } = await supabase
+        const { data } = await supabase
             .from('course_instances')
             .update({
                 archived: true,
@@ -261,13 +266,13 @@ export const courseService = {
             .eq('id', id)
             .select()
             .single()
+            .throwOnError()
 
-        if (error) throw error
         return data
     },
 
     async unarchiveCourse(id: string) {
-        const { data, error } = await supabase
+        const { data } = await supabase
             .from('course_instances')
             .update({
                 archived: false,
@@ -276,8 +281,8 @@ export const courseService = {
             .eq('id', id)
             .select()
             .single()
+            .throwOnError()
 
-        if (error) throw error
         return data
     },
 

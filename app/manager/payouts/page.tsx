@@ -62,7 +62,6 @@ export default function PayoutsPage() {
         <TabsContent value="teachers" className="mt-4">
           <PayoutsTab
             payoutData={teachersPayouts} // ✨ Directly uses your hook state data
-            onDenyPayout={denyPayout}
             type="teacher"
           />
         </TabsContent>
@@ -70,7 +69,6 @@ export default function PayoutsPage() {
         <TabsContent value="students" className="mt-4">
           <PayoutsTab
             payoutData={studentsPayouts} // ✨ Directly uses your hook state data
-            onDenyPayout={denyPayout}
             type="student"
           />
         </TabsContent>

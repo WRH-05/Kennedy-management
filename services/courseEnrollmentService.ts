@@ -3,15 +3,12 @@ import { Tables, TablesInsert, TablesUpdate } from "@/types/database.types"
 import { PostgrestError } from "@supabase/supabase-js"
 
 export const courseEnrollmentService = {
-  // Get all students (excluding archived unless specified)
   async getAllStudentsEnrolledInACourse(
     course_id: string,
     page = 1,
     pageSize = 0,
   ): Promise<{ data: Tables<"students">[]; total: number; page: number; pageSize: number }> {
 
-    // 1. Fixed: Filtering by course_id added. 
-    // 2. Fixed: Inner join syntax 'students!inner(*)' ensures we can filter or handle joins cleanly.
     let query = supabase
       .from('course_enrollments')
       .select('students!inner(*)', { count: pageSize > 0 ? 'exact' : 'estimated' })
@@ -26,10 +23,8 @@ export const courseEnrollmentService = {
       query = query.range(from, to);
     }
 
-    const { data, error, count } = await query;
+    const { data, count } = await query.throwOnError();
 
-
-    if (error) throw error;
 
     const finalData: Tables<"students">[] = (data || [])
       .map((enrollment) => {
@@ -46,51 +41,49 @@ export const courseEnrollmentService = {
   },
 
   async getCourseEnrollmentByStudentId(student_id: string): Promise<Tables<"course_enrollments">[]> {
-    const { data, error } = await supabase
+    const { data } = await supabase
       .from('course_enrollments')
       .select('*, course_instances (*)')
       .eq('student_id', student_id)
-    if (error) throw error
+      .throwOnError()
     return data
   },
 
   async addStudent(studentData: TablesInsert<"students">): Promise<Tables<"students"> | PostgrestError> {
-    const { data, error } = await supabase
+    const { data } = await supabase
       .from('students')
       .insert([studentData])
       .select()
       .single()
-
-    if (error) throw error
+      .throwOnError()
     return data
   },
 
   async updateStudent(id: string, updatedData: TablesUpdate<"students">): Promise<Tables<"students"> | PostgrestError> {
-    const { data, error } = await supabase
+    const { data } = await supabase
       .from('students')
       .update(updatedData)
       .eq('id', id)
       .select()
       .single()
-
-    if (error) throw error
+      .throwOnError()
     return data
   },
 
   async deleteStudent(id: string): Promise<Tables<"students"> | PostgrestError> {
-    const { data, error } = await supabase
+    const { data } = await supabase
       .from('students')
       .delete()
       .eq('id', id)
       .select()
       .single()
+      .throwOnError()
 
-    if (error) throw error
     return data
   },
 
   async archiveStudent(id: string): Promise<Tables<"students"> | PostgrestError> {
-    const { data, error } = await supabase
+    const { data } = await supabase
       .from('students')
       .update({
         archived: true,
@@ -99,12 +92,10 @@ export const courseEnrollmentService = {
       .eq('id', id)
       .select()
       .single()
+      .throwOnError()
 
-    if (error) throw error
     return data
   },
-
-  //consider removing
 
   async unarchiveStudent(id: string): Promise<Tables<"students"> | PostgrestError> {
     const { data, error } = await supabase
@@ -116,8 +107,7 @@ export const courseEnrollmentService = {
       .eq('id', id)
       .select()
       .single()
-    console.log(data)
-    if (error) throw error
+      .throwOnError()
     return data
   },
 }

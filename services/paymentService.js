@@ -345,7 +345,7 @@ export const paymentService = {
         return data?.status === 'paid' || data?.status === 'approved'
     },
 
-    async getStudentPayments() {
+    async getStudentPayments(student_id) {
         const { data, error } = await supabase
             .from('student_payments')
             .select(`
@@ -354,6 +354,7 @@ export const paymentService = {
                 course_instances(subject),
                 profiles!student_payments_recorded_by_id_fkey (full_name)
             `)
+            .eq('student_id', student_id)
             .order('created_at', { ascending: false })
 
         if (error) throw error
@@ -386,16 +387,38 @@ export const paymentService = {
                 }])
                 .select()
                 .single()
+                .throwOnError()
 
-            if (billingError) throw billingError
+
+            const { data: courseInstance, error: courseInstanceError } = await supabase
+                .from('course_instances')
+                .select('*, teachers(*)')
+                .eq('course_id', courseId)
+                .single()
+                .throwOnError()
+
+                
+            const payout = {
+                teacher_id: courseInstance.teachers.id,
+                course_id: courseId,
+                billingPeriod: billingPeriod.id,
+                amount: 0,
+                status: 'pending'
+            }
+
+            const { error: payoutInsertError } = await supabase
+                .from('teacher_payouts')
+                .insert(payout)
+                .throwOnError()
+
 
             const { data: enrollments, error: enrollmentError } = await supabase
                 .from('course_enrollments')
                 .select('student_id, status')
                 .eq('course_id', courseId)
                 .eq('status', 'enrolled')
+                .throwOnError()
 
-            if (enrollmentError) throw enrollmentError
 
             if (enrollments && enrollments.length > 0) {
 
@@ -410,8 +433,8 @@ export const paymentService = {
                 const { error: paymentInsertError } = await supabase
                     .from('student_payments')
                     .insert(paymentRows)
+                    .throwOnError()
 
-                if (paymentInsertError) throw paymentInsertError
             }
 
             return {
