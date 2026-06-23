@@ -27,8 +27,6 @@ export const studentPaymentService = {
         return data || []
     },
 
-
-    // General update function
     async updatePaymentStatus(paymentId: string, status: string) {
         const updateData = {
             status,

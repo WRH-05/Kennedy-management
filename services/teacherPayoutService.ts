@@ -48,6 +48,18 @@ export const teacherPayoutService = {
         return data
     },
 
+    async updatePayout(id: string, updates = {}){
+        const { data } = await supabase
+            .from('teacher_payouts')
+            .update(updates)
+            .eq('id', id)
+            .select()
+            .single()
+            .throwOnError()
+
+        return data
+    },
+
     async getPendingPayouts() {
         const { data } = await supabase
             .from('teacher_payouts')

@@ -100,9 +100,7 @@ export const studentService = {
 
     return data
   },
-
-  //consider removing
-
+  
   async unarchiveStudent(id: string): Promise<Tables<"students"> | PostgrestError> {
     const { data } = await supabase
       .from('students')
