@@ -11,6 +11,7 @@ import { GraduationCap, Users } from "lucide-react"
 export default function PayoutsPage() {
   const { payments: studentsPayouts, isLoading: studentLoading, mutate: mutateStudents } = useStudentsPayments();
   const { payments: teachersPayouts, isLoading: teachersLoading, mutate: mutateTeachers } = useTeachersPayments();
+  console.log(teachersPayouts)
   const { user } = useAuth()
   const [activeTab, setActiveTab] = useState<"teachers" | "students">("teachers")
 

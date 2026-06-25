@@ -51,7 +51,7 @@ export const studentPaymentService = {
 
         let query = supabase
             .from('student_payments')
-            .select('*, students (*), course_instances (*), billing_periods (*), profiles!student_payments_recorded_by_id_fkey(*)', { count: pageSize > 0 ? 'exact' : 'estimated' })
+            .select('*, students (*), course_instances (*), billing_periods (*), profiles!student_payments_recorded_by_fkey(*)', { count: pageSize > 0 ? 'exact' : 'estimated' })
 
         query = query.order('created_at', { ascending: false });
 
@@ -147,7 +147,7 @@ export const studentPaymentService = {
                 *,
                 students(name),
                 course_instances(subject),
-                profiles!student_payments_recorded_by_id_fkey (full_name)
+                profiles!student_payments_recorded_by_fkey (full_name)
             `)
             .eq('student_id', student_id)
             .order('created_at', { ascending: false })

@@ -2,15 +2,40 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Label } from "@/components/ui/label"
+import { Badge } from "@/components/ui/badge" // Recommended for clean status displaying
 import { DollarSign } from "lucide-react"
 
 interface PaymentSummaryProps {
   course: any
   teacherEarnings: number
+  payout: {
+    status: 'pending' | 'paid' | 'cancelled' | 'unpaid'
+  }
   onToggleTeacherPayment: () => void
 }
 
-export function PaymentSummaryCard({ course, teacherEarnings, onToggleTeacherPayment }: PaymentSummaryProps) {
+export function PaymentSummaryCard({ course, payout, teacherEarnings, onToggleTeacherPayment }: PaymentSummaryProps) {
+  if (!payout) return null
+
+  // The button is ONLY clickable if status is 'pending', 'unpaid', or 'cancelled'
+  // It is disabled ONLY when it is already 'paid'
+  const isPayable = payout.status === 'pending' || payout.status === 'unpaid' || payout.status === 'cancelled'
+
+  // Helper function to get badge styles/labels based on status
+  const getStatusBadge = (status: string) => {
+    switch (status) {
+      case 'paid':
+        return <Badge className="bg-green-500 hover:bg-green-600 text-white">Paid</Badge>
+      case 'pending':
+        return <Badge variant="outline" className="text-amber-500 border-amber-500">Pending</Badge>
+      case 'cancelled':
+        return <Badge variant="destructive">Cancelled</Badge>
+      case 'unpaid':
+      default:
+        return <Badge variant="secondary">Unpaid</Badge>
+    }
+  }
+
   return (
     <Card className="mt-6">
       <CardHeader>
@@ -19,12 +44,25 @@ export function PaymentSummaryCard({ course, teacherEarnings, onToggleTeacherPay
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
+        {/* Status Display Row */}
         <div className="flex items-center justify-between">
+          <Label className="text-muted-foreground">Current Status</Label>
+          {getStatusBadge(payout.status)}
+        </div>
+
+        {/* Action Row */}
+        <div className="flex items-center justify-between pt-2">
           <Label>Teacher Payment</Label>
-          <Button variant={course?.payments?.teacherPaid ? "default" : "destructive"} size="sm" onClick={onToggleTeacherPayment}>
-            {course?.payments?.teacherPaid ? "Paid" : "Pay"}
+          <Button 
+            disabled={!isPayable} 
+            variant={payout.status === 'paid' ? "outline" : "default"} 
+            size="sm" 
+            onClick={onToggleTeacherPayment}
+          >
+            {payout.status === 'paid' ? "Paid" : "Pay"}
           </Button>
         </div>
+
         <div className="pt-4 border-t">
           <div className="flex justify-between items-center">
             <span className="font-medium">Total Revenue:</span>

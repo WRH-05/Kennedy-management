@@ -15,6 +15,7 @@ import { useStudents } from "@/hooks/useStudents"
 import { paymentService } from "@/services/paymentService"
 import { useCourseEnrollementStudentsByCourseId } from "@/hooks/useCourseEnrollement"
 import { studentPaymentService } from "@/services/studentPaymentService"
+import { toast } from "@/hooks/use-toast"
 
 const PAYMENT_STATUSES = [
   { value: "paid", label: "Paid" },
@@ -71,6 +72,7 @@ export function StudentsManagementCard({
       const student = students.find((s: any) => s.id.toString() === selectedStudent)
       if (!student) return
       await courseService.enrollStudent(course.id, student.id, selectedPeriodId)
+      toast({ title: "Success", description: "New student added." })
       
       await Promise.all([mutate(), mutateEnrolled()])
       onRefresh()

@@ -87,8 +87,7 @@ export default function PayoutsTab({
   }
 
   const renderNameCell = (payout: any) => {
-    console.log(payout)
-    const { id, name } = payout.students
+    let { id, name } = type == "student"? payout.students : payout.teachers
 
     if (id) {
       return (

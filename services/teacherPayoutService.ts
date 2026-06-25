@@ -10,7 +10,7 @@ export const teacherPayoutService = {
             .select(`
                     *,
                     teachers (name),
-                    profiles!teacher_payouts_recorded_by_id_fkey (full_name)
+                    profiles!teacher_payouts_recorded_by_fkey (full_name)
                 `, { count: pageSize > 0 ? 'exact' : 'estimated' })
 
         query.order('created_at', { ascending: false });
@@ -31,6 +31,21 @@ export const teacherPayoutService = {
             pageSize: pageSize > 0 ? pageSize : finalData.length,
         };
     },
+
+    async getAllTeacherPayouts(courseId: string) {
+        let query = supabase
+            .from('teacher_payouts')
+            .select(`*, profiles!teacher_payouts_recorded_by_fkey (*)`)
+            .eq('course_id', courseId)
+
+        query.order('created_at', { ascending: false });
+
+
+        const { data } = await query.throwOnError();
+
+        return data || [];
+    },
+
     // Change for full update
     async updatePayoutStatus(id: string, status: string) {
         const updateData = {
@@ -48,7 +63,7 @@ export const teacherPayoutService = {
         return data
     },
 
-    async updatePayout(id: string, updates = {}){
+    async updatePayout(id: string, updates = {}) {
         const { data } = await supabase
             .from('teacher_payouts')
             .update(updates)
@@ -77,7 +92,7 @@ export const teacherPayoutService = {
 
         let query = supabase
             .from('teacher_payouts')
-            .select('*, teachers (*), course_instances (*), billing_periods (*), profiles!teacher_payouts_recorded_by_id_fkey(*)', { count: pageSize > 0 ? 'exact' : 'estimated' })
+            .select('*, teachers (*), course_instances (*), billing_periods (*), profiles!teacher_payouts_recorded_by_fkey(full_name)', { count: pageSize > 0 ? 'exact' : 'estimated' })
 
         query = query.order('created_at', { ascending: false });
 
@@ -132,22 +147,19 @@ export const teacherPayoutService = {
         return data
     },
 
-    async recordTeacherPayout(teacherId: string, amount: number, percentage = 50, totalGenerated = 0, billingPeriodId = null) {
+    async recordTeacherPayout(amount: number, billingPeriodId: string) {
 
-        const { data, error } = await supabase
+        const { data } = await supabase
             .from('teacher_payouts')
-            .insert([{
-                teacher_id: teacherId,
-                amount: amount || 0,
-                percentage: percentage,
-                total_generated: totalGenerated,
+            .update({
+                amount: amount,
                 status: 'pending',
-                billing_period_id: billingPeriodId,
-            }])
+            })
+            .eq('billing_period_id', billingPeriodId)
             .select()
             .single()
+            .throwOnError()
 
-        if (error) throw error
         return data
     },
 }

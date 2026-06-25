@@ -29,6 +29,8 @@ function CourseDetailContent() {
   const { toast } = useToast()
 
   const [course, setCourse] = useState<any>(null)
+  const [payouts, setPayouts] = useState<any[]>([])
+  const [payout, setPayout] = useState<any>(null)
   const [billingPeriods, setBillingPeriods] = useState<any[]>([])
   const [selectedPeriodId, setSelectedPeriodId] = useState<string>("")
   const [studentSearchQuery, setStudentSearchQuery] = useState("")
@@ -48,15 +50,13 @@ function CourseDetailContent() {
 
   const loadData = useCallback(async () => {
     try {
-      let [courseData, billingData] = await Promise.all([
+      let [courseData, billingData, teacherPayoutsData] = await Promise.all([
         courseService.getCourseInstanceById(courseId),
-        paymentService.getBillingPeriods(courseId)
+        paymentService.getBillingPeriods(courseId),
+        teacherPayoutService.getAllTeacherPayouts(courseId)
       ])
 
-      if (!courseData) {
-        router.push(user?.profile?.role === 'receptionist' ? '/receptionist' : '/manager')
-        return
-      }
+      setPayouts(teacherPayoutsData)
 
       courseData = await courseService.enrichCourseWithStudents(courseData)
       setBillingPeriods(billingData || [])
@@ -69,6 +69,9 @@ function CourseDetailContent() {
       studentsBillingPeriods.forEach((bill) => {
         studentsData.push(bill.students)
       })
+
+      setPayout(payouts.find((p)=> p.billing_period_id == selectedPeriodId))
+
       setCourse(courseData)
     } catch (error) {
       console.error(error)
@@ -89,9 +92,10 @@ function CourseDetailContent() {
       description: `Create a payout request for the teacher? Amount: ${earnings} DA.`,
       action: async () => {
         try {
-          await teacherPayoutService.recordTeacherPayout(course.teacher_id, earnings, course.percentage_cut || 50, course.price * (course.student_ids?.length || 0), null)
+          await teacherPayoutService.recordTeacherPayout(earnings, selectedPeriodId)
           toast({ title: "Payout request created" })
           setCourse((prev: any) => ({ ...prev, payments: { ...prev.payments, teacherPaid: false, payoutPending: true } }))
+          loadData()
         } catch {
           toast({ title: "Error", variant: "destructive" })
         }
@@ -127,7 +131,7 @@ function CourseDetailContent() {
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           <div className="lg:col-span-1">
             <CourseInfoCard course={course} courseId={course.id} onRefresh={loadData} />
-            <PaymentSummaryCard course={course} teacherEarnings={teacherEarnings} onToggleTeacherPayment={toggleTeacherPayment} />
+            <PaymentSummaryCard payout={payout} course={course} teacherEarnings={teacherEarnings} onToggleTeacherPayment={toggleTeacherPayment} />
           </div>
 
           <div className="lg:col-span-2 space-y-6">

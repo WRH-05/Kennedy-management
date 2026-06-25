@@ -42,7 +42,8 @@ export function BillingPeriodToolbar({ courseId, billingPeriods, selectedPeriodI
       setNewBillingForm({ startDate: "", endDate: "" })
       setShowAddBillingDialog(false)
       onRefresh()
-    } catch {
+    } catch(e) {
+      console.error(e)
       toast({ title: "Error", description: "Failed to create cycle.", variant: "destructive" })
     }
   }
