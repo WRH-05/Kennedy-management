@@ -94,14 +94,41 @@ export default function DashboardHeader() {
     <header className="bg-white shadow-sm border-b">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between items-center h-16">
-          
-          {/* Logo / Brand Title */}
-          <h1 className="text-xl font-semibold text-gray-900 shrink-0">
-            <Link href="/dashboard">Manager Dashboard</Link>
-          </h1>
+          {/* Side Slider Button (Sheet) */}
+            <Sheet>
+              <SheetTrigger asChild>
+                <Button variant="ghost" size="icon" title="Open Sidebar">
+                  <Menu className="h-5 w-5" />
+                </Button>
+              </SheetTrigger>
+              <SheetContent side="right" className="w-75 sm:w-100">
+                <SheetHeader>
+                  <SheetTitle>Quick Actions Panel</SheetTitle>
+                  <SheetDescription>
+                    Access alternative utilities and global management tools here.
+                  </SheetDescription>
+                </SheetHeader>
+                
+                {/* Content inside the slider */}
+                <div className="py-6 flex flex-col gap-4">
 
+                  <div className="flex flex-col gap-2 text-sm border-t pt-4">
+                    <p className="font-medium text-slate-900">Mobile Navigation</p>
+                    <Link href="/manager" className="p-2 hover:bg-slate-100 rounded-md transition-colors">Main Menu</Link>
+                    <Link href="/manager/students" className="p-2 hover:bg-slate-100 rounded-md transition-colors">Students Registry</Link>
+                    <Link href="/manager/teachers" className="p-2 hover:bg-slate-100 rounded-md transition-colors">Teachers Registry</Link>
+                    <Link href="/manager/courses" className="p-2 hover:bg-slate-100 rounded-md transition-colors">Active Courses</Link>
+                    <Link href="/manager/payouts" className="p-2 hover:bg-slate-100 rounded-md transition-colors">Payments</Link>
+                    <Link href="/manager/archive" className="p-2 hover:bg-slate-100 rounded-md transition-colors">Archives</Link>
+                    <Link href="/manager/revenue" className="p-2 hover:bg-slate-100 rounded-md transition-colors">Revenue</Link>
+                  </div>
+                </div>
+              </SheetContent>
+            </Sheet>
           {/* Search Bar */}
           <div className="flex-1 max-w-md mx-4 relative">
+            
+
             <div className="relative">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
               <Input
@@ -156,38 +183,6 @@ export default function DashboardHeader() {
 
           {/* Right Side Actions */}
           <div className="flex items-center space-x-2 sm:space-x-4 shrink-0">
-            
-            {/* Side Slider Button (Sheet) */}
-            <Sheet>
-              <SheetTrigger asChild>
-                <Button variant="ghost" size="icon" title="Open Sidebar">
-                  <Menu className="h-5 w-5" />
-                </Button>
-              </SheetTrigger>
-              <SheetContent side="right" className="w-75 sm:w-100">
-                <SheetHeader>
-                  <SheetTitle>Quick Actions Panel</SheetTitle>
-                  <SheetDescription>
-                    Access alternative utilities and global management tools here.
-                  </SheetDescription>
-                </SheetHeader>
-                
-                {/* Content inside the slider */}
-                <div className="py-6 flex flex-col gap-4">
-
-                  <div className="flex flex-col gap-2 text-sm border-t pt-4">
-                    <p className="font-medium text-slate-900">Mobile Navigation</p>
-                    <Link href="/manager" className="p-2 hover:bg-slate-100 rounded-md transition-colors">Main Menu</Link>
-                    <Link href="/manager/students" className="p-2 hover:bg-slate-100 rounded-md transition-colors">Students Registry</Link>
-                    <Link href="/manager/teachers" className="p-2 hover:bg-slate-100 rounded-md transition-colors">Teachers Registry</Link>
-                    <Link href="/manager/courses" className="p-2 hover:bg-slate-100 rounded-md transition-colors">Active Courses</Link>
-                    <Link href="/manager/payouts" className="p-2 hover:bg-slate-100 rounded-md transition-colors">Payments</Link>
-                    <Link href="/manager/archive" className="p-2 hover:bg-slate-100 rounded-md transition-colors">Archives</Link>
-                    <Link href="/manager/revenue" className="p-2 hover:bg-slate-100 rounded-md transition-colors">Revenue</Link>
-                  </div>
-                </div>
-              </SheetContent>
-            </Sheet>
 
             <span className="text-sm text-gray-600 hidden lg:inline">
               Welcome, {user?.profile?.full_name || 'Manager'}
