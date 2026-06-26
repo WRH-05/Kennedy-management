@@ -2,8 +2,6 @@
 
 import { useState } from "react"
 import { useStudentsPayments, useTeachersPayments } from "@/hooks/usePayments" 
-import { useAuth } from "@/contexts/AuthContext"
-import { paymentService } from "@/services/paymentService"
 import PayoutsTab from "@/components/tabs/PayoutsTab"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { GraduationCap, Users } from "lucide-react"
@@ -12,7 +10,6 @@ export default function PayoutsPage() {
   const { payments: studentsPayouts, isLoading: studentLoading, mutate: mutateStudents } = useStudentsPayments();
   const { payments: teachersPayouts, isLoading: teachersLoading, mutate: mutateTeachers } = useTeachersPayments();
   console.log(teachersPayouts)
-  const { user } = useAuth()
   const [activeTab, setActiveTab] = useState<"teachers" | "students">("teachers")
 
   return (

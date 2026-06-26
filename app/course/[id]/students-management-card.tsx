@@ -8,14 +8,15 @@ import { Input } from "@/components/ui/input"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Users, Plus } from "lucide-react"
+import { Users, Plus, MoreHorizontal, Check } from "lucide-react"
 import { courseService } from "@/services/courseService"
 import { useStudentsData } from "@/hooks/usePayments"
 import { useStudents } from "@/hooks/useStudents"
-import { paymentService } from "@/services/paymentService"
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 import { useCourseEnrollementStudentsByCourseId } from "@/hooks/useCourseEnrollement"
 import { studentPaymentService } from "@/services/studentPaymentService"
 import { toast } from "@/hooks/use-toast"
+import { Badge } from "@/components/ui/badge"
 
 const PAYMENT_STATUSES = [
   { value: "paid", label: "Paid" },
@@ -73,10 +74,10 @@ export function StudentsManagementCard({
       if (!student) return
       await courseService.enrollStudent(course.id, student.id, selectedPeriodId)
       toast({ title: "Success", description: "New student added." })
-      
+
       await Promise.all([mutate(), mutateEnrolled()])
       onRefresh()
-      
+
       setSelectedStudent("")
       setStudentSearchQuery("")
       setShowAddStudentDialog(false)
@@ -88,13 +89,28 @@ export function StudentsManagementCard({
   const onChangeStudentPaymentStatus = async (student_id: string, status: string) => {
     try {
       await studentPaymentService.updateRecordStudentPayment(course.id, student_id, selectedPeriodId, {
-        status
+        status,
+        amount: course.price
       });
-      
-      await mutate() 
+
+      await mutate()
       onRefresh()
     } catch (error) {
       console.error(error)
+    }
+  }
+
+  const getStatusBadge = (status: string) => {
+    switch (status) {
+      case 'paid':
+        return <Badge className="bg-green-500 hover:bg-green-600 text-white">Paid</Badge>
+      case 'pending':
+        return <Badge variant="outline" className="text-amber-500 border-amber-500">Pending</Badge>
+      case 'cancelled':
+        return <Badge variant="destructive">Cancelled</Badge>
+      case 'unpaid':
+      default:
+        return <Badge variant="secondary">Unpaid</Badge>
     }
   }
 
@@ -105,7 +121,7 @@ export function StudentsManagementCard({
       if (targetStatus === "dropped" || targetStatus === "missing") {
         await courseService.unenrollStudent(course.id, student_id);
       }
-      
+
       await Promise.all([mutate(), mutateEnrolled()])
       onRefresh()
     } catch (error) {
@@ -222,7 +238,7 @@ export function StudentsManagementCard({
             ) : (
               payments.map((p: any, idx: number) => {
                 const currentStudentId = p.students?.id;
-                
+
                 // Determine current local status state string
                 const isEnrolled = enrolledStudents.some((s: any) => s.id === currentStudentId);
                 // If you have an explicit 'missing' status saved down in your payment/enrollment object schema, 
@@ -235,35 +251,18 @@ export function StudentsManagementCard({
                 return (
                   <TableRow key={idx}>
                     <TableCell className="font-medium">
-                      <Button 
-                        variant="link" 
-                        className="p-0 h-auto font-medium text-left" 
+                      <Button
+                        variant="link"
+                        className="p-0 h-auto font-medium text-left"
                         onClick={() => router.push(`/student/${currentStudentId}`)}
                       >
                         {p.students?.name || "Unknown Student"}
                       </Button>
                     </TableCell>
-                    
+
                     {/* Payment Status Dropdown Column */}
                     <TableCell>
-                      <Select
-                        value={p.status}
-                        disabled={isPaid}
-                        onValueChange={(newStatus) => onChangeStudentPaymentStatus(currentStudentId, newStatus)}
-                      >
-                        <SelectTrigger className="w-40 h-8 text-xs capitalize disabled:opacity-100 disabled:bg-emerald-50 disabled:text-emerald-700 disabled:border-emerald-200">
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {PAYMENT_STATUSES
-                            .filter((status) => status.value !== "paid")
-                            .map((status) => (
-                              <SelectItem key={status.value} value={status.value} className="text-xs capitalize">
-                                {status.label}
-                              </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
+                      {getStatusBadge(p.status)}
                     </TableCell>
 
                     {/* Enrollment Status Dropdown Column */}
@@ -273,14 +272,13 @@ export function StudentsManagementCard({
                         disabled={isFinalizedEnrollment}
                         onValueChange={(newStatus) => onChangeEnrollmentStatus(currentStudentId, currentEnrollmentStatus, newStatus)}
                       >
-                        <SelectTrigger 
-                          className={`w-40 h-8 text-xs capitalize disabled:opacity-100 ${
-                            currentEnrollmentStatus === "dropped" 
-                              ? "disabled:bg-rose-50 disabled:text-rose-700 disabled:border-rose-200" 
-                              : currentEnrollmentStatus === "missing"
+                        <SelectTrigger
+                          className={`w-40 h-8 text-xs capitalize disabled:opacity-100 ${currentEnrollmentStatus === "dropped"
+                            ? "disabled:bg-rose-50 disabled:text-rose-700 disabled:border-rose-200"
+                            : currentEnrollmentStatus === "missing"
                               ? "disabled:bg-amber-50 disabled:text-amber-700 disabled:border-amber-200"
                               : ""
-                          }`}
+                            }`}
                         >
                           <SelectValue />
                         </SelectTrigger>
@@ -293,6 +291,28 @@ export function StudentsManagementCard({
                             ))}
                         </SelectContent>
                       </Select>
+                    </TableCell>
+
+                    <TableCell className="group"> {/* <-- Add 'group' here */}
+                      <div className="flex items-center justify-between">
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button variant="ghost" className="h-8 w-8 p-0 opacity-0 group-hover:opacity-100 transition-opacity">
+                              <MoreHorizontal className="h-4 w-4" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end">
+                            <DropdownMenuItem
+                              onClick={() => onChangeStudentPaymentStatus(currentStudentId, 'pending')}
+                              className="text-emerald-600 focus:text-emerald-600 cursor-pointer"
+                            >
+                              <Check className="mr-2 h-4 w-4" />
+                              Make Request
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+
+                      </div>
                     </TableCell>
                   </TableRow>
                 );

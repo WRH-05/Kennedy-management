@@ -1,6 +1,5 @@
 import { supabase } from "@/lib/supabase"
 import { Tables, TablesInsert, TablesUpdate } from "@/types/database.types"
-import { studentPaymentService } from "./studentPaymentService";
 
 export const courseService = {
     async getAllCourseInstances(

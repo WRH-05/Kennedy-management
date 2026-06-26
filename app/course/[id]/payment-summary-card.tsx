@@ -65,10 +65,6 @@ export function PaymentSummaryCard({ course, payout, teacherEarnings, onToggleTe
 
         <div className="pt-4 border-t">
           <div className="flex justify-between items-center">
-            <span className="font-medium">Total Revenue:</span>
-            <span className="text-lg font-bold">{(course?.price || 0) * (course?.student_ids?.length || 0)} DA</span>
-          </div>
-          <div className="flex justify-between items-center">
             <span className="font-medium">Teacher Earnings:</span>
             <span className="text-lg font-bold text-green-600">{teacherEarnings} DA</span>
           </div>

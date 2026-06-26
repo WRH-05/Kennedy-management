@@ -7,9 +7,9 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Badge } from "@/components/ui/badge"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 import { DollarSign, Check, X, MoreHorizontal, ChevronLeft, ChevronRight } from "lucide-react"
-import { paymentService } from "@/services/paymentService"
 import { studentPaymentService } from "@/services/studentPaymentService"
 import { teacherPayoutService } from "@/services/teacherPayoutService"
+import Link from "next/link"
 
 interface PayoutsTabProps {
   // payoutData now accepts the full response object from your service
@@ -129,7 +129,7 @@ export default function PayoutsTab({
                 <TableHeader className="sticky top-0 bg-secondary/80 backdrop-blur-sm z-10">
                   <TableRow>
                     <TableHead>{type === "teacher" ? "Teacher" : "Student"} Name</TableHead>
-                    {type === "teacher" && <TableHead>Percentage</TableHead>}
+                    <TableHead>Course</TableHead>
                     <TableHead>Total Amount</TableHead>
                     <TableHead>Date</TableHead>
                     <TableHead>Time</TableHead>
@@ -143,7 +143,7 @@ export default function PayoutsTab({
                     return (
                       <TableRow key={payout.id || index} className="group hover:bg-muted/50 transition-colors">
                         <TableCell className="font-medium">{renderNameCell(payout)}</TableCell>
-                        {type === "teacher" && <TableCell>{payout.percentage || 'N/A'}%</TableCell>}
+                        <TableCell className="font-medium"><Link href={`/course/${payout.course_instances.id}`}>{payout.course_instances.subject}</Link></TableCell>
                         <TableCell className="font-semibold text-primary">{payout.amount.toLocaleString()} DA</TableCell>
                         <TableCell>{dateTime.date}</TableCell>
                         <TableCell>{dateTime.time}</TableCell>
@@ -203,7 +203,7 @@ export default function PayoutsTab({
                 <TableHeader className="sticky top-0 bg-secondary/80 backdrop-blur-sm z-10">
                   <TableRow>
                     <TableHead>{type === "teacher" ? "Teacher" : "Student"} Name</TableHead>
-                    {type === "teacher" && <TableHead>Percentage</TableHead>}
+                    <TableHead>Course</TableHead>
                     <TableHead>Total Amount</TableHead>
                     <TableHead>Date</TableHead>
                     <TableHead>Time</TableHead>
@@ -220,7 +220,7 @@ export default function PayoutsTab({
                     return (
                       <TableRow key={payout.id || index} className="opacity-80 hover:opacity-100 transition-opacity">
                         <TableCell className="font-medium">{renderNameCell(payout)}</TableCell>
-                        {type === "teacher" && <TableCell>{payout.percentage || 'N/A'}%</TableCell>}
+                        <TableCell className="font-medium"><Link href={`/course/${payout.course_instances.id}`}>{payout.course_instances.subject}</Link></TableCell>
                         <TableCell>{(payout.amount || 0).toLocaleString()} DA</TableCell>
                         <TableCell>{dateTime.date}</TableCell>
                         <TableCell>{dateTime.time}</TableCell>
