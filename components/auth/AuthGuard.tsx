@@ -1,7 +1,7 @@
 "use client"
 
 import React from 'react'
-import { useRouter } from 'next/navigation'
+import { useRouter, usePathname } from 'next/navigation'
 import { useAuth } from '@/contexts/AuthContext'
 import { Loader2 } from 'lucide-react'
 
@@ -18,76 +18,52 @@ export default function AuthGuard({
 }: AuthGuardProps) {
   const { user, loading } = useAuth()
   const router = useRouter()
+  const pathname = usePathname()
 
-  React.useEffect(() => {
-    if (!loading) {
-      if (!user) {
-        router.push(fallbackPath)
-        return
-      }
-
-      // Check if user needs email confirmation
-      if (user.needsEmailConfirmation) {
-        router.push(`/auth/check-email?email=${encodeURIComponent(user.email || '')}`)
-        return
-      }
-
-      // Check role requirements
-      if (requiredRoles.length > 0 && user.profile?.role) {
-        if (!requiredRoles.includes(user.profile.role)) {
-          // Redirect based on user role
-          switch (user.profile.role) {
-            case 'manager':
-              router.push('/manager')
-              break
-            case 'receptionist':
-              router.push('/receptionist')
-              break
-            default:
-              router.push(fallbackPath)
-          }
-          return
-        }
-      }
-
-      // Auto-redirect authenticated users from auth pages
-      if (user && ['/auth/login', '/auth/signup', '/auth/create-school'].includes(window.location.pathname)) {
-        switch (user.profile?.role) {
-          case 'manager':
-            router.push('/manager')
-            break
-          case 'receptionist':
-            router.push('/receptionist')
-            break
-          default:
-            router.push('/manager')
-        }
-      }
-    }
-  }, [user, loading, router, requiredRoles, fallbackPath])
-
+  // 1. If auth is still loading, show the spinner immediately
   if (loading) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="text-center">
-          <Loader2 className="h-8 w-8 animate-spin mx-auto mb-4" />
-          <p className="text-gray-600">Loading...</p>
-        </div>
+        <Loader2 className="h-8 w-8 animate-spin text-blue-600" />
       </div>
     )
   }
 
+  // 2. RUN CHECKS DIRECTLY IN THE RENDER PHASE (No useEffect needed!)
+  
+  // Unauthenticated
   if (!user) {
-    return null // Will redirect to login
+    router.push(fallbackPath)
+    return null 
   }
 
+  // Email confirmation check
   if (user.needsEmailConfirmation) {
-    return null // Will redirect to check email
+    router.push(`/auth/check-email?email=${encodeURIComponent(user.email || '')}`)
+    return null
   }
 
-  if (requiredRoles.length > 0 && (!user.profile?.role || !requiredRoles.includes(user.profile.role))) {
-    return null // Will redirect to appropriate dashboard
+  const userRole = user.profile?.role
+
+  // Role authorization check
+  if (requiredRoles.length > 0) {
+    if (!userRole || !requiredRoles.includes(userRole)) {
+      if (userRole === 'manager') router.push('/manager')
+      else if (userRole === 'receptionist') router.push('/receptionist')
+      else router.push('/unauthorized')
+      return null
+    }
   }
 
+  // Prevent authenticated users from staying on auth pages
+  const authPages = ['/auth/login', '/auth/signup', '/auth/create-school']
+  if (authPages.includes(pathname)) {
+    if (userRole === 'manager') router.push('/manager')
+    else if (userRole === 'receptionist') router.push('/receptionist')
+    else router.push('/')
+    return null
+  }
+
+  // 3. If all guards pass, safely render the application
   return <>{children}</>
-}
+} 
