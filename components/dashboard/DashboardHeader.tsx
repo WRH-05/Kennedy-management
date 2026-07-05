@@ -2,7 +2,8 @@
 import { useState, useMemo } from "react"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
-import { useAuth } from "@/contexts/AuthContext"
+import { useAuth } from "@/context/AuthContext"
+import { authService } from "@/services/authService"
 import { useStudents } from "@/hooks/useStudents"
 import { useTeachers } from "@/hooks/useTeachers"
 import { useCourses } from "@/hooks/useCourses"
@@ -19,10 +20,12 @@ import {
   SheetTrigger,
 } from "@/components/ui/sheet"
 import { Search, LogOut, Menu } from "lucide-react"
+import { createClient } from "@/lib/supabase/client"
+
 
 export default function DashboardHeader() {
   const router = useRouter()
-  const { user, signOut } = useAuth()
+  const { user } = useAuth()
   const [searchQuery, setSearchQuery] = useState("")
 
   const { students: allStudents } = useStudents();
@@ -45,11 +48,8 @@ export default function DashboardHeader() {
   )
 
   const handleSignOut = async () => {
-    await signOut()
-  }
-
-  const handleMonthlyRollover = () => {
-    // Implement structural rollover processing logic here
+    await authService.signOut()
+    router.push('/')
   }
 
   const searchResults = useMemo(() => {
@@ -95,39 +95,39 @@ export default function DashboardHeader() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between items-center h-16">
           {/* Side Slider Button (Sheet) */}
-            <Sheet>
-              <SheetTrigger asChild>
-                <Button variant="ghost" size="icon" title="Open Sidebar">
-                  <Menu className="h-5 w-5" />
-                </Button>
-              </SheetTrigger>
-              <SheetContent side="right" className="w-75 sm:w-100">
-                <SheetHeader>
-                  <SheetTitle>Quick Actions Panel</SheetTitle>
-                  <SheetDescription>
-                    Access alternative utilities and global management tools here.
-                  </SheetDescription>
-                </SheetHeader>
-                
-                {/* Content inside the slider */}
-                <div className="py-6 flex flex-col gap-4">
+          <Sheet>
+            <SheetTrigger asChild>
+              <Button variant="ghost" size="icon" title="Open Sidebar">
+                <Menu className="h-5 w-5" />
+              </Button>
+            </SheetTrigger>
+            <SheetContent side="right" className="w-75 sm:w-100">
+              <SheetHeader>
+                <SheetTitle>Quick Actions Panel</SheetTitle>
+                <SheetDescription>
+                  Access alternative utilities and global management tools here.
+                </SheetDescription>
+              </SheetHeader>
 
-                  <div className="flex flex-col gap-2 text-sm border-t pt-4">
-                    <p className="font-medium text-slate-900">Mobile Navigation</p>
-                    <Link href="/manager" className="p-2 hover:bg-slate-100 rounded-md transition-colors">Main Menu</Link>
-                    <Link href="/manager/students" className="p-2 hover:bg-slate-100 rounded-md transition-colors">Students Registry</Link>
-                    <Link href="/manager/teachers" className="p-2 hover:bg-slate-100 rounded-md transition-colors">Teachers Registry</Link>
-                    <Link href="/manager/courses" className="p-2 hover:bg-slate-100 rounded-md transition-colors">Active Courses</Link>
-                    <Link href="/manager/payouts" className="p-2 hover:bg-slate-100 rounded-md transition-colors">Payments</Link>
-                    <Link href="/manager/archive" className="p-2 hover:bg-slate-100 rounded-md transition-colors">Archives</Link>
-                    <Link href="/manager/revenue" className="p-2 hover:bg-slate-100 rounded-md transition-colors">Revenue</Link>
-                  </div>
+              {/* Content inside the slider */}
+              <div className="py-6 flex flex-col gap-4">
+
+                <div className="flex flex-col gap-2 text-sm border-t pt-4">
+                  <p className="font-medium text-slate-900">Mobile Navigation</p>
+                  <Link href="/manager" className="p-2 hover:bg-slate-100 rounded-md transition-colors">Main Menu</Link>
+                  <Link href="/manager/students" className="p-2 hover:bg-slate-100 rounded-md transition-colors">Students Registry</Link>
+                  <Link href="/manager/teachers" className="p-2 hover:bg-slate-100 rounded-md transition-colors">Teachers Registry</Link>
+                  <Link href="/manager/courses" className="p-2 hover:bg-slate-100 rounded-md transition-colors">Active Courses</Link>
+                  <Link href="/manager/payouts" className="p-2 hover:bg-slate-100 rounded-md transition-colors">Payments</Link>
+                  <Link href="/manager/archive" className="p-2 hover:bg-slate-100 rounded-md transition-colors">Archives</Link>
+                  <Link href="/manager/revenue" className="p-2 hover:bg-slate-100 rounded-md transition-colors">Revenue</Link>
                 </div>
-              </SheetContent>
-            </Sheet>
+              </div>
+            </SheetContent>
+          </Sheet>
           {/* Search Bar */}
           <div className="flex-1 max-w-md mx-4 relative">
-            
+
 
             <div className="relative">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />

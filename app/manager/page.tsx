@@ -1,61 +1,86 @@
 "use client"
-import SummaryCards from "@/components/dashboard/SummaryCards"
+
 import Link from "next/link"
-import { ArrowRight, Users, BookOpen, DollarSign, Archive, LibraryBig, Banknote  } from "lucide-react"
+import { ArrowRight, Users, BookOpen, DollarSign, Archive, LibraryBig, Banknote } from "lucide-react"
+import { useAuth } from "@/context/AuthContext"
+
 export default function DashboardHubPage() {
+  const { user } = useAuth()
+  // Clean fallback if role isn't populated yet
+  const role = user?.user_role
+
+  // 1. Define all navigation options centrally
+  const allNavigationCards = [
+    {
+      title: "Manage Students",
+      description: "View directories and status mappings",
+      href: `/manager/students`,
+      icon: <Users className="h-5 w-5 text-blue-500" />,
+      allowedRoles: ["manager", "receptionist"], // specify who can see what
+    },
+    {
+      title: "Manage Teachers",
+      description: "Track assignments and payouts",
+      href: `/manager/teachers`,
+      icon: <BookOpen className="h-5 w-5 text-green-500" />,
+      allowedRoles: ["manager", "receptionist"],
+    },
+    {
+      title: "Financial Logs",
+      description: "Review revenue collections",
+      href: `/manager/revenue`,
+      icon: <DollarSign className="h-5 w-5 text-amber-500" />,
+      allowedRoles: ["manager"], 
+    },
+    {
+      title: "Manage Courses",
+      description: "Edit courses and curriculum",
+      href: `/manager/courses`,
+      icon: <LibraryBig className="h-5 w-5 text-red-500" />,
+      allowedRoles: ["manager", "receptionist"],
+    },
+    {
+      title: "Manage Archives",
+      description: "Check past student records",
+      href: `/manager/archive`,
+      icon: <Archive className="h-5 w-5 text-amber-800" />,
+      allowedRoles: ["manager"],
+    },
+    {
+      title: "Manage Payouts",
+      description: "Process partner and contractor earnings",
+      href: `/manager/payouts`,
+      icon: <Banknote className="h-5 w-5 text-green-700" />,
+      allowedRoles: ["manager"],
+    },
+  ]
+
+  // 2. Filter down cards to only show what the current role is authorized to view
+  const authorizedCards = allNavigationCards.filter((card) =>
+    card.allowedRoles.includes(role)
+  )
+
   return (
     <div className="space-y-8">
-      {/* Show the global metrics at the top */}
+      {/* Global metrics could go here */}
 
       {/* Grid of quick navigation shortcuts */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <Link href="/manager/students" className="p-6 bg-white rounded-lg border shadow-sm hover:shadow-md transition group flex justify-between items-center">
-          <div>
-            <h3 className="font-semibold text-lg flex items-center gap-2"><Users className="h-5 w-5 text-blue-500" /> Manage Students</h3>
-            <p className="text-sm text-gray-500">View directories and status mappings</p>
-          </div>
-          <ArrowRight className="h-5 w-5 text-gray-400 group-hover:translate-x-1 transition-transform" />
-        </Link>
-
-        <Link href="/manager/teachers" className="p-6 bg-white rounded-lg border shadow-sm hover:shadow-md transition group flex justify-between items-center">
-          <div>
-            <h3 className="font-semibold text-lg flex items-center gap-2"><BookOpen className="h-5 w-5 text-green-500" /> Manage Teachers</h3>
-            <p className="text-sm text-gray-500">Track assignments and payouts</p>
-          </div>
-          <ArrowRight className="h-5 w-5 text-gray-400 group-hover:translate-x-1 transition-transform" />
-        </Link>
-
-        <Link href="/manager/revenue" className="p-6 bg-white rounded-lg border shadow-sm hover:shadow-md transition group flex justify-between items-center">
-          <div>
-            <h3 className="font-semibold text-lg flex items-center gap-2"><DollarSign className="h-5 w-5 text-amber-500" /> Financial Logs</h3>
-            <p className="text-sm text-gray-500">Review revenue collections</p>
-          </div>
-          <ArrowRight className="h-5 w-5 text-gray-400 group-hover:translate-x-1 transition-transform" />
-        </Link>
-
-        <Link href="/manager/courses" className="p-6 bg-white rounded-lg border shadow-sm hover:shadow-md transition group flex justify-between items-center">
-          <div>
-            <h3 className="font-semibold text-lg flex items-center gap-2"><LibraryBig className="h-5 w-5 text-red-500" /> Manange Courses</h3>
-            <p className="text-sm text-gray-500">Edit courses</p>
-          </div>
-          <ArrowRight className="h-5 w-5 text-gray-400 group-hover:translate-x-1 transition-transform" />
-        </Link>
-
-        <Link href="/manager/archive" className="p-6 bg-white rounded-lg border shadow-sm hover:shadow-md transition group flex justify-between items-center">
-          <div>
-            <h3 className="font-semibold text-lg flex items-center gap-2"><Archive className="h-5 w-5 text-amber-800" /> Manange Archives</h3>
-            <p className="text-sm text-gray-500">Check Archives</p>
-          </div>
-          <ArrowRight className="h-5 w-5 text-gray-400 group-hover:translate-x-1 transition-transform" />
-        </Link>
-
-        <Link href="/manager/payouts" className="p-6 bg-white rounded-lg border shadow-sm hover:shadow-md transition group flex justify-between items-center">
-          <div>
-            <h3 className="font-semibold text-lg flex items-center gap-2"><Banknote className="h-5 w-5 text-green-700" /> Manange Payouts</h3>
-            <p className="text-sm text-gray-500">Time for money baby</p>
-          </div>
-          <ArrowRight className="h-5 w-5 text-gray-400 group-hover:translate-x-1 transition-transform" />
-        </Link>
+        {authorizedCards.map((card, index) => (
+          <Link
+            key={index}
+            href={card.href}
+            className="p-6 bg-white rounded-lg border shadow-sm hover:shadow-md transition group flex justify-between items-center"
+          >
+            <div className="space-y-1">
+              <h3 className="font-semibold text-lg flex items-center gap-2">
+                {card.icon} {card.title}
+              </h3>
+              <p className="text-sm text-gray-500">{card.description}</p>
+            </div>
+            <ArrowRight className="h-5 w-5 text-gray-400 group-hover:translate-x-1 transition-transform" />
+          </Link>
+        ))}
       </div>
     </div>
   )

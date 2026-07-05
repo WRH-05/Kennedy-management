@@ -16,8 +16,6 @@ import {
 
 import { teacherService } from "@/services/teacherService"
 import { courseService } from "@/services/courseService"
-import { useAuth } from "@/contexts/AuthContext"
-import AuthGuard from "@/components/auth/AuthGuard"
 
 // Sub-components imports
 import { TeacherHeader } from "./teacher-header"
@@ -29,7 +27,6 @@ function TeacherProfileContent() {
   const router = useRouter()
   const params = useParams()
   const teacherId = params.id as string
-  const { user } = useAuth()
   
   const [teacher, setTeacher] = useState<any>(null)
   const [isEditing, setIsEditing] = useState(false)
@@ -61,7 +58,7 @@ function TeacherProfileContent() {
     }
 
     loadData()
-  }, [teacherId, router, user])
+  }, [teacherId, router])
 
   const confirmSave = async () => {
     try {
@@ -89,7 +86,7 @@ function TeacherProfileContent() {
     )
   }
 
-  if (error || !teacher || !user) {
+  if (error || !teacher) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center text-center">
         <div>
@@ -100,7 +97,7 @@ function TeacherProfileContent() {
     )
   }
 
-  const canEdit = ["receptionist", "manager", "owner"].includes(user?.profile?.role || "")
+  const canEdit = true
   const activeCourses = courses.filter((course) => course.status === "active")
   const completedCourses = courses.filter((course) => course.status === "completed")
   const numberOfActiveStudents = activeCourses.reduce((acc, course) => acc + (course.student_ids?.length || 0), 0)
@@ -165,8 +162,6 @@ function TeacherProfileContent() {
 
 export default function TeacherProfile() {
   return (
-    <AuthGuard requiredRoles={['manager', 'receptionist']}>
-      <TeacherProfileContent />
-    </AuthGuard>
+    <TeacherProfileContent />
   )
 }

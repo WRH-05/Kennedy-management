@@ -24,13 +24,11 @@ import {
   XCircle,
   Ban
 } from 'lucide-react'
-import { useAuth } from '@/contexts/AuthContext'
 import { authService } from '@/services/authService'
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
 import { useToast } from '@/hooks/use-toast'
 
 export default function UserManagementTab() {
-  const { user: currentUser, hasRole } = useAuth()
   const { toast } = useToast()
   const [users, setUsers] = useState<any[]>([])
   const [invitations, setInvitations] = useState<any[]>([])
@@ -51,7 +49,6 @@ export default function UserManagementTab() {
     try {
       setLoading(true)
       const [usersData, invitationsData] = await Promise.all([
-        authService.getSchoolUsers(),
         authService.getInvitations()
       ])
       setUsers(usersData)

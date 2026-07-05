@@ -24,16 +24,11 @@ import {
 import { ArrowLeft, Download, User, BookOpen, AlertTriangle, CheckCircle } from "lucide-react"
 import { studentService } from "@/services/studentService"
 import { courseService } from "@/services/courseService"
-import { useAuth } from "@/contexts/AuthContext"
-import AuthGuard from "@/components/auth/AuthGuard"
-import { paymentService } from "@/services/paymentService"
-import { studentPaymentService } from "@/services/studentPaymentService"
 
 function StudentDashboardContent() {
   const router = useRouter()
   const params = useParams()
   const studentId = params.id as string
-  const { user } = useAuth()
   const [student, setStudent] = useState<any>(null)
   const [editedStudent, setEditedStudent] = useState<any>(null)
   const [courses, setCourses] = useState<any[]>([])
@@ -48,7 +43,6 @@ function StudentDashboardContent() {
       setLoading(true)
       try {
         const studentData = await studentService.getStudentById(studentId)
-        const paymentsData = await studentPaymentService.getStudentPayments(studentId);
         if (!studentData) router.push('/')
         setStudent(studentData)
         setEditedStudent(JSON.parse(JSON.stringify(studentData)))
@@ -56,15 +50,14 @@ function StudentDashboardContent() {
         const studentCourses = await courseService.getCoursesByStudentId(studentId)
         setCourses(studentCourses)
       } catch (error) {
-        const redirectPath = user?.profile?.role === 'receptionist' ? '/receptionist' : '/manager'
-        router.push(redirectPath)
+        console.error(error)
       } finally {
         setLoading(false)
       }
     }
 
     loadStudentData()
-  }, [studentId, router, user])
+  }, [studentId, router])
 
   const handleEdit = () => {
     setIsEditing(true)
@@ -139,18 +132,18 @@ function StudentDashboardContent() {
               </Button>
               <h1 className="text-xl font-semibold text-gray-900">Student Dashboard</h1>
             </div>
-            {user?.profile?.role && ["manager", "receptionist"].includes(user.profile.role) && (
-              <div className="flex items-center space-x-2">
-                {!isEditing ? (
-                  <Button onClick={handleEdit}>Edit Student</Button>
-                ) : (
-                  <>
-                    <Button onClick={handleSave}>Save</Button>
-                    <Button variant="outline" onClick={handleCancel}>Cancel</Button>
-                  </>
-                )}
-              </div>
-            )}
+
+            <div className="flex items-center space-x-2">
+              {!isEditing ? (
+                <Button onClick={handleEdit}>Edit Student</Button>
+              ) : (
+                <>
+                  <Button onClick={handleSave}>Save</Button>
+                  <Button variant="outline" onClick={handleCancel}>Cancel</Button>
+                </>
+              )}
+            </div>
+
           </div>
         </div>
       </header>
@@ -359,37 +352,38 @@ function StudentDashboardContent() {
                       </TableHeader>
                       <TableBody>
                         {activeCourses.map((course) => {
-                          const isPaymentMissing = payments.filter((p)=>{
+                          const isPaymentMissing = payments.filter((p) => {
                             return p.course_id == course.id && p.status != 'paid'
                           }).length > 1
-                          return(
-                          <TableRow key={course.id}>
-                            <TableCell className="font-medium">
-                              <Button
-                                variant="link"
-                                className="p-0 h-auto font-medium text-left"
-                                onClick={() => router.push(`/course/${course.id}`)}
-                              >
-                                {course.subject} - {course.school_year}
-                              </Button>
-                            </TableCell>
-                            <TableCell>
-                              <Button
-                                variant="link"
-                                className="p-0 h-auto font-medium text-left"
-                                onClick={() => router.push(`/teacher/${course.teacher_id}`)}
-                              >
-                                {course.teachers.name}
-                              </Button>
-                            </TableCell>
-                            <TableCell>{course.monthly_price} DA</TableCell>
-                            <TableCell>
-                              <Badge variant="outline">
-                                {isPaymentMissing? "Missing payment" : "Paid"}
-                              </Badge>
-                            </TableCell>
-                          </TableRow>
-                        )})}
+                          return (
+                            <TableRow key={course.id}>
+                              <TableCell className="font-medium">
+                                <Button
+                                  variant="link"
+                                  className="p-0 h-auto font-medium text-left"
+                                  onClick={() => router.push(`/course/${course.id}`)}
+                                >
+                                  {course.subject} - {course.school_year}
+                                </Button>
+                              </TableCell>
+                              <TableCell>
+                                <Button
+                                  variant="link"
+                                  className="p-0 h-auto font-medium text-left"
+                                  onClick={() => router.push(`/teacher/${course.teacher_id}`)}
+                                >
+                                  {course.teachers.name}
+                                </Button>
+                              </TableCell>
+                              <TableCell>{course.monthly_price} DA</TableCell>
+                              <TableCell>
+                                <Badge variant="outline">
+                                  {isPaymentMissing ? "Missing payment" : "Paid"}
+                                </Badge>
+                              </TableCell>
+                            </TableRow>
+                          )
+                        })}
                       </TableBody>
                     </Table>
                   </div>
@@ -446,8 +440,6 @@ function StudentDashboardContent() {
 
 export default function StudentDashboard() {
   return (
-    <AuthGuard requiredRoles={['manager']}>
-      <StudentDashboardContent />
-    </AuthGuard>
+    <StudentDashboardContent />
   )
 }

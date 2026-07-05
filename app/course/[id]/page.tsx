@@ -9,8 +9,6 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 
 import { courseService } from "@/services/courseService"
 import { paymentService } from "@/services/paymentService"
-import { useAuth } from "@/contexts/AuthContext"
-import AuthGuard from "@/components/auth/AuthGuard"
 import { useToast } from "@/hooks/use-toast"
 
 import { CourseInfoCard } from "./course-info-card"
@@ -25,7 +23,6 @@ function CourseDetailContent() {
   const router = useRouter()
   const params = useParams()
   const courseId = params.id as string
-  const { user } = useAuth()
   const { toast } = useToast()
 
   const [course, setCourse] = useState<any>(null)
@@ -78,7 +75,7 @@ function CourseDetailContent() {
     } finally {
       setLoading(false)
     }
-  }, [courseId, router, user, selectedPeriodId])
+  }, [courseId, router, selectedPeriodId])
 
   useEffect(() => { loadData() }, [loadData])
 
@@ -104,7 +101,7 @@ function CourseDetailContent() {
     })
   }
 
-  if (!course || !user || loading) {
+  if (!course || loading) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <h2 className="text-xl font-semibold text-gray-900">Loading...</h2>
@@ -165,8 +162,6 @@ function CourseDetailContent() {
 
 export default function CourseDetail() {
   return (
-    <AuthGuard requiredRoles={['manager', 'receptionist']}>
-      <CourseDetailContent />
-    </AuthGuard>
+    <CourseDetailContent />
   )
 }

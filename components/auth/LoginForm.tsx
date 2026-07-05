@@ -8,36 +8,16 @@ import { Label } from '@/components/ui/label'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Loader2, AlertTriangle } from 'lucide-react'
-import { useAuth } from '@/contexts/AuthContext'
+import { useAuth } from '@/context/AuthContext'
+import { authService } from '@/services/authService'
 
 export default function LoginForm() {
   const router = useRouter()
-  const { signIn, user, loading } = useAuth()
   const [formData, setFormData] = useState({ email: '', password: '' })
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const { user, loading } = useAuth()
 
-  // Handle routing reactively as soon as the AuthContext updates its user state
-  useEffect(() => {
-    if (user?.profile?.role) {
-      switch (user.profile.role) {
-        case 'manager':
-          router.push('/manager')
-          break
-        case 'receptionist':
-          router.push('/receptionist')
-          break
-        default:
-          router.push('/')
-      }
-    } else if (user && !user.profile) {
-      if (user.needsEmailConfirmation) {
-        router.push('/auth/check-email')
-      } else {
-        setError('Account is verified, but no profile was found.')
-      }
-    }
-  }, [user, router])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -46,7 +26,8 @@ export default function LoginForm() {
 
     try {
       // Just await the sign in process; let AuthProvider do the session syncing
-      await signIn(formData.email, formData.password)
+      await authService.signIn(formData.email, formData.password)
+      router.push('/manager')
     } catch (err: any) {
       console.error('Login failed:', err)
       setError(err.message || 'Failed to sign in')
