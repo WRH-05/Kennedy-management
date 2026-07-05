@@ -1,4 +1,6 @@
-import { supabase } from "@/lib/supabase"
+import { createClient } from "@/lib/supabase/client"
+
+const supabase = createClient();
 
 export const studentPaymentService = {
     async getStudentPaymentHistory(studentId: string) {

@@ -66,50 +66,6 @@ function StudentCoursesCell({ studentId }: { studentId: string }) {
   )
 }
 
-// Sub-component to isolate async payment status fetching per row
-function StudentPaymentCell({ studentId }: { studentId: string }) {
-  const [courses, setCourses] = useState<any[]>([])
-  const [loading, setLoading] = useState(true)
-
-  useEffect(() => {
-    let isMounted = true
-    async function fetchCourses() {
-      try {
-        const data = await courseEnrollmentService.getCourseEnrollmentByStudentId(studentId)
-        if (isMounted) {
-          setCourses(data || [])
-        }
-      } catch (err) {
-        console.error(err)
-      } finally {
-        if (isMounted) setLoading(false)
-      }
-    }
-    fetchCourses()
-    return () => { isMounted = false }
-  }, [studentId])
-
-  if (loading) return <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
-  if (!courses.length) return <span className="text-muted-foreground text-xs">-</span>
-
-  return (
-    <div className="flex items-center gap-1 flex-wrap">
-      {courses.map((course, idx) => {
-        const isPaid = course.payments?.students?.[studentId]
-        return (
-          <Badge
-            key={idx}
-            variant={isPaid ? "default" : "destructive"}
-            className="text-[10px] px-1.5 py-0.5"
-          >
-            {isPaid ? "Paid" : "Pending"}
-          </Badge>
-        )
-      })}
-    </div>
-  )
-}
-
 export default function StudentsTab({
   students,
   onStudentsUpdate,
@@ -404,7 +360,7 @@ export default function StudentsTab({
         </div>
       </CardHeader>
       <CardContent>
-        <div className="max-h-[455px] overflow-auto scrollbar-thin">
+        <div className="max-h-113.75 overflow-auto scrollbar-thin">
           <Table>
             <TableHeader>
               <TableRow>

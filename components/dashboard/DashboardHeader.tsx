@@ -101,7 +101,7 @@ export default function DashboardHeader() {
                 <Menu className="h-5 w-5" />
               </Button>
             </SheetTrigger>
-            <SheetContent side="right" className="w-75 sm:w-100">
+            <SheetContent side="left" className="w-75 sm:w-100">
               <SheetHeader>
                 <SheetTitle>Quick Actions Panel</SheetTitle>
                 <SheetDescription>

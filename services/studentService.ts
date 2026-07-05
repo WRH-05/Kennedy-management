@@ -1,6 +1,10 @@
-import { supabase } from "@/lib/supabase"
 import { Tables, TablesInsert, TablesUpdate } from "@/types/database.types"
 import { PostgrestError } from "@supabase/supabase-js"
+
+import { createClient } from "@/lib/supabase/client"
+
+const supabase = createClient();
+
 export const studentService = {
   // Get all students (excluding archived unless specified)
   async getAllStudents(
@@ -28,8 +32,8 @@ export const studentService = {
 
     const { data, count } = await query.throwOnError();
 
-
     const finalData = data || [];
+
 
     return {
       data: finalData,

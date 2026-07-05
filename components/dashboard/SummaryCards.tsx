@@ -1,14 +1,14 @@
 "use client"
 import { useMemo } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { TrendingUp, DollarSign, Users } from "lucide-react"
+import { TrendingUp, DollarSign, Users, Loader2 } from "lucide-react"
 import { useRevenue, useTeachersPayouts } from "@/hooks/usePayments"
 import { useStudents } from "@/hooks/useStudents"
 
 export default function SummaryCards() {
-  const { students: allStudents } = useStudents()
-  const { data: revenueData } = useRevenue()
-  const { payments: payoutsData } = useTeachersPayouts()
+  const { students: allStudents, isLoading: studentLoading } = useStudents()
+  const { data: revenueData, isLoading: revenueLoading } = useRevenue()
+  const { payments: payoutsData, isLoading: payoutLoading } = useTeachersPayouts()
   const revenue = revenueData || []
 
   const students = useMemo(() =>
@@ -46,7 +46,11 @@ export default function SummaryCards() {
           <TrendingUp className="h-4 w-4 text-muted-foreground" />
         </CardHeader>
         <CardContent>
-          <div className="text-2xl font-bold">{totalRevenue.toLocaleString()} DA</div>
+          {studentLoading || revenueLoading || payoutLoading ?
+            (<Loader2 className="h-10 w-10 text-gray-500 mx-auto animate-spin" />)
+            :
+            (<div className="text-2xl font-bold">{totalRevenue.toLocaleString()} DA</div>)
+          }
           <p className="text-xs text-muted-foreground">This month</p>
         </CardContent>
       </Card>
@@ -57,7 +61,12 @@ export default function SummaryCards() {
           <DollarSign className="h-4 w-4 text-muted-foreground" />
         </CardHeader>
         <CardContent>
-          <div className="text-2xl font-bold">{totalPayouts.toLocaleString()} DA</div>
+          {studentLoading || revenueLoading || payoutLoading ?
+            (<Loader2 className="h-10 w-10 text-gray-500 mx-auto animate-spin" />)
+            :
+            (<div className="text-2xl font-bold">{totalPayouts.toLocaleString()} DA</div>)
+          }
+
           <p className="text-xs text-muted-foreground">To teachers</p>
         </CardContent>
       </Card>
@@ -68,7 +77,12 @@ export default function SummaryCards() {
           <TrendingUp className="h-4 w-4 text-muted-foreground" />
         </CardHeader>
         <CardContent>
-          <div className="text-2xl font-bold">{netProfit.toLocaleString()} DA</div>
+          {studentLoading || revenueLoading || payoutLoading ?
+            (<Loader2 className="h-10 w-10 text-gray-500 mx-auto animate-spin" />)
+            :
+            (<div className="text-2xl font-bold">{netProfit.toLocaleString()} DA</div>)
+          }
+
           <p className="text-xs text-muted-foreground">This month</p>
         </CardContent>
       </Card>
@@ -79,7 +93,11 @@ export default function SummaryCards() {
           <Users className="h-4 w-4 text-muted-foreground" />
         </CardHeader>
         <CardContent>
-          <div className="text-2xl font-bold">{students.length}</div>
+          {studentLoading || revenueLoading || payoutLoading ?
+            (<Loader2 className="h-10 w-10 text-gray-500 mx-auto animate-spin" />)
+            :
+            (<div className="text-2xl font-bold">{students.length}</div>)
+          }
           <p className="text-xs text-muted-foreground">Enrolled</p>
         </CardContent>
       </Card>

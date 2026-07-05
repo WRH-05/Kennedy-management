@@ -1,4 +1,6 @@
-import { supabase } from "@/lib/supabase"
+import { createClient } from "@/lib/supabase/client"
+
+const supabase = createClient();
 import { Tables, TablesInsert, TablesUpdate } from "@/types/database.types";
 import { PostgrestError } from "@supabase/supabase-js";
 
