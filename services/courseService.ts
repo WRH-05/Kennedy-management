@@ -161,10 +161,8 @@ export const courseService = {
                 subject: instanceData.subject,
                 school_year: instanceData.school_year,
                 percentage_cut: instanceData.percentage_cut,
-                course_type: instanceData.course_type,
                 price: instanceData.price,
-                monthly_price: instanceData.monthly_price,
-                status: instanceData.status
+                monthly_price: instanceData.monthly_price
             },
             p_schedules: schedulesToInsert
         })
