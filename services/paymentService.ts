@@ -16,7 +16,7 @@ export const paymentService = {
         const allPayments = [
             ...(studentPayments.data || []).map(p => ({ ...p, type: 'student' })),
             ...(teacherPayouts.data || []).map(p => ({ ...p, type: 'teacher' }))
-        ].sort((a, b) => new Date(b.payment_date || b.created_at) - new Date(a.payment_date || a.created_at))
+        ]
 
         return allPayments
     },

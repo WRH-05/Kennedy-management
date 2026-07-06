@@ -116,28 +116,6 @@ export const courseService = {
         return true
     },
 
-    async getCourseSessions(courseId: string): Promise<Tables<"course_sessions">[]> {
-        const { data } = await supabase
-            .from('course_sessions')
-            .select('*')
-            .eq('course_id', courseId)
-            .order('starts_at', { ascending: false })
-            .throwOnError()
-
-        return data || []
-    },
-
-    async createCourseSession(courseId: string, startsAt: Date, endsAt = null): Promise<Tables<"course_sessions">> {
-        const { data } = await supabase
-            .from('course_sessions')
-            .insert([{ course_id: courseId, starts_at: startsAt, ends_at: endsAt }])
-            .select()
-            .single()
-            .throwOnError()
-
-        return data
-    },
-
     // Transaction
     async addCourseInstance(instanceData: TablesInsert<"course_instances">, scheduleSlots: any[]) {
         const schedulesToInsert = scheduleSlots.map(slot => {
