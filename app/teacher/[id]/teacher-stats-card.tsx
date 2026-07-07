@@ -9,10 +9,10 @@ interface TeacherStatsCardProps {
 
 export function TeacherStatsCard({ totalCourses, activeCourses, totalStudents, completedCourses }: TeacherStatsCardProps) {
   const statsConfig = [
-    { label: "Total Courses", count: totalCourses, bg: "bg-blue-50", text: "text-blue-600" },
-    { label: "Active Courses", count: activeCourses, bg: "bg-green-50", text: "text-green-600" },
+    { label: "Total courseInstances", count: totalCourses, bg: "bg-blue-50", text: "text-blue-600" },
+    { label: "Active courseInstances", count: activeCourses, bg: "bg-green-50", text: "text-green-600" },
     { label: "Total Students", count: totalStudents, bg: "bg-purple-50", text: "text-purple-600" },
-    { label: "Completed Courses", count: completedCourses, bg: "bg-orange-50", text: "text-orange-600" },
+    { label: "Completed courseInstances", count: completedCourses, bg: "bg-orange-50", text: "text-orange-600" },
   ]
 
   return (

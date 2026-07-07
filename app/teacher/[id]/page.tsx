@@ -15,7 +15,7 @@ import {
 } from "@/components/ui/alert-dialog"
 
 import { teacherService } from "@/services/teacherService"
-import { courseService } from "@/services/courseService"
+import { courseInstancesService } from "@/services/courseInstancesService"
 
 // Sub-components imports
 import { TeacherHeader } from "./teacher-header"
@@ -31,7 +31,7 @@ function TeacherProfileContent() {
   const [teacher, setTeacher] = useState<any>(null)
   const [isEditing, setIsEditing] = useState(false)
   const [editedTeacher, setEditedTeacher] = useState<any>(null)
-  const [courses, setCourses] = useState<any[]>([])
+  const [courseInstances, setCourses] = useState<any[]>([])
   const [showSaveConfirmation, setShowSaveConfirmation] = useState(false)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -47,7 +47,7 @@ function TeacherProfileContent() {
         setTeacher(teacherData)
         setEditedTeacher(JSON.parse(JSON.stringify(teacherData)))
 
-        const teacherCourses = await courseService.getCoursesByTeacherId(teacherId)
+        const teacherCourses = await courseInstancesService.getCourseInstancesByTeacherId(teacherId)
         setCourses(teacherCourses)
       } catch (err) {
         console.error("Error loading teacher data:", err)
@@ -98,8 +98,8 @@ function TeacherProfileContent() {
   }
 
   const canEdit = true
-  const activeCourses = courses.filter((course) => course.status === "active")
-  const completedCourses = courses.filter((course) => course.status === "completed")
+  const activeCourses = courseInstances.filter((course) => course.status === "active")
+  const completedCourses = courseInstances.filter((course) => course.status === "completed")
   const numberOfActiveStudents = activeCourses.reduce((acc, course) => acc + (course.student_ids?.length || 0), 0)
 
   return (
@@ -126,7 +126,7 @@ function TeacherProfileContent() {
             />
             
             <TeacherStatsCard 
-              totalCourses={courses.length}
+              totalCourses={courseInstances.length}
               activeCourses={activeCourses.length}
               totalStudents={numberOfActiveStudents}
               completedCourses={completedCourses.length}

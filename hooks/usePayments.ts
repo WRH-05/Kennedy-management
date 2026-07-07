@@ -127,7 +127,7 @@ export function useTeachersPayouts() {
 export function useDashboardData() {
   const { students, isLoading: studentsLoading, error: studentsError } = useStudents()
   const { teachers, isLoading: teachersLoading, error: teachersError } = useTeachers()
-  const { courses, isLoading: coursesLoading, error: coursesError } = useCourses()
+  const { courseInstances, isLoading: coursesLoading, error: coursesError } = useCourses()
   const { payments, isLoading: paymentsLoading, error: paymentsError } = usePayments()
 
   const isLoading = studentsLoading || teachersLoading || coursesLoading || paymentsLoading
@@ -136,14 +136,14 @@ export function useDashboardData() {
   return {
     students,
     teachers,
-    courses,
+    courseInstances,
     payments,
     isLoading,
     error,
     refreshAll: () => {
       mutate('students')
       mutate('teachers')
-      mutate('courses')
+      mutate('courseInstances')
       mutate('payments')
     },
   }

@@ -9,7 +9,7 @@ import { Badge } from "@/components/ui/badge"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 import { Plus } from "lucide-react"
 import { ScheduleSlotRow } from "./ScheduleSlotRow"
-import { courseService } from "@/services/courseService"
+import { courseInstancesService } from "@/services/courseInstancesService"
 import { useToast } from "@/hooks/use-toast"
 import { useTeachers } from "@/hooks/useTeachers"
 
@@ -104,8 +104,8 @@ export function AddCourseDialog({ onCourseAdded }: AddCourseDialogProps) {
         status: "active",
       }
 
-      await courseService.addCourseInstance(coursePayload, scheduleSlots)
-      const updatedCourses = await courseService.getAllCourseInstances()
+      await courseInstancesService.addCourseInstance(coursePayload, scheduleSlots)
+      const updatedCourses = await courseInstancesService.getAllCourseInstances()
       onCourseAdded(updatedCourses.data)
 
       // Reset

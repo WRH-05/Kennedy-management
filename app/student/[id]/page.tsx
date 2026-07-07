@@ -23,7 +23,7 @@ import {
 } from "@/components/ui/alert-dialog"
 import { ArrowLeft, Download, User, BookOpen, AlertTriangle, CheckCircle } from "lucide-react"
 import { studentService } from "@/services/studentService"
-import { courseService } from "@/services/courseService"
+import { courseInstancesService } from "@/services/courseInstancesService"
 
 function StudentDashboardContent() {
   const router = useRouter()
@@ -31,7 +31,7 @@ function StudentDashboardContent() {
   const studentId = params.id as string
   const [student, setStudent] = useState<any>(null)
   const [editedStudent, setEditedStudent] = useState<any>(null)
-  const [courses, setCourses] = useState<any[]>([])
+  const [courseInstances, setCourses] = useState<any[]>([])
   const [payments, setPayments] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
   const [isEditing, setIsEditing] = useState(false)
@@ -46,8 +46,8 @@ function StudentDashboardContent() {
         if (!studentData) router.push('/')
         setStudent(studentData)
         setEditedStudent(JSON.parse(JSON.stringify(studentData)))
-        // Load courses for this student
-        const studentCourses = await courseService.getCoursesByStudentId(studentId)
+        // Load courseInstances for this student
+        const studentCourses = await courseInstancesService.getCourseInstancesByStudentId(studentId)
         setCourses(studentCourses)
       } catch (error) {
         console.error(error)
@@ -109,7 +109,7 @@ function StudentDashboardContent() {
     )
   }
 
-  const studentCourses = courses.filter((course) => course.student_ids?.includes(studentId))
+  const studentCourses = courseInstances.filter((course) => course.student_ids?.includes(studentId))
   const activeCourses = studentCourses.filter((course) => course.status === "active")
   const completedCourses = studentCourses.filter((course) => course.status === "completed")
 
@@ -327,7 +327,7 @@ function StudentDashboardContent() {
 
           </div>
 
-          {/* Courses */}
+          {/* courseInstances */}
           <div className="lg:col-span-2">
             <Card>
               <CardHeader>
@@ -338,9 +338,9 @@ function StudentDashboardContent() {
               </CardHeader>
               <CardContent>
                 <div className="space-y-6">
-                  {/* Active Courses */}
+                  {/* Active courseInstances */}
                   <div>
-                    <h3 className="font-medium text-lg mb-4">Active Courses</h3>
+                    <h3 className="font-medium text-lg mb-4">Active courseInstances</h3>
                     <Table>
                       <TableHeader>
                         <TableRow>
@@ -388,10 +388,10 @@ function StudentDashboardContent() {
                     </Table>
                   </div>
 
-                  {/* Completed Courses */}
+                  {/* Completed courseInstances */}
                   {completedCourses.length > 0 && (
                     <div>
-                      <h3 className="font-medium text-lg mb-4">Completed Courses</h3>
+                      <h3 className="font-medium text-lg mb-4">Completed courseInstances</h3>
                       <Table>
                         <TableHeader>
                           <TableRow>

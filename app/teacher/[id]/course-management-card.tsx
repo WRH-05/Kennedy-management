@@ -22,9 +22,9 @@ export function CourseManagementCard({ activeCourses, completedCourses }: Course
       </CardHeader>
       <CardContent>
         <div className="space-y-6">
-          {/* Active Courses */}
+          {/* Active courseInstances */}
           <div>
-            <h3 className="font-medium text-lg mb-4">Active Courses</h3>
+            <h3 className="font-medium text-lg mb-4">Active courseInstances</h3>
             {activeCourses.length > 0 ? (
               <Table>
                 <TableHeader>
@@ -55,14 +55,14 @@ export function CourseManagementCard({ activeCourses, completedCourses }: Course
                 </TableBody>
               </Table>
             ) : (
-              <p className="text-gray-600">No active courses</p>
+              <p className="text-gray-600">No active courseInstances</p>
             )}
           </div>
 
-          {/* Completed Courses */}
+          {/* Completed courseInstances */}
           {completedCourses.length > 0 && (
             <div>
-              <h3 className="font-medium text-lg mb-4">Completed Courses</h3>
+              <h3 className="font-medium text-lg mb-4">Completed courseInstances</h3>
               <Table>
                 <TableHeader>
                   <TableRow>

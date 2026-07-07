@@ -30,12 +30,12 @@ export default function DashboardHubPage() {
       description: "Review revenue collections",
       href: `/manager/revenue`,
       icon: <DollarSign className="h-5 w-5 text-amber-500" />,
-      allowedRoles: ["manager"], 
+      allowedRoles: ["manager"],
     },
     {
-      title: "Manage Courses",
-      description: "Edit courses and curriculum",
-      href: `/manager/courses`,
+      title: "Manage Course Instances",
+      description: "Edit classes and curriculum",
+      href: `/manager/course-instances`,
       icon: <LibraryBig className="h-5 w-5 text-red-500" />,
       allowedRoles: ["manager", "receptionist"],
     },
@@ -56,9 +56,10 @@ export default function DashboardHubPage() {
   ]
 
   // 2. Filter down cards to only show what the current role is authorized to view
-  const authorizedCards = allNavigationCards.filter((card) =>
-    card.allowedRoles.includes(role)
-  )
+  const authorizedCards = allNavigationCards.filter((card) => {
+    if (!role) return false
+    return card.allowedRoles.includes(role)
+  })
 
   return (
     <div className="space-y-8">

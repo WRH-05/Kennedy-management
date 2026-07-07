@@ -18,7 +18,7 @@ import { useToast } from "@/hooks/use-toast"
 
 interface TeachersTabProps {
   teachers: any[]
-  courses: any[]
+  courseInstances: any[]
   onTeachersUpdate: (teachers: any[]) => void
   canAdd?: boolean
   showCourses?: boolean
@@ -28,7 +28,7 @@ interface TeachersTabProps {
 
 export default function TeachersTab({ 
   teachers, 
-  courses, 
+  courseInstances, 
   onTeachersUpdate, 
   canAdd = false,
   showStats = false,
@@ -124,7 +124,7 @@ export default function TeachersTab({
   }
 
   const getTeacherCourses = (teacherId: number) => {
-    return (courses || []).filter((course) => course.teacher_id === teacherId)
+    return (courseInstances || []).filter((course) => course.teacher_id === teacherId)
   }
 
   const handleArchiveTeacher = async (teacherId: number, teacherName: string) => {
@@ -319,7 +319,7 @@ export default function TeachersTab({
                 <TableHead>Subjects</TableHead>
                 <TableHead>School</TableHead>
                 <TableHead>School Years</TableHead>
-                <TableHead>Active Courses</TableHead>
+                <TableHead>Active courseInstances</TableHead>
                 <TableHead className="w-12.5"></TableHead>
               </TableRow>
             </TableHeader>

@@ -30,7 +30,7 @@ export default function DashboardHeader() {
 
   const { students: allStudents } = useStudents();
   const { teachers: allTeachers } = useTeachers();
-  const { courses: allCourses } = useCourses();
+  const { courseInstances: allCourses } = useCourses();
 
   const students = useMemo(() =>
     (allStudents && 'data' in allStudents ? allStudents.data : []),
@@ -42,7 +42,7 @@ export default function DashboardHeader() {
     [allTeachers]
   )
 
-  const courses = useMemo(() =>
+  const courseInstances = useMemo(() =>
     (allCourses && 'data' in allCourses ? allCourses.data : []),
     [allCourses]
   )
@@ -65,7 +65,7 @@ export default function DashboardHeader() {
       .filter((teacher: any) => teacher.name?.toLowerCase().includes(query))
       .map((teacher: any) => ({ ...teacher, type: "teacher" }))
 
-    const courseResults = courses
+    const courseResults = courseInstances
       .filter(
         (course: any) =>
           course.subject?.toLowerCase().includes(query) ||
@@ -75,7 +75,7 @@ export default function DashboardHeader() {
       .map((course: any) => ({ ...course, type: "course" }))
 
     return [...studentResults, ...teacherResults, ...courseResults]
-  }, [searchQuery, students, teachers, courses])
+  }, [searchQuery, students, teachers, courseInstances])
 
   const showSearchResults = searchQuery.trim().length > 0 && searchResults.length > 0
 
@@ -117,7 +117,7 @@ export default function DashboardHeader() {
                   <Link href="/manager" className="p-2 hover:bg-slate-100 rounded-md transition-colors">Main Menu</Link>
                   <Link href="/manager/students" className="p-2 hover:bg-slate-100 rounded-md transition-colors">Students Registry</Link>
                   <Link href="/manager/teachers" className="p-2 hover:bg-slate-100 rounded-md transition-colors">Teachers Registry</Link>
-                  <Link href="/manager/courses" className="p-2 hover:bg-slate-100 rounded-md transition-colors">Active Courses</Link>
+                  <Link href="/manager/courseInstances" className="p-2 hover:bg-slate-100 rounded-md transition-colors">Active courseInstances</Link>
                   <Link href="/manager/payouts" className="p-2 hover:bg-slate-100 rounded-md transition-colors">Payments</Link>
                   <Link href="/manager/archive" className="p-2 hover:bg-slate-100 rounded-md transition-colors">Archives</Link>
                   <Link href="/manager/revenue" className="p-2 hover:bg-slate-100 rounded-md transition-colors">Revenue</Link>
@@ -132,7 +132,7 @@ export default function DashboardHeader() {
             <div className="relative">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
               <Input
-                placeholder="Search students, teachers, courses..."
+                placeholder="Search students, teachers, courseInstances..."
                 className="pl-10"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}

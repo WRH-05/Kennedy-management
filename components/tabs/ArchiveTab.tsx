@@ -9,7 +9,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { Archive, Check, X, Undo, MoreHorizontal } from "lucide-react"
 import { studentService } from "@/services/studentService"
 import { teacherService } from "@/services/teacherService"
-import { courseService } from "@/services/courseService"
+import { courseInstancesService } from "@/services/courseInstancesService"
 import { archiveService } from "@/services/archiveService"
 
 interface ArchiveTabProps {
@@ -112,7 +112,7 @@ export default function ArchiveTab({ isManager = false }: ArchiveTabProps) {
       } else if (type === 'teacher') {
         await teacherService.unarchiveTeacher(entityId)
       } else if (type === 'course') {
-        await courseService.unarchiveCourse(entityId)
+        await courseInstancesService.unarchiveCourse(entityId)
       }
 
       // Reload archive requests

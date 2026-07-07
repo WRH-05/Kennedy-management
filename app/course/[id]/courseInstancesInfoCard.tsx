@@ -3,31 +3,28 @@ import { useState } from "react"
 import { useRouter } from "next/navigation"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
-import { Badge } from "@/components/ui/badge"
 import { Label } from "@/components/ui/label"
 import { Input } from "@/components/ui/input"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { BookOpen, Edit3, Plus, Trash2 } from "lucide-react"
 import { formatScheduleString, mapSchedulesToSlots } from "./utils"
-import { courseService } from "@/services/courseService"
+import { CourseInstanceDetail, courseInstancesService } from "@/services/courseInstancesService"
 import { useToast } from "@/hooks/use-toast"
 
-export function CourseInfoCard({ course, courseId, onRefresh }: { course: any, courseId: string, onRefresh: () => void }) {
+export function CourseInstancesInfoCard({ courseInstances, onRefresh }: { courseInstances: CourseInstanceDetail, onRefresh: () => void }) {
   const router = useRouter()
   const { toast } = useToast()
   const [showEditCourseDialog, setShowEditCourseDialog] = useState(false)
   const [isUpdatingCourse, setIsUpdatingCourse] = useState(false)
   
   const [editForm, setEditForm] = useState({
-    subject: course.subject || "",
-    schoolYear: course.school_year || "",
-    courseType: course.course_type || "Group",
-    price: course.price || 0,
-    percentageCut: course.percentage_cut || 50,
-    status: course.status || "active"
+    subject: courseInstances.subject || "",
+    schoolYear: courseInstances.school_year || "",
+    price: courseInstances.price || 0,
+    percentageCut: courseInstances.percentage_cut || 50
   })
-  const [editScheduleSlots, setEditScheduleSlots] = useState<any[]>(mapSchedulesToSlots(course.course_schedule))
+  const [editScheduleSlots, setEditScheduleSlots] = useState<any[]>(mapSchedulesToSlots(courseInstances.course_schedule))
 
   const handleEditScheduleChange = (index: number, field: string, value: any) => {
     const updated = [...editScheduleSlots]
@@ -46,14 +43,12 @@ export function CourseInfoCard({ course, courseId, onRefresh }: { course: any, c
 
     setIsUpdatingCourse(true)
     try {
-      await courseService.updateCourseInstance(courseId, {
+      await courseInstancesService.updateCourseInstance(courseInstances.id, {
         subject: editForm.subject,
         school_year: editForm.schoolYear,
-        course_type: editForm.courseType,
         price: editForm.price,
         monthly_price: editForm.price,
         percentage_cut: editForm.percentageCut,
-        status: editForm.status
       }, editScheduleSlots)
       
       toast({ title: "Success", description: "Course updated successfully." })
@@ -134,23 +129,12 @@ export function CourseInfoCard({ course, courseId, onRefresh }: { course: any, c
       </CardHeader>
       <CardContent className="space-y-4">
         <div>
-          <h3 className="font-semibold text-lg">{course.subject}</h3>
-          <p className="text-gray-600">{course.school_year}</p>
+          <h3 className="font-semibold text-lg">{courseInstances.subject}</h3>
+          <p className="text-gray-600">{courseInstances.school_year}</p>
         </div>
         <div className="space-y-2">
-          <p><span className="font-medium">Teacher:</span> <Button variant="link" className="p-0 h-auto font-medium" onClick={() => router.push(`/teacher/${course.teacher_id}`)}>{course.teacher_name}</Button></p>
-          <div>
-            <span className="font-medium">Type:</span>
-            <Badge variant={course.course_type === "Group" ? "default" : "secondary"} className="ml-2">{course.course_type}</Badge>
-          </div>
-          <p><span className="font-medium">Schedule:</span> {formatScheduleString(course.course_schedule)}</p>
-          <p><span className="font-medium">{course.course_type === "Group" ? "Monthly Price" : "Session Price"}:</span> {course.price || 0} DA</p>
-          <p><span className="font-medium">Teacher Cut:</span> {course.percentage_cut || 0}%</p>
-          <p><span className="font-medium">Enrolled Students:</span> {course.student_ids?.length || 0}</p>
-        </div>
-        <div className="pt-4 border-t">
-          <span className="font-medium">Status:</span>
-          <Badge variant={course.status === "active" ? "default" : "secondary"} className="ml-2">{course.status}</Badge>
+          <p><span className="font-medium">Teacher:</span> <Button variant="link" className="p-0 h-auto font-medium" onClick={() => router.push(`/teacher/${courseInstances.teacher_id}`)}>{courseInstances.teachers?.name}</Button></p>
+          <p><span className="font-medium">Schedule:</span> {formatScheduleString(courseInstances.course_schedule)}</p>
         </div>
       </CardContent>
     </Card>

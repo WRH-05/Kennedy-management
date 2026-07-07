@@ -6,7 +6,6 @@ import { Badge } from "@/components/ui/badge" // Recommended for clean status di
 import { DollarSign } from "lucide-react"
 
 interface PaymentSummaryProps {
-  course: any
   teacherEarnings: number
   payout: {
     status: 'pending' | 'paid' | 'cancelled' | 'unpaid'
@@ -14,7 +13,7 @@ interface PaymentSummaryProps {
   onToggleTeacherPayment: () => void
 }
 
-export function PaymentSummaryCard({ course, payout, teacherEarnings, onToggleTeacherPayment }: PaymentSummaryProps) {
+export function PaymentSummaryCard({payout, teacherEarnings, onToggleTeacherPayment }: PaymentSummaryProps) {
   if (!payout) return null
 
   // The button is ONLY clickable if status is 'pending', 'unpaid', or 'cancelled'

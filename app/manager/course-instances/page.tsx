@@ -1,12 +1,9 @@
 "use client"
 import { useMemo, useState } from "react"
 import { usePaginatedCourses } from "@/hooks/useCourses"
-import { useStudents } from "@/hooks/useStudents"
-import { useTeachers } from "@/hooks/useTeachers"
 import { usePendingArchives } from "@/hooks/usePayments"
-import CoursesTab from "@/components/tabs/CoursesTab"
+import CourseInstancesTab from "@/components/tabs/CoursesInstancesTab"
 import { Pagination, PaginationContent, PaginationItem, PaginationLink, PaginationPrevious, PaginationNext, PaginationEllipsis } from "@/components/ui/pagination"
-import { useCourseEnrollementStudentsByCourseId } from "@/hooks/useCourseEnrollement"
 
 const PAGE_SIZE = 6
 
@@ -44,25 +41,25 @@ function getPageItems(page: number, totalPages: number) {
 
 export default function CoursesPage() {
   const [page, setPage] = useState(1)
-  const { courses: allCourses, total, isLoading: isCourseLoading, mutate } = usePaginatedCourses(page, PAGE_SIZE)
+  const { courseInstances: allCourses, total, isLoading: isCourseLoading, mutate } = usePaginatedCourses(page, PAGE_SIZE)
   const { data: pendingArchiveMap } = usePendingArchives()
 
 
-  const courses = useMemo(() => {
+  const courseInstances = useMemo(() => {
     const list = allCourses;
     return list;
   }, [allCourses]);
 
 
 
-  if (isCourseLoading) return <div className="p-8 text-center text-gray-500">Loading Courses Directory...</div>
+  if (isCourseLoading) return <div className="p-8 text-center text-gray-500">Loading courseInstances Directory...</div>
 
   const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE))
 
   return (
     <div className="space-y-6">
-      <CoursesTab
-        courses={courses}
+      <CourseInstancesTab
+        courseInstances={courseInstances}
         onCoursesUpdate={() => mutate()}
         canAdd={true}
         pendingArchiveIds={pendingArchiveMap?.course || new Set()}

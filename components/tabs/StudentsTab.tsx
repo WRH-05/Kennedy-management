@@ -31,7 +31,7 @@ interface StudentsTabProps {
 
 // Sub-component to isolate async course fetching per row
 function StudentCoursesCell({ studentId }: { studentId: string }) {
-  const [courses, setCourses] = useState<any[]>([])
+  const [courseInstances, setCourses] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
@@ -53,11 +53,11 @@ function StudentCoursesCell({ studentId }: { studentId: string }) {
   }, [studentId])
 
   if (loading) return <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
-  if (!courses.length) return <span className="text-muted-foreground text-xs">No courses</span>
+  if (!courseInstances.length) return <span className="text-muted-foreground text-xs">No courseInstances</span>
 
   return (
     <>
-      {courses.map((course, idx) => (
+      {courseInstances.map((course, idx) => (
         <Badge key={idx} variant="secondary" className="mr-1 mb-1">
           {course.course_instances?.subject || "Unknown"}
         </Badge>
@@ -368,7 +368,7 @@ export default function StudentsTab({
                 <TableHead>Level</TableHead>
                 <TableHead>School Year</TableHead>
                 <TableHead>Specialty</TableHead>
-                {showCourses && <TableHead>Enrolled Courses</TableHead>}
+                {showCourses && <TableHead>Enrolled courseInstances</TableHead>}
                 {showPaymentStatus && <TableHead>Payment Status</TableHead>}
                 <TableHead className="w-15"></TableHead>
               </TableRow>

@@ -7,7 +7,7 @@ import { jwtDecode } from "jwt-decode"
 import { type User } from "@supabase/supabase-js"
 
 // 1. Properly allow null for the initial/logged-out state
-type UserWithRole = User & { user_role?: string }
+type UserWithRole = User & { user_role: string }
 
 interface AuthContextType {
   user: UserWithRole | null

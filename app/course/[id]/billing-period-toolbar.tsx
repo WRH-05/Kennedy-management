@@ -10,14 +10,14 @@ import { paymentService } from "@/services/paymentService"
 import { useToast } from "@/hooks/use-toast"
 
 interface BillingPeriodToolbarProps {
-  courseId: string
+  courseInstanceId: string
   billingPeriods: any[]
   selectedPeriodId: string
   setSelectedPeriodId: (id: string) => void
   onRefresh: () => void
 }
 
-export function BillingPeriodToolbar({ courseId, billingPeriods, selectedPeriodId, setSelectedPeriodId, onRefresh }: BillingPeriodToolbarProps) {
+export function BillingPeriodToolbar({ courseInstanceId, billingPeriods, selectedPeriodId, setSelectedPeriodId, onRefresh }: BillingPeriodToolbarProps) {
   const { toast } = useToast()
   const [showAddBillingDialog, setShowAddBillingDialog] = useState(false)
   const [newBillingForm, setNewBillingForm] = useState({ startDate: "", endDate: "" })
@@ -36,7 +36,7 @@ export function BillingPeriodToolbar({ courseId, billingPeriods, selectedPeriodI
     if (!newBillingForm.startDate || !newBillingForm.endDate) return
 
     try {
-      const freshPeriod = await paymentService.createBillingPeriod(courseId, newBillingForm.startDate, newBillingForm.endDate)
+      const freshPeriod = await paymentService.createBillingPeriod(courseInstanceId, newBillingForm.startDate, newBillingForm.endDate)
       toast({ title: "Success", description: "New billing cycle defined." })
       setSelectedPeriodId(freshPeriod.id)
       setNewBillingForm({ startDate: "", endDate: "" })

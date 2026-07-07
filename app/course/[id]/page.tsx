@@ -1,4 +1,3 @@
-// page.tsx
 "use client"
 
 import { useState, useEffect, useCallback, useMemo } from "react"
@@ -7,11 +6,11 @@ import { Button } from "@/components/ui/button"
 import { ArrowLeft } from "lucide-react"
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog"
 
-import { courseService } from "@/services/courseService"
+import { CourseInstanceDetail, courseInstancesService, CourseInstanceWithEnrichment } from "@/services/courseInstancesService"
 import { paymentService } from "@/services/paymentService"
 import { useToast } from "@/hooks/use-toast"
 
-import { CourseInfoCard } from "./course-info-card"
+import { CourseInstancesInfoCard } from "./courseInstancesInfoCard"
 import { PaymentSummaryCard } from "./payment-summary-card"
 import { BillingPeriodToolbar } from "./billing-period-toolbar"
 import { StudentsManagementCard } from "./students-management-card"
@@ -19,13 +18,14 @@ import { useStudents } from "@/hooks/useStudents"
 import { studentPaymentService } from "@/services/studentPaymentService"
 import { teacherPayoutService } from "@/services/teacherPayoutService"
 
-function CourseDetailContent() {
+function CourseInstancesDetailContent() {
   const router = useRouter()
   const params = useParams()
-  const courseId = params.id as string
+  const CourseInstancesId = params.id as string
   const { toast } = useToast()
 
-  const [course, setCourse] = useState<any>(null)
+  const [courseInstances, setCourseInstances] = useState<CourseInstanceWithEnrichment | null>(null)
+  const [simpleCourseInstances, setSimpleCourseInstances] = useState<CourseInstanceDetail | null> (null)
   const [payouts, setPayouts] = useState<any[]>([])
   const [payout, setPayout] = useState<any>(null)
   const [billingPeriods, setBillingPeriods] = useState<any[]>([])
@@ -44,44 +44,61 @@ function CourseDetailContent() {
     [allStudents]
   )
 
-
-  const loadData = useCallback(async () => {
+  // 1. Core initialization data (Only runs once on mount or if ID changes)
+  const loadInitialData = useCallback(async () => {
     try {
-      let [courseData, billingData, teacherPayoutsData] = await Promise.all([
-        courseService.getCourseInstanceById(courseId),
-        paymentService.getBillingPeriods(courseId),
-        teacherPayoutService.getAllTeacherPayouts(courseId)
+      setLoading(true)
+      const [rawCourseData, billingData, teacherPayoutsData] = await Promise.all([
+        courseInstancesService.getCourseInstanceById(CourseInstancesId),
+        paymentService.getBillingPeriods(CourseInstancesId),
+        teacherPayoutService.getAllTeacherPayouts(CourseInstancesId)
       ])
-
+      setSimpleCourseInstances(rawCourseData);
       setPayouts(teacherPayoutsData)
-
-      courseData = await courseService.enrichCourseWithStudents(courseData)
       setBillingPeriods(billingData || [])
+
+      // Secure default period ID selection securely
+      let initialPeriodId = selectedPeriodId
       if (billingData?.length > 0 && !selectedPeriodId) {
-        setSelectedPeriodId(billingData[0].id)
+        initialPeriodId = billingData[0].id
+        setSelectedPeriodId(initialPeriodId)
       }
 
-      let studentsBillingPeriods = await studentPaymentService.getStudentData(selectedPeriodId);
-      const studentsData: any[] = [];
-      studentsBillingPeriods.forEach((bill) => {
-        studentsData.push(bill.students)
-      })
+      // Safe alignment with our array-based batch enrichment service
+      const [enrichedCourse] = await courseInstancesService.enrichCoursesWithStudentsBatch([rawCourseData])
+      setCourseInstances(enrichedCourse)
 
-      setPayout(payouts.find((p)=> p.billing_period_id == selectedPeriodId))
-
-      setCourse(courseData)
     } catch (error) {
-      console.error(error)
+      console.error("Failed to load initial course data:", error)
     } finally {
       setLoading(false)
     }
-  }, [courseId, router, selectedPeriodId])
+  }, [CourseInstancesId])
 
-  useEffect(() => { loadData() }, [loadData])
+  // 2. Period-specific data loading (Runs independently when switching tabs)
+  const loadPeriodData = useCallback(async () => {
+    if (!selectedPeriodId) return
+
+    try {
+      // Avoid looking into stale 'payouts' state by scanning across latest data if loaded, or state if it exists
+      setPayout(payouts.find((p) => p.billing_period_id === selectedPeriodId) || null)
+
+      const studentsBillingPeriods = await studentPaymentService.getStudentData(selectedPeriodId);
+      const studentsData = studentsBillingPeriods.map((bill: any) => bill.students).filter(Boolean);
+      
+      // Note: If you want to use studentsData somewhere in state later, remember to bind it here.
+    } catch (error) {
+      console.error("Failed to load data for selected period:", error)
+    }
+  }, [selectedPeriodId, payouts])
+
+  // Fire handlers sequentially based on context mutations
+  useEffect(() => { loadInitialData() }, [loadInitialData])
+  useEffect(() => { loadPeriodData() }, [loadPeriodData])
 
   const toggleTeacherPayment = () => {
-    if (!course?.teacher_id) return
-    const earnings = Math.round((course.price * (course.student_ids?.length || 0) * (course.percentage_cut || 0)) / 100)
+    if (!courseInstances?.teacher_id || !selectedPeriodId) return
+    const earnings = Math.round((courseInstances.price * (courseInstances.student_ids?.length || 0) * (courseInstances.percentage_cut || 0)) / 100)
 
     setConfirmDialog({
       open: true,
@@ -91,8 +108,8 @@ function CourseDetailContent() {
         try {
           await teacherPayoutService.recordTeacherPayout(earnings, selectedPeriodId)
           toast({ title: "Payout request created" })
-          setCourse((prev: any) => ({ ...prev, payments: { ...prev.payments, teacherPaid: false, payoutPending: true } }))
-          loadData()
+          setCourseInstances((prev: any) => ({ ...prev, payments: { ...prev?.payments, teacherPaid: false, payoutPending: true } }))
+          loadInitialData()
         } catch {
           toast({ title: "Error", variant: "destructive" })
         }
@@ -101,7 +118,7 @@ function CourseDetailContent() {
     })
   }
 
-  if (!course || loading) {
+  if (!courseInstances || !simpleCourseInstances || loading) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <h2 className="text-xl font-semibold text-gray-900">Loading...</h2>
@@ -109,9 +126,9 @@ function CourseDetailContent() {
     )
   }
 
-  const availableStudents = students.filter((student: any) => !course?.student_ids?.includes(student.id))
-  const teacherEarnings = Math.round((course.price * (course.student_ids?.length || 0) * (course.percentage_cut || 0)) / 100)
-  const filteredStudents = availableStudents.filter((student: any) => student.name.toLowerCase().includes(studentSearchQuery.toLowerCase()))
+  const availableStudents = students.filter((student: any) => !courseInstances?.student_ids?.includes(student.id))
+  const teacherEarnings = Math.round((courseInstances.price * (courseInstances.student_ids?.length || 0) * (courseInstances.percentage_cut || 0)) / 100)
+  const filteredStudents = availableStudents.filter((student: any) => student.name?.toLowerCase().includes(studentSearchQuery.toLowerCase()))
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -127,18 +144,18 @@ function CourseDetailContent() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           <div className="lg:col-span-1">
-            <CourseInfoCard course={course} courseId={course.id} onRefresh={loadData} />
-            <PaymentSummaryCard payout={payout} course={course} teacherEarnings={teacherEarnings} onToggleTeacherPayment={toggleTeacherPayment} />
+            <CourseInstancesInfoCard courseInstances={simpleCourseInstances} onRefresh={loadInitialData} />
+            <PaymentSummaryCard payout={payout} teacherEarnings={teacherEarnings} onToggleTeacherPayment={toggleTeacherPayment} />
           </div>
 
           <div className="lg:col-span-2 space-y-6">
-            <BillingPeriodToolbar courseId={course.id} billingPeriods={billingPeriods} selectedPeriodId={selectedPeriodId} setSelectedPeriodId={setSelectedPeriodId} onRefresh={loadData} />
+            <BillingPeriodToolbar courseInstanceId={courseInstances.id} billingPeriods={billingPeriods} selectedPeriodId={selectedPeriodId} setSelectedPeriodId={setSelectedPeriodId} onRefresh={loadInitialData} />
             <StudentsManagementCard
-              course={course} filteredStudents={filteredStudents}
+              courseInstance={courseInstances} filteredStudents={filteredStudents}
               studentSearchQuery={studentSearchQuery} selectedPeriodId={selectedPeriodId}
               billingPeriods={billingPeriods} setSelectedPeriodId={setSelectedPeriodId}
               setStudentSearchQuery={setStudentSearchQuery}
-              onRefresh={loadData}
+              onRefresh={loadInitialData}
             />
           </div>
         </div>
@@ -160,8 +177,8 @@ function CourseDetailContent() {
   )
 }
 
-export default function CourseDetail() {
+export default function CourseInstancesDetail() {
   return (
-    <CourseDetailContent />
+    <CourseInstancesDetailContent />
   )
 }

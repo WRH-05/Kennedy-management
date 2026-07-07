@@ -3,20 +3,43 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Table, TableBody, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { BookOpen } from "lucide-react"
-import { AddCourseDialog } from "./CoursesTab/AddCourseDialog"
-import { CourseTableRow } from "./CoursesTab/CourseTableRow"
+import { AddCourseDialog } from "./CourseInstancesTab/AddCourseDialog"
+import { CourseTableRow } from "./CourseInstancesTab/CourseTableRow"
+import { archiveService } from "@/services/archiveService"
+import { useToast } from "@/hooks/use-toast"
 
 interface CoursesTabProps {
   courseInstances: any[]
   onCoursesUpdate: (courseInstances: any[]) => void
   canAdd?: boolean
+  pendingArchiveIds?: Set<string>
 }
 
-export default function CourseTab({
+export default function CoursesTab({
   courseInstances,
   onCoursesUpdate,
   canAdd = false,
+  pendingArchiveIds = new Set(),
 }: CoursesTabProps) {
+  const { toast } = useToast()
+
+  const handleArchiveCourse = async (courseId: number, courseName: string) => {
+    try {
+      await archiveService.createArchiveRequest("course", courseId, courseName)
+      toast({
+        title: "Archive request submitted",
+        description: "Waiting for manager approval.",
+      })
+    } catch (error) {
+      console.error("Error creating archive request:", error)
+      toast({
+        title: "Error",
+        description: "Failed to create archive request.",
+        variant: "destructive",
+      })
+    }
+  }
+
   return (
     <Card>
       <CardHeader>
@@ -37,8 +60,12 @@ export default function CourseTab({
           <Table>
             <TableHeader>
               <TableRow>
+                <TableHead>Status</TableHead>
+                <TableHead>Course</TableHead>
+                <TableHead>Teacher</TableHead>
                 <TableHead>Type</TableHead>
-                <TableHead>Name</TableHead>
+                <TableHead>Students</TableHead>
+                <TableHead>Price</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -46,6 +73,8 @@ export default function CourseTab({
                 <CourseTableRow
                   key={course.id}
                   course={course}
+                  pendingArchiveIds={pendingArchiveIds}
+                  onArchive={handleArchiveCourse}
                 />
               ))}
             </TableBody>

@@ -43,7 +43,7 @@ function getPageItems(page: number, totalPages: number) {
 export default function TeachersPage() {
   const [page, setPage] = useState(1)
   const { teachers: allTeachers, total, isLoading: isTeacherLoading, mutate } = usePaginatedTeachers(page, PAGE_SIZE)
-  const { courses: allCourses, isLoading: isCourseLoading } = useCourses()
+  const { courseInstances: allCourses, isLoading: isCourseLoading } = useCourses()
   const { data: pendingArchiveMap } = usePendingArchives()
 
   const teachers = useMemo(() =>
@@ -51,7 +51,7 @@ export default function TeachersPage() {
     [allTeachers]
   )
 
-  const courses = useMemo(() => {
+  const courseInstances = useMemo(() => {
     const list = allCourses;
     return list;
   }, [allCourses]);
@@ -64,7 +64,7 @@ export default function TeachersPage() {
     <div className="space-y-6">
       <TeachersTab
         teachers={teachers}
-        courses={courses || []}
+        courseInstances={courseInstances || []}
         onTeachersUpdate={() => mutate()}
         canAdd={true}
         showCourses={true}

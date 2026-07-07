@@ -13,7 +13,7 @@ export function invalidateAllCache() {
 }
 
 
-export function revalidateData(key: 'students' | 'teachers' | 'courses' | 'payments' | 'all') {
+export function revalidateData(key: 'students' | 'teachers' | 'courseInstances' | 'payments' | 'all') {
   if (key === 'all') {
     mutate(() => true, undefined, { revalidate: true })
     return
@@ -29,7 +29,7 @@ export function revalidateData(key: 'students' | 'teachers' | 'courses' | 'payme
     mutate((cacheKey) => typeof cacheKey === 'string' && cacheKey.startsWith('teachers-page-'))
   }
 
-  if (key === 'courses') {
-    mutate((cacheKey) => typeof cacheKey === 'string' && cacheKey.startsWith('courses-page-'))
+  if (key === 'courseInstances') {
+    mutate((cacheKey) => typeof cacheKey === 'string' && cacheKey.startsWith('courseInstances-page-'))
   }
 }

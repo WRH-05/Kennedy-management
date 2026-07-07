@@ -9,7 +9,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Users, Plus, MoreHorizontal, Check } from "lucide-react"
-import { courseService } from "@/services/courseService"
+import { courseInstancesService } from "@/services/courseInstancesService"
 import { useStudentsData } from "@/hooks/usePayments"
 import { useStudents } from "@/hooks/useStudents"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
@@ -17,6 +17,7 @@ import { useCourseEnrollementStudentsByCourseId } from "@/hooks/useCourseEnrolle
 import { studentPaymentService } from "@/services/studentPaymentService"
 import { toast } from "@/hooks/use-toast"
 import { Badge } from "@/components/ui/badge"
+import { Tables } from "@/types/database.types"
 
 const PAYMENT_STATUSES = [
   { value: "paid", label: "Paid" },
@@ -33,7 +34,7 @@ const ENROLLMENT_STATUSES = [
 ]
 
 interface StudentsManagementProps {
-  course: any
+  courseInstance: Tables<"course_instances">
   filteredStudents: any[]
   billingPeriods: any[]
   studentSearchQuery: string
@@ -44,7 +45,7 @@ interface StudentsManagementProps {
 }
 
 export function StudentsManagementCard({
-  course, selectedPeriodId, filteredStudents, studentSearchQuery, billingPeriods, setStudentSearchQuery, onRefresh, setSelectedPeriodId
+  courseInstance, selectedPeriodId, filteredStudents, studentSearchQuery, billingPeriods, setStudentSearchQuery, onRefresh, setSelectedPeriodId
 }: StudentsManagementProps) {
   const router = useRouter()
   const [showAddStudentDialog, setShowAddStudentDialog] = useState(false)
@@ -53,7 +54,7 @@ export function StudentsManagementCard({
 
   // SWR Hooks
   const { payments, isLoading, mutate } = useStudentsData(selectedPeriodId);
-  const { students: enrolledStudentsRaw, mutate: mutateEnrolled } = useCourseEnrollementStudentsByCourseId(course.id)
+  const { students: enrolledStudentsRaw, mutate: mutateEnrolled } = useCourseEnrollementStudentsByCourseId(courseInstance.id)
   const { students: allStudents } = useStudents();
 
   const students = useMemo(() =>
@@ -72,7 +73,7 @@ export function StudentsManagementCard({
     try {
       const student = students.find((s: any) => s.id.toString() === selectedStudent)
       if (!student) return
-      await courseService.enrollStudent(course.id, student.id, selectedPeriodId)
+      await courseInstancesService.enrollStudent(courseInstance.id, student.id, selectedPeriodId)
       toast({ title: "Success", description: "New student added." })
 
       await Promise.all([mutate(), mutateEnrolled()])
@@ -88,9 +89,9 @@ export function StudentsManagementCard({
 
   const onChangeStudentPaymentStatus = async (student_id: string, status: string) => {
     try {
-      await studentPaymentService.updateRecordStudentPayment(course.id, student_id, selectedPeriodId, {
+      await studentPaymentService.updateRecordStudentPayment(courseInstance.id, student_id, selectedPeriodId, {
         status,
-        amount: course.price
+        amount: courseInstance.price
       });
 
       await mutate()
@@ -117,9 +118,9 @@ export function StudentsManagementCard({
   const onChangeEnrollmentStatus = async (student_id: string, currentStatus: string, targetStatus: string) => {
     try {
       // Logic assumes if switching away from enrolled, we execute the unenroll payload
-      // You can update this body matching your backend service route requirements (e.g. courseService.updateStatus)
+      // You can update this body matching your backend service route requirements (e.g. courseInstancesService.updateStatus)
       if (targetStatus === "dropped" || targetStatus === "missing") {
-        await courseService.unenrollStudent(course.id, student_id);
+        await courseInstancesService.unenrollStudent(courseInstance.id, student_id);
       }
 
       await Promise.all([mutate(), mutateEnrolled()])

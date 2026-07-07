@@ -13,7 +13,7 @@ export default function DashboardNavTabs() {
     { name: "Payouts", href: "/dashboard/payouts" },
     { name: "Students", href: "/dashboard/students" },
     { name: "Teachers", href: "/dashboard/teachers" },
-    { name: "Courses", href: "/dashboard/courses" },
+    { name: "courseInstances", href: "/dashboard/courseInstances" },
     { name: "Archive", href: "/dashboard/archive" },
   ]
 
