@@ -17,7 +17,8 @@ import { useCourseEnrollementStudentsByCourseId } from "@/hooks/useCourseEnrolle
 import { studentPaymentService } from "@/services/studentPaymentService"
 import { toast } from "@/hooks/use-toast"
 import { Badge } from "@/components/ui/badge"
-import { Tables } from "@/types/database.types"
+import { Enums, Tables } from "@/types/database.types"
+import { EnrichedCourseEnrollements } from "@/services/courseEnrollmentService"
 
 const PAYMENT_STATUSES = [
   { value: "paid", label: "Paid" },
@@ -35,8 +36,8 @@ const ENROLLMENT_STATUSES = [
 
 interface StudentsManagementProps {
   courseInstance: Tables<"course_instances">
-  filteredStudents: any[]
-  billingPeriods: any[]
+  filteredStudents: Tables<"students">[]
+  billingPeriods: Tables<"billing_periods">[]
   studentSearchQuery: string
   selectedPeriodId: string
   setSelectedPeriodId: (id: string) => void
@@ -71,7 +72,7 @@ export function StudentsManagementCard({
     e.preventDefault()
     if (!selectedStudent) return
     try {
-      const student = students.find((s: any) => s.id.toString() === selectedStudent)
+      const student = students.find((s: Tables<"students">) => s.id.toString() === selectedStudent)
       if (!student) return
       await courseInstancesService.enrollStudent(courseInstance.id, student.id, selectedPeriodId)
       toast({ title: "Success", description: "New student added." })
@@ -87,7 +88,7 @@ export function StudentsManagementCard({
     }
   }
 
-  const onChangeStudentPaymentStatus = async (student_id: string, status: string) => {
+  const onChangeStudentPaymentStatus = async (student_id: string, status: Enums<"payment_status">) => {
     try {
       await studentPaymentService.updateRecordStudentPayment(courseInstance.id, student_id, selectedPeriodId, {
         status,
@@ -237,17 +238,17 @@ export function StudentsManagementCard({
                 </TableCell>
               </TableRow>
             ) : (
-              payments.map((p: any, idx: number) => {
+              payments.map((p, idx: number) => {
                 const currentStudentId = p.students?.id;
 
                 // Determine current local status state string
-                const isEnrolled = enrolledStudents.some((s: any) => s.id === currentStudentId);
+                const isEnrolled = enrolledStudents.some((s: EnrichedCourseEnrollements) => s.student_id === currentStudentId);
                 // If you have an explicit 'missing' status saved down in your payment/enrollment object schema, 
                 // swap 'p.enrollment_status' here. Otherwise fallback checks if they are in the enrollment cache array.
-                const currentEnrollmentStatus = p.enrollment_status || (isEnrolled ? "enrolled" : "dropped");
+                const currentEnrollmentStatus = (isEnrolled ? "enrolled" : "dropped");
 
                 const isPaid = p.status === "paid";
-                const isFinalizedEnrollment = currentEnrollmentStatus === "dropped" || currentEnrollmentStatus === "missing";
+                const isFinalizedEnrollment = currentEnrollmentStatus === "dropped";
 
                 return (
                   <TableRow key={idx}>
@@ -276,9 +277,7 @@ export function StudentsManagementCard({
                         <SelectTrigger
                           className={`w-40 h-8 text-xs capitalize disabled:opacity-100 ${currentEnrollmentStatus === "dropped"
                             ? "disabled:bg-rose-50 disabled:text-rose-700 disabled:border-rose-200"
-                            : currentEnrollmentStatus === "missing"
-                              ? "disabled:bg-amber-50 disabled:text-amber-700 disabled:border-amber-200"
-                              : ""
+                            : ""
                             }`}
                         >
                           <SelectValue />

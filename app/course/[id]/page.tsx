@@ -17,6 +17,7 @@ import { StudentsManagementCard } from "./students-management-card"
 import { useStudents } from "@/hooks/useStudents"
 import { studentPaymentService } from "@/services/studentPaymentService"
 import { teacherPayoutService } from "@/services/teacherPayoutService"
+import { Tables } from "@/types/database.types"
 
 function CourseInstancesDetailContent() {
   const router = useRouter()
@@ -26,9 +27,9 @@ function CourseInstancesDetailContent() {
 
   const [courseInstances, setCourseInstances] = useState<CourseInstanceWithEnrichment | null>(null)
   const [simpleCourseInstances, setSimpleCourseInstances] = useState<CourseInstanceDetail | null> (null)
-  const [payouts, setPayouts] = useState<any[]>([])
-  const [payout, setPayout] = useState<any>(null)
-  const [billingPeriods, setBillingPeriods] = useState<any[]>([])
+  const [payouts, setPayouts] = useState<Tables<"teacher_payouts">[]>([])
+  const [payout, setPayout] = useState<Tables<"teacher_payouts"> | null>(null)
+  const [billingPeriods, setBillingPeriods] = useState<Tables<"billing_periods">[]>([])
   const [selectedPeriodId, setSelectedPeriodId] = useState<string>("")
   const [studentSearchQuery, setStudentSearchQuery] = useState("")
   const [loading, setLoading] = useState(true)
@@ -82,11 +83,6 @@ function CourseInstancesDetailContent() {
     try {
       // Avoid looking into stale 'payouts' state by scanning across latest data if loaded, or state if it exists
       setPayout(payouts.find((p) => p.billing_period_id === selectedPeriodId) || null)
-
-      const studentsBillingPeriods = await studentPaymentService.getStudentData(selectedPeriodId);
-      const studentsData = studentsBillingPeriods.map((bill: any) => bill.students).filter(Boolean);
-      
-      // Note: If you want to use studentsData somewhere in state later, remember to bind it here.
     } catch (error) {
       console.error("Failed to load data for selected period:", error)
     }
@@ -108,7 +104,7 @@ function CourseInstancesDetailContent() {
         try {
           await teacherPayoutService.recordTeacherPayout(earnings, selectedPeriodId)
           toast({ title: "Payout request created" })
-          setCourseInstances((prev: any) => ({ ...prev, payments: { ...prev?.payments, teacherPaid: false, payoutPending: true } }))
+          setCourseInstances(null)
           loadInitialData()
         } catch {
           toast({ title: "Error", variant: "destructive" })
@@ -126,9 +122,9 @@ function CourseInstancesDetailContent() {
     )
   }
 
-  const availableStudents = students.filter((student: any) => !courseInstances?.student_ids?.includes(student.id))
+  const availableStudents = students.filter((student: Tables<"students">) => !courseInstances?.student_ids?.includes(student.id))
   const teacherEarnings = Math.round((courseInstances.price * (courseInstances.student_ids?.length || 0) * (courseInstances.percentage_cut || 0)) / 100)
-  const filteredStudents = availableStudents.filter((student: any) => student.name?.toLowerCase().includes(studentSearchQuery.toLowerCase()))
+  const filteredStudents = availableStudents.filter((student: Tables<"students">) => student.name?.toLowerCase().includes(studentSearchQuery.toLowerCase()))
 
   return (
     <div className="min-h-screen bg-gray-50">

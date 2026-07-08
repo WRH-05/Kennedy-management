@@ -4,6 +4,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { TrendingUp, DollarSign, Users, Loader2 } from "lucide-react"
 import { useRevenue, useTeachersPayouts } from "@/hooks/usePayments"
 import { useStudents } from "@/hooks/useStudents"
+import { UnifiedPaymentActivity } from "@/services/paymentService"
+import { Tables } from "@/types/database.types"
 
 export default function SummaryCards() {
   const { students: allStudents, isLoading: studentLoading } = useStudents()
@@ -24,12 +26,12 @@ export default function SummaryCards() {
   }, [payoutsData])
 
   const totalRevenue = useMemo(() =>
-    revenue.reduce((sum: number, item: any) => sum + (item.paid && item.amount ? item.amount : 0), 0),
+    revenue.reduce((sum: number, item: UnifiedPaymentActivity) => sum + (item.status === "paid" && item.amount ? item.amount : 0), 0),
     [revenue]
   )
 
   const totalPayouts = useMemo(() =>
-    payouts.reduce((sum: number, payout: any) =>
+    payouts.reduce((sum: number, payout: Tables<"teacher_payouts">) =>
       sum + ((payout.status === 'paid') && payout.amount ? payout.amount : 0),
       0
     ),

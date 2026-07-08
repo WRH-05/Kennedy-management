@@ -5,11 +5,12 @@ import { Badge } from "@/components/ui/badge"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { GraduationCap, MapPin, Phone, Mail, School } from "lucide-react"
+import { Tables, TablesUpdate } from "@/types/database.types"
 
 interface TeacherInfoCardProps {
-  teacher: any
+  teacher: Tables<"teachers">
   isEditing: boolean
-  editedTeacher: any
+  editedTeacher: TablesUpdate<"teachers">
   onInputChange: (field: string, value: any) => void
 }
 

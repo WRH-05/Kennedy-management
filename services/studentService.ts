@@ -43,7 +43,7 @@ export const studentService = {
     };
   },
 
-  async getStudentById(id: string): Promise<Tables<"students">[]> {
+  async getStudentById(id: string): Promise<Tables<"students">> {
 
     const { data } = await supabase
       .from('students')
@@ -78,8 +78,8 @@ export const studentService = {
     return data
   },
 
-  async deleteStudent(id: string): Promise<Tables<"students"> | PostgrestError> {
-    const { data, error } = await supabase
+  async deleteStudent(id: string): Promise<Tables<"students">> {
+    const { data } = await supabase
       .from('students')
       .delete()
       .eq('id', id)
@@ -90,7 +90,7 @@ export const studentService = {
     return data
   },
 
-  async archiveStudent(id: string): Promise<Tables<"students"> | PostgrestError> {
+  async archiveStudent(id: string): Promise<Tables<"students">> {
     const { data } = await supabase
       .from('students')
       .update({
@@ -105,7 +105,7 @@ export const studentService = {
     return data
   },
   
-  async unarchiveStudent(id: string): Promise<Tables<"students"> | PostgrestError> {
+  async unarchiveStudent(id: string): Promise<Tables<"students">> {
     const { data } = await supabase
       .from('students')
       .update({

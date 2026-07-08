@@ -7,10 +7,12 @@ import { AddCourseDialog } from "./CourseInstancesTab/AddCourseDialog"
 import { CourseTableRow } from "./CourseInstancesTab/CourseTableRow"
 import { archiveService } from "@/services/archiveService"
 import { useToast } from "@/hooks/use-toast"
+import { Tables } from "@/types/database.types"
+import { CourseInstanceWithEnrichment } from "@/services/courseInstancesService"
 
 interface CoursesTabProps {
-  courseInstances: any[]
-  onCoursesUpdate: (courseInstances: any[]) => void
+  courseInstances: CourseInstanceWithEnrichment[]
+  onCoursesUpdate: (courseInstances: CourseInstanceWithEnrichment[]) => void
   canAdd?: boolean
   pendingArchiveIds?: Set<string>
 }

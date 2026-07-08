@@ -8,10 +8,11 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { paymentService } from "@/services/paymentService"
 import { useToast } from "@/hooks/use-toast"
+import { Tables } from "@/types/database.types"
 
 interface BillingPeriodToolbarProps {
   courseInstanceId: string
-  billingPeriods: any[]
+  billingPeriods: Tables<"billing_periods">[]
   selectedPeriodId: string
   setSelectedPeriodId: (id: string) => void
   onRefresh: () => void

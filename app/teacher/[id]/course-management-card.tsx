@@ -5,10 +5,11 @@ import { Badge } from "@/components/ui/badge"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { BookOpen } from "lucide-react"
 import Link from "next/link"
+import { CourseInstanceWithEnrichment } from "@/services/courseInstancesService"
 
 interface CourseManagementCardProps {
-  activeCourses: any[]
-  completedCourses: any[]
+  activeCourses: CourseInstanceWithEnrichment[]
+  completedCourses: CourseInstanceWithEnrichment[]
 }
 
 export function CourseManagementCard({ activeCourses, completedCourses }: CourseManagementCardProps) {
@@ -44,11 +45,6 @@ export function CourseManagementCard({ activeCourses, completedCourses }: Course
                         </Link>
                       </TableCell>
                       <TableCell>{course.school_year}</TableCell>
-                      <TableCell>
-                        <Badge variant={course.course_type === "Group" ? "default" : "secondary"}>
-                          {course.course_type}
-                        </Badge>
-                      </TableCell>
                       <TableCell>{course.price} DA</TableCell>
                     </TableRow>
                   ))}
@@ -78,13 +74,9 @@ export function CourseManagementCard({ activeCourses, completedCourses }: Course
                     <TableRow key={course.id} className="opacity-60">
                       <TableCell className="font-medium">{course.subject}</TableCell>
                       <TableCell>{course.school_year}</TableCell>
-                      <TableCell>
-                        <Badge variant={course.course_type === "Group" ? "default" : "secondary"}>
-                          {course.course_type}
-                        </Badge>
-                      </TableCell>
+                     
                       <TableCell>{course.price} DA</TableCell>
-                      <TableCell>{course.enrolled_students?.length || 0}</TableCell>
+                      <TableCell>{course.student_ids.length || 0}</TableCell>
                     </TableRow>
                   ))}
                 </TableBody>

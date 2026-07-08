@@ -1,5 +1,7 @@
+import { Database, Tables } from "@/types/database.types"
+
 // utils.ts
-export function formatScheduleString(schedules: any[]): string {
+export function formatScheduleString(schedules: Tables<"course_schedule">[]): string {
   if (!schedules || schedules.length === 0) return "No scheduled slots"
 
   return schedules
@@ -12,7 +14,7 @@ export function formatScheduleString(schedules: any[]): string {
     .join(", ")
 }
 
-export function mapSchedulesToSlots(schedules: any[]): any[] {
+export function mapSchedulesToSlots(schedules: Tables<"course_schedule">[]) {
   if (!schedules) return []
   return schedules.map(s => {
     const startStr = s.start_time?.slice(0, 5) || "09:00"
@@ -23,8 +25,8 @@ export function mapSchedulesToSlots(schedules: any[]): any[] {
     const durationHours = (eH * 60 + eM - (sH * 60 + sM)) / 60
 
     return {
-      dayOfWeek: s.day,
-      startHour: startStr,
+      day: s.day as "sunday" | "monday" | "tuesday" | "wednesday" | "thursday" | "friday" | "saturday", 
+      start_time: startStr,
       duration: durationHours > 0 ? durationHours : 2
     }
   })

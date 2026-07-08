@@ -16,7 +16,7 @@ export default function LoginForm() {
   const [formData, setFormData] = useState({ email: '', password: '' })
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const { user, loading } = useAuth()
+  const { loading } = useAuth()
 
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -31,7 +31,7 @@ export default function LoginForm() {
     } catch (err: any) {
       console.error('Login failed:', err)
       setError(err.message || 'Failed to sign in')
-      setSubmitting(false) 
+      setSubmitting(false)
     }
   }
 

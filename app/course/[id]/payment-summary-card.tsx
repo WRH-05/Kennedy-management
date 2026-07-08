@@ -4,12 +4,11 @@ import { Button } from "@/components/ui/button"
 import { Label } from "@/components/ui/label"
 import { Badge } from "@/components/ui/badge" // Recommended for clean status displaying
 import { DollarSign } from "lucide-react"
+import { Tables } from "@/types/database.types"
 
 interface PaymentSummaryProps {
   teacherEarnings: number
-  payout: {
-    status: 'pending' | 'paid' | 'cancelled' | 'unpaid'
-  }
+  payout: Tables<"teacher_payouts"> | null
   onToggleTeacherPayment: () => void
 }
 

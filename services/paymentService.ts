@@ -1,47 +1,80 @@
 import { createClient } from "@/lib/supabase/client"
+import { Tables } from "@/types/database.types";
 
 const supabase = createClient();
 
+// 1. Define explicit, discriminated union types for your unified transactions stream
+export type EnrichedStudentPayment = Tables<"student_payments"> & {
+    type: 'student';
+    students?: Tables<"student_payments"> | null;
+    course_instances?: { subject: string } | null;
+};
+
+export type EnrichedTeacherPayout = Tables<"teacher_payouts"> & {
+    type: 'teacher';
+    teachers?: Tables<"teacher_payouts"> | null;
+};
+
+export type UnifiedPaymentActivity = EnrichedStudentPayment | EnrichedTeacherPayout;
+
 export const paymentService = {
 
-    async getAllPayments() {
+    async getAllPayments(): Promise<UnifiedPaymentActivity[]> {
+        // 2. Fetch data along with human-readable relation names instead of just UUIDs
         const [studentPayments, teacherPayouts] = await Promise.all([
-            supabase.from('student_payments').select('*').order('payment_date', { ascending: false }),
-            supabase.from('teacher_payouts').select('*').order('payment_date', { ascending: false })
-        ])
+            supabase
+                .from('student_payments')
+                .select('*, students(*), course_instances(*)')
+                .order('payment_date', { ascending: false }),
+            supabase
+                .from('teacher_payouts')
+                .select('*, teachers(*)')
+                .order('payment_date', { ascending: false })
+        ]);
 
-        if (studentPayments.error) throw studentPayments.error
-        if (teacherPayouts.error) throw teacherPayouts.error
+        if (studentPayments.error) throw studentPayments.error;
+        if (teacherPayouts.error) throw teacherPayouts.error;
 
-        const allPayments = [
-            ...(studentPayments.data || []).map(p => ({ ...p, type: 'student' })),
-            ...(teacherPayouts.data || []).map(p => ({ ...p, type: 'teacher' }))
-        ]
+        // 3. Map type discriminators cleanly to avoid forced 'as any' casting
+        const mappedStudents: EnrichedStudentPayment[] = (studentPayments.data || []).map(p => ({
+            ...p,
+            type: 'student'
+        }));
 
-        return allPayments
+        const mappedTeachers: EnrichedTeacherPayout[] = (teacherPayouts.data || []).map(p => ({
+            ...p,
+            type: 'teacher'
+        }));
+
+        // 4. Combine and sort by date chronologically so they can be rendered in a single feed
+        const allPayments: UnifiedPaymentActivity[] = [...mappedStudents, ...mappedTeachers];
+
+        return allPayments.sort((a, b) => {
+            const dateA = new Date(a.payment_date || 0).getTime();
+            const dateB = new Date(b.payment_date || 0).getTime();
+            return dateB - dateA; // Newest transactions first
+        });
     },
 
-
-    async getBillingPeriods(courseId: string) {
+    async getBillingPeriods(courseId: string): Promise<Tables<"billing_periods">[]> {
         const { data } = await supabase
             .from('billing_periods')
             .select('*')
             .eq('course_id', courseId)
             .order('start_date', { ascending: false })
-            .throwOnError()
+            .throwOnError();
 
-        return data || []
+        return data || [];
     },
 
-    // Transaction
-    async createBillingPeriod(courseId: string, startDate: string, endDate: string) {
-
-        const { data } = await supabase.rpc('create_billing_period_and_initialize', {
-            p_course_id: courseId,
-            p_start_date: startDate,
-            p_end_date: endDate
-        })
-        .throwOnError();
+    async createBillingPeriod(courseId: string, startDate: string, endDate: string): Promise<Tables<"billing_periods">> {
+        const { data } = await supabase
+            .rpc('create_billing_period_and_initialize', {
+                p_course_id: courseId,
+                p_start_date: startDate,
+                p_end_date: endDate
+            })
+            .throwOnError();
 
         return data;
     }

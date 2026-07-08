@@ -15,23 +15,24 @@ import {
 } from "@/components/ui/alert-dialog"
 
 import { teacherService } from "@/services/teacherService"
-import { courseInstancesService } from "@/services/courseInstancesService"
+import { CourseInstanceDetail, courseInstancesService, CourseInstanceWithEnrichment } from "@/services/courseInstancesService"
 
 // Sub-components imports
 import { TeacherHeader } from "./teacher-header"
 import { TeacherInfoCard } from "./teacher-info-card"
 import { TeacherStatsCard } from "./teacher-stats-card"
 import { CourseManagementCard } from "./course-management-card"
+import { Tables, TablesUpdate } from "@/types/database.types"
 
 function TeacherProfileContent() {
   const router = useRouter()
   const params = useParams()
   const teacherId = params.id as string
   
-  const [teacher, setTeacher] = useState<any>(null)
+  const [teacher, setTeacher] = useState<Tables<"teachers"> | null>(null)
   const [isEditing, setIsEditing] = useState(false)
-  const [editedTeacher, setEditedTeacher] = useState<any>(null)
-  const [courseInstances, setCourses] = useState<any[]>([])
+  const [editedTeacher, setEditedTeacher] = useState<TablesUpdate<"teachers">>()
+  const [courseInstances, setCourses] = useState<CourseInstanceWithEnrichment[]>([])
   const [showSaveConfirmation, setShowSaveConfirmation] = useState(false)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -62,8 +63,9 @@ function TeacherProfileContent() {
 
   const confirmSave = async () => {
     try {
+      if(!editedTeacher) return
       await teacherService.updateTeacher(teacherId, editedTeacher)
-      setTeacher({ ...editedTeacher })
+      setTeacher(null)
       setIsEditing(false)
       setShowSaveConfirmation(false)
     } catch (err) {
@@ -98,8 +100,8 @@ function TeacherProfileContent() {
   }
 
   const canEdit = true
-  const activeCourses = courseInstances.filter((course) => course.status === "active")
-  const completedCourses = courseInstances.filter((course) => course.status === "completed")
+  const activeCourses = courseInstances.filter((course) => !course.archived)
+  const completedCourses = courseInstances.filter((course) => course.archived)
   const numberOfActiveStudents = activeCourses.reduce((acc, course) => acc + (course.student_ids?.length || 0), 0)
 
   return (

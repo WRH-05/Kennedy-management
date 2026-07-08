@@ -1,6 +1,9 @@
 import { createClient } from "@/lib/supabase/client"
+import { Tables, TablesInsert, TablesUpdate } from "@/types/database.types";
 
 const supabase = createClient();
+
+type EnrichedStudentPayments = Tables<"student_payments"> & {students: Tables<"students">}
 
 export const studentPaymentService = {
     async getStudentPaymentHistory(studentId: string) {
@@ -14,7 +17,7 @@ export const studentPaymentService = {
         return data || []
     },
 
-    async getStudentData(billingPeriodId: string) {
+    async getStudentData(billingPeriodId: string): Promise<EnrichedStudentPayments[]> {
         if (!billingPeriodId) return []
 
         const { data } = await supabase
@@ -78,7 +81,7 @@ export const studentPaymentService = {
         };
     },
 
-    async recordStudentPayment(courseId: string, studentId: string, billingPeriodId: string) {
+    async recordStudentPayment(courseId: string, studentId: string, billingPeriodId: string): Promise<TablesInsert<"student_payments">> {
         const { data } = await supabase
             .from('student_payments')
             .insert([{
@@ -95,7 +98,7 @@ export const studentPaymentService = {
         return data
     },
 
-    async updateRecordStudentPayment(courseId: string, studentId: string, billingPeriodId: string, updates = {}) {
+    async updateRecordStudentPayment(courseId: string, studentId: string, billingPeriodId: string, updates: TablesUpdate<"student_payments"> = {}): Promise<Tables<"student_payments">> {
 
         const { data } = await supabase
             .from('student_payments')

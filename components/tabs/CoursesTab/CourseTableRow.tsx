@@ -5,7 +5,7 @@ import { Badge } from "@/components/ui/badge"
 import { Tables } from "@/types/database.types"
 
 interface CourseTableRowProps {
-  course: Tables<"courseInstances">
+  course: Tables<"courses">
 }
 
 export function CourseTableRow({ course }: CourseTableRowProps) {

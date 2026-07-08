@@ -9,11 +9,10 @@ import { GraduationCap, Users } from "lucide-react"
 export default function PayoutsPage() {
   const { payments: studentsPayouts, isLoading: studentLoading, mutate: mutateStudents } = useStudentsPayments();
   const { payments: teachersPayouts, isLoading: teachersLoading, mutate: mutateTeachers } = useTeachersPayments();
-  const [activeTab, setActiveTab] = useState<"teachers" | "students">("teachers")
 
   return (
     <div className="space-y-6">
-      <Tabs defaultValue="teachers" onValueChange={(v) => setActiveTab(v as any)} className="w-full">
+      <Tabs defaultValue="teachers" className="w-full">
         <TabsList className="grid w-full max-w-md grid-cols-2">
           <TabsTrigger value="teachers" className="flex items-center gap-2">
             <GraduationCap className="h-4 w-4" />

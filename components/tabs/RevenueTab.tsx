@@ -6,9 +6,10 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Badge } from "@/components/ui/badge"
 import { TrendingUp } from "lucide-react"
+import { UnifiedPaymentActivity } from "@/services/paymentService"
 
 interface RevenueTabProps {
-  revenue: any[]
+  revenue: UnifiedPaymentActivity[]
 }
 
 // Helper function to format date and time

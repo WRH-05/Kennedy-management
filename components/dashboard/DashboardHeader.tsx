@@ -20,17 +20,27 @@ import {
   SheetTrigger,
 } from "@/components/ui/sheet"
 import { Search, LogOut, Menu } from "lucide-react"
-import { createClient } from "@/lib/supabase/client"
+import { Tables } from "@/types/database.types"
+import { profileService } from "@/services/profileService"
+import { CourseInstanceWithEnrichment } from "@/services/courseInstancesService"
+
 
 
 export default function DashboardHeader() {
   const router = useRouter()
-  const { user } = useAuth()
   const [searchQuery, setSearchQuery] = useState("")
+  const [profile, setProfile] = useState<Tables<"profiles">>();
+
+  profileService.getCurrentUserProfile().then((v) =>
+    setProfile(v)
+  ).catch(e => {
+    console.error(`No profile found: ${e}`)
+  })
+
 
   const { students: allStudents } = useStudents();
   const { teachers: allTeachers } = useTeachers();
-  const { courseInstances: allCourses } = useCourses();
+  const { data: allCourses } = useCourses();
 
   const students = useMemo(() =>
     (allStudents && 'data' in allStudents ? allStudents.data : []),
@@ -43,7 +53,7 @@ export default function DashboardHeader() {
   )
 
   const courseInstances = useMemo(() =>
-    (allCourses && 'data' in allCourses ? allCourses.data : []),
+    (allCourses),
     [allCourses]
   )
 
@@ -58,28 +68,28 @@ export default function DashboardHeader() {
     const query = searchQuery.toLowerCase()
 
     const studentResults = students
-      .filter((student: any) => student.name?.toLowerCase().includes(query))
-      .map((student: any) => ({ ...student, type: "student" }))
+      .filter((student: Tables<"students">) => student.name?.toLowerCase().includes(query))
+      .map((student: Tables<"students">) => ({ ...student, type: "student" }))
 
     const teacherResults = teachers
-      .filter((teacher: any) => teacher.name?.toLowerCase().includes(query))
-      .map((teacher: any) => ({ ...teacher, type: "teacher" }))
+      .filter((teacher: Tables<"teachers">) => teacher.name?.toLowerCase().includes(query))
+      .map((teacher: Tables<"teachers">) => ({ ...teacher, type: "teacher" }))
 
     const courseResults = courseInstances
       .filter(
-        (course: any) =>
+        (course: CourseInstanceWithEnrichment) =>
           course.subject?.toLowerCase().includes(query) ||
           course.school_year?.toLowerCase().includes(query) ||
-          course.teacher_name?.toLowerCase().includes(query),
+          course.teachers.name?.toLowerCase().includes(query),
       )
-      .map((course: any) => ({ ...course, type: "course" }))
+      .map((course: CourseInstanceWithEnrichment) => ({ ...course, type: "course" }))
 
     return [...studentResults, ...teacherResults, ...courseResults]
   }, [searchQuery, students, teachers, courseInstances])
 
   const showSearchResults = searchQuery.trim().length > 0 && searchResults.length > 0
 
-  const handleSearchResultClick = (result: any) => {
+  const handleSearchResultClick = (result: { id: string, type: "student" | "teacher" | "course" }) => {
     if (result.type === "student") {
       router.push(`/student/${result.id}`)
     } else if (result.type === "teacher") {
@@ -185,7 +195,7 @@ export default function DashboardHeader() {
           <div className="flex items-center space-x-2 sm:space-x-4 shrink-0">
 
             <span className="text-sm text-gray-600 hidden lg:inline">
-              Welcome, {user?.profile?.full_name || 'Manager'}
+              Welcome, {profile?.full_name || 'Manager'}
             </span>
             <Button variant="outline" size="sm" onClick={handleSignOut} className="hidden sm:flex">
               <LogOut className="h-4 w-4 mr-2" />

@@ -52,7 +52,7 @@ export const teacherService = {
         return data
     },
 
-    async addTeacher(teacherData: TablesInsert<"teachers">): Promise<Tables<"teachers"> | PostgrestError> {
+    async addTeacher(teacherData: TablesInsert<"teachers">): Promise<Tables<"teachers">> {
         const { data } = await supabase
             .from('teachers')
             .insert([{ ...teacherData }])
@@ -63,7 +63,7 @@ export const teacherService = {
         return data
     },
 
-    async updateTeacher(id: string, updatedData: TablesUpdate<"teachers">): Promise<Tables<"teachers"> | PostgrestError> {
+    async updateTeacher(id: string, updatedData: TablesUpdate<"teachers">): Promise<Tables<"teachers">> {
         const { data } = await supabase
             .from('teachers')
             .update(updatedData)

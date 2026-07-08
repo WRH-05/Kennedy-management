@@ -5,15 +5,16 @@ import { Table, TableBody, TableHead, TableHeader, TableRow } from "@/components
 import { BookOpen } from "lucide-react"
 import { AddCourseDialog } from "./CoursesTab/AddCourseDialog"
 import { CourseTableRow } from "./CoursesTab/CourseTableRow"
+import { Tables, TablesUpdate } from "@/types/database.types"
 
 interface CoursesTabProps {
-  courseInstances: any[]
-  onCoursesUpdate: (courseInstances: any[]) => void
+  courses: Tables<"courses">[]
+  onCoursesUpdate: (courses: TablesUpdate<"courses">[]) => void
   canAdd?: boolean
 }
 
 export default function CourseTab({
-  courseInstances,
+  courses,
   onCoursesUpdate,
   canAdd = false,
 }: CoursesTabProps) {
@@ -23,7 +24,7 @@ export default function CourseTab({
         <div className="flex justify-between items-center">
           <CardTitle className="flex items-center">
             <BookOpen className="h-5 w-5 mr-2" />
-            All courseInstances
+            All Courses
           </CardTitle>
           {canAdd && (
             <AddCourseDialog 
@@ -42,7 +43,7 @@ export default function CourseTab({
               </TableRow>
             </TableHeader>
             <TableBody>
-              {courseInstances.map((course) => (
+              {courses.map((course) => (
                 <CourseTableRow
                   key={course.id}
                   course={course}

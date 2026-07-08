@@ -6,7 +6,7 @@ const supabase = createClient();
 // 1. Explicitly type your extended/enriched structures
 export type CourseInstanceWithEnrichment = Tables<"course_instances"> & {
     student_ids: string[];
-    teachers?: Tables<"teachers"> | null;
+    teachers: Tables<"teachers">;
 };
 
 export type CourseInstanceDetail = Tables<"course_instances"> & {
@@ -14,22 +14,6 @@ export type CourseInstanceDetail = Tables<"course_instances"> & {
     teachers: Tables<"teachers">;
 };
 
-// Helper to handle duration transformations cleanly
-const formatScheduleSlot = (slot: { startHour: string; duration: number; dayOfWeek: string }) => {
-    const [hours, minutes] = slot.startHour.split(":").map(Number);
-    const totalMinutes = hours * 60 + minutes + (slot.duration * 60);
-    const endHours = Math.floor(totalMinutes / 60).toString().padStart(2, "0");
-    const endMins = (totalMinutes % 60).toString().padStart(2, "0");
-    
-    const cleanStart = slot.startHour.includes(':00') ? slot.startHour : `${slot.startHour}:00`;
-    const cleanEnd = `${endHours}:${endMins}:00`;
-
-    return {
-        day: slot.dayOfWeek,
-        start_time: cleanStart,
-        end_time: cleanEnd
-    };
-};
 
 export const courseInstancesService = {
     async getAllCourseInstances(
@@ -142,8 +126,7 @@ export const courseInstancesService = {
         return true;
     },
 
-    async addCourseInstance(instanceData: TablesInsert<"course_instances">, scheduleSlots: any[]) {
-        const schedulesToInsert = (scheduleSlots || []).map(formatScheduleSlot);
+    async addCourseInstance(instanceData: TablesInsert<"course_instances">, scheduleSlots: TablesInsert<"course_schedule">[]) {
 
         const { data } = await supabase.rpc('add_course_instance_with_schedule', {
             p_instance: {
@@ -154,20 +137,19 @@ export const courseInstancesService = {
                 price: instanceData.price,
                 monthly_price: instanceData.monthly_price
             },
-            p_schedules: schedulesToInsert
+            p_schedules: scheduleSlots
         })
         .throwOnError();
 
         return data;
     },
 
-    async updateCourseInstance(id: string, updatedData: TablesUpdate<"course_instances">, scheduleSlots: any[]) {
-        const schedulesToInsert = scheduleSlots ? scheduleSlots.map(formatScheduleSlot) : null;
+    async updateCourseInstance(id: string, updatedData: TablesUpdate<"course_instances">, scheduleSlots: TablesUpdate<"course_schedule">[]) {
 
         const { data } = await supabase.rpc('update_course_instance_with_schedule', {
             p_course_id: id,
             p_updated_data: updatedData,
-            p_schedules: schedulesToInsert 
+            p_schedules: scheduleSlots 
         })
         .throwOnError();
 

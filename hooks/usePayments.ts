@@ -1,7 +1,7 @@
 "use client"
 
 import useSWR, { mutate } from 'swr'
-import { paymentService } from "@/services/paymentService"
+import { paymentService, UnifiedPaymentActivity } from "@/services/paymentService"
 import { swrConfig } from './swr-config'
 import { useStudents } from './useStudents'
 import { useTeachers } from './useTeachers'
@@ -59,13 +59,13 @@ export function useTeachersPayments() {
 
 export function useStudentsData(billing_period_id: string) {
   const { data, error, isLoading, isValidating, mutate } = useSWR(
-    billing_period_id ? ['payment-students-data', billing_period_id] : null,
+    billing_period_id ? ['payment-students-data', billing_period_id] : null, // Guard against empty IDs
     ([_, id]) => studentPaymentService.getStudentData(id),
     {
-      ...swrConfig,                // Keep your other configs if necessary
-      revalidateOnMount: true,     // Forces revalidation when the component mounts
-      revalidateIfStale: true,     // Always revalidate even if data is cached
-      dedupingInterval: 0,         // Disables request deduping (no caching time window)
+      ...swrConfig,
+      revalidateOnMount: true,
+      revalidateIfStale: true,
+      dedupingInterval: 0, 
     }
   )
 
@@ -74,7 +74,7 @@ export function useStudentsData(billing_period_id: string) {
     isLoading,
     isValidating,
     error,
-    mutate: () => mutate(['payment-students-data', billing_period_id]),
+    mutate: () => mutate(), 
   }
 }
 
@@ -82,8 +82,8 @@ export function useRevenue() {
   const { payments } = usePayments()
 
   const revenueData = payments
-    .filter((p: any) => p.type === 'student' && p.status === 'paid')
-    .map((p: any) => ({
+    .filter((p: UnifiedPaymentActivity) => p.type === 'student' && p.status === 'paid')
+    .map((p: UnifiedPaymentActivity) => ({
       ...p,
       paid: true
     }))
@@ -127,7 +127,7 @@ export function useTeachersPayouts() {
 export function useDashboardData() {
   const { students, isLoading: studentsLoading, error: studentsError } = useStudents()
   const { teachers, isLoading: teachersLoading, error: teachersError } = useTeachers()
-  const { courseInstances, isLoading: coursesLoading, error: coursesError } = useCourses()
+  const { data: courseInstances, isLoading: coursesLoading, error: coursesError } = useCourses()
   const { payments, isLoading: paymentsLoading, error: paymentsError } = usePayments()
 
   const isLoading = studentsLoading || teachersLoading || coursesLoading || paymentsLoading

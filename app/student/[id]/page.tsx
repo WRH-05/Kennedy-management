@@ -23,16 +23,17 @@ import {
 } from "@/components/ui/alert-dialog"
 import { ArrowLeft, Download, User, BookOpen, AlertTriangle, CheckCircle } from "lucide-react"
 import { studentService } from "@/services/studentService"
-import { courseInstancesService } from "@/services/courseInstancesService"
+import { courseInstancesService, CourseInstanceWithEnrichment } from "@/services/courseInstancesService"
+import { Tables, TablesUpdate } from "@/types/database.types"
 
 function StudentDashboardContent() {
   const router = useRouter()
   const params = useParams()
   const studentId = params.id as string
-  const [student, setStudent] = useState<any>(null)
-  const [editedStudent, setEditedStudent] = useState<any>(null)
-  const [courseInstances, setCourses] = useState<any[]>([])
-  const [payments, setPayments] = useState<any[]>([])
+  const [student, setStudent] = useState<Tables<"students">>()
+  const [editedStudent, setEditedStudent] = useState<TablesUpdate<"students">>()
+  const [courseInstances, setCourses] = useState<CourseInstanceWithEnrichment[]>([])
+  const [payments, setPayments] = useState<Tables<"student_payments">[]>([])
   const [loading, setLoading] = useState(true)
   const [isEditing, setIsEditing] = useState(false)
   const [showSaveConfirmation, setShowSaveConfirmation] = useState(false)
@@ -110,8 +111,8 @@ function StudentDashboardContent() {
   }
 
   const studentCourses = courseInstances.filter((course) => course.student_ids?.includes(studentId))
-  const activeCourses = studentCourses.filter((course) => course.status === "active")
-  const completedCourses = studentCourses.filter((course) => course.status === "completed")
+  const activeCourses = studentCourses.filter((course) => !course.archived)
+  const completedCourses = studentCourses.filter((course) => course.archived)
 
   const totalMonthlyFees = activeCourses.reduce((sum, course) => sum + (course.monthly_price || 0), 0)
   const paidThisMonth = 0 // Payment tracking to be implemented with payments table
@@ -406,7 +407,7 @@ function StudentDashboardContent() {
                           {completedCourses.map((course) => (
                             <TableRow key={course.id} className="opacity-60">
                               <TableCell className="font-medium">
-                                {course.subject} - {course.schoolYear}
+                                {course.subject} - {course.school_year}
                               </TableCell>
                               <TableCell>
                                 <Button
@@ -414,11 +415,10 @@ function StudentDashboardContent() {
                                   className="p-0 h-auto font-medium text-left"
                                   onClick={() => router.push(`/teacher/${course.teacher_id}`)}
                                 >
-                                  {course.teacher_name}
+                                  {course.teachers.name}
                                 </Button>
                               </TableCell>
-                              <TableCell>{course.schedule}</TableCell>
-                              <TableCell>{course.monthlyPrice} DA</TableCell>
+                              <TableCell>{course.monthly_price} DA</TableCell>
                               <TableCell>
                                 <Badge variant="default">Completed</Badge>
                               </TableCell>

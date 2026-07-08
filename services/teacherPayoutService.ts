@@ -1,18 +1,26 @@
 import { createClient } from "@/lib/supabase/client"
+import { Tables, TablesUpdate } from "@/types/database.types";
 
 const supabase = createClient();
+
+type EnrichedTeacherPayout = Tables<"teacher_payouts"> & {teachers?: Tables<"teachers">, profiles?: Tables<"profiles">}
 
 export const teacherPayoutService = {
     async getAllTeachersPayouts(
         page = 1,
         pageSize = 0
-    ) {
+    ): Promise<{
+        data: EnrichedTeacherPayout[];
+        total: number;
+        page: number;
+        pageSize: number;
+    }> {
         let query = supabase
             .from('teacher_payouts')
             .select(`
                     *,
                     teachers (name),
-                    profiles!teacher_payouts_recorded_by_fkey (full_name)
+                    profiles!teacher_payouts_recorded_by_fkey (*)
                 `, { count: pageSize > 0 ? 'exact' : 'estimated' })
 
         query.order('created_at', { ascending: false });
@@ -34,7 +42,7 @@ export const teacherPayoutService = {
         };
     },
 
-    async getAllTeacherPayouts(courseId: string) {
+    async getAllTeacherPayouts(courseId: string): Promise<EnrichedTeacherPayout[]> {
         let query = supabase
             .from('teacher_payouts')
             .select(`*, profiles!teacher_payouts_recorded_by_fkey (*)`)
@@ -49,7 +57,7 @@ export const teacherPayoutService = {
     },
 
     // Change for full update
-    async updatePayoutStatus(id: string, status: string) {
+    async updatePayoutStatus(id: string, status: string): Promise<Tables<"teacher_payouts">> {
         const updateData = {
             status,
         }
@@ -65,7 +73,7 @@ export const teacherPayoutService = {
         return data
     },
 
-    async updatePayout(id: string, updates = {}) {
+    async updatePayout(id: string, updates: TablesUpdate<"teacher_payouts"> = {}): Promise<Tables<"teacher_payouts">> {
         const { data } = await supabase
             .from('teacher_payouts')
             .update(updates)

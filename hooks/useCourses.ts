@@ -12,7 +12,7 @@ export function useCourses() {
   )
 
   return {
-    courseInstances: data?.data || [],
+    data: data?.data || [],
     isLoading,
     isValidating,
     error,
@@ -58,7 +58,7 @@ export function useCourse(id: string) {
 export function useCoursesByTeacher(teacherId: string) {
   const { data, error, isLoading, isValidating } = useSWR(
     teacherId ? `courseInstances-teacher-${teacherId}` : null,
-    () => courseInstancesService.getCoursesByTeacherId(teacherId),
+    () => courseInstancesService.getCourseInstancesByTeacherId(teacherId),
     swrConfig
   )
 
@@ -74,7 +74,7 @@ export function useCoursesByTeacher(teacherId: string) {
 export function useCoursesByStudent(studentId: string ) {
   const { data, error, isLoading, isValidating } = useSWR(
     studentId ? `courseInstances-student-${studentId}` : null,
-    () => courseInstancesService.getCoursesByStudentId(studentId),
+    () => courseInstancesService.getCourseInstancesByStudentId(studentId),
     swrConfig
   )
 

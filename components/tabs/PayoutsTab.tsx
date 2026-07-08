@@ -10,15 +10,16 @@ import { DollarSign, Check, X, MoreHorizontal, ChevronLeft, ChevronRight } from 
 import { studentPaymentService } from "@/services/studentPaymentService"
 import { teacherPayoutService } from "@/services/teacherPayoutService"
 import Link from "next/link"
+import { Tables } from "@/types/database.types"
 
 interface PayoutsTabProps {
   // payoutData now accepts the full response object from your service
   payoutData: {
-    data: any[]
+    data: Tables<"teacher_payouts">[] | Tables<"student_payments">[]
     total: number
     page: number
     pageSize: number
-  } | any[]
+  }
   onPageChange?: (newPage: number) => void // Callback to pass page changes up to your parent component
   isManager?: boolean
   type: "teacher" | "student"
@@ -51,7 +52,7 @@ export default function PayoutsTab({
   const router = useRouter()
 
   // Safely normalize whether payoutData is wrapped in the backend object structure or is a fallback array
-  const payouts = Array.isArray(payoutData) ? payoutData : payoutData?.data || []
+  const payouts = Array.isArray(payoutData) ? payoutData : payoutData?.data
   const totalItems = Array.isArray(payoutData) ? payouts.length : payoutData?.total || 0
   const currentPage = Array.isArray(payoutData) ? 1 : payoutData?.page || 1
   const pageSize = Array.isArray(payoutData) ? payouts.length : payoutData?.pageSize || 10
@@ -86,7 +87,7 @@ export default function PayoutsTab({
     }
   }
 
-  const renderNameCell = (payout: any) => {
+  const renderNameCell = (payout: Tables<"teacher_payouts"> | Tables<"student_payments">) => {
     let { id, name } = type == "student"? payout.students : payout.teachers
 
     if (id) {

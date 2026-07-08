@@ -5,6 +5,7 @@ import { useCourses } from "@/hooks/useCourses"
 import { usePendingArchives } from "@/hooks/usePayments"
 import TeachersTab from "@/components/tabs/TeachersTab"
 import { Pagination, PaginationContent, PaginationItem, PaginationLink, PaginationPrevious, PaginationNext, PaginationEllipsis } from "@/components/ui/pagination"
+import { Tables } from "@/types/database.types"
 
 const PAGE_SIZE = 6
 
@@ -47,7 +48,7 @@ export default function TeachersPage() {
   const { data: pendingArchiveMap } = usePendingArchives()
 
   const teachers = useMemo(() =>
-    (allTeachers || []).filter((teacher: any) => !teacher.archived),
+    (allTeachers || []).filter((teacher: Tables<"teachers">) => !teacher.archived),
     [allTeachers]
   )
 

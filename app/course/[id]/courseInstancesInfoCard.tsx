@@ -11,20 +11,25 @@ import { BookOpen, Edit3, Plus, Trash2 } from "lucide-react"
 import { formatScheduleString, mapSchedulesToSlots } from "./utils"
 import { CourseInstanceDetail, courseInstancesService } from "@/services/courseInstancesService"
 import { useToast } from "@/hooks/use-toast"
+import { TablesUpdate } from "@/types/database.types"
 
 export function CourseInstancesInfoCard({ courseInstances, onRefresh }: { courseInstances: CourseInstanceDetail, onRefresh: () => void }) {
   const router = useRouter()
   const { toast } = useToast()
   const [showEditCourseDialog, setShowEditCourseDialog] = useState(false)
   const [isUpdatingCourse, setIsUpdatingCourse] = useState(false)
-  
+
   const [editForm, setEditForm] = useState({
     subject: courseInstances.subject || "",
     schoolYear: courseInstances.school_year || "",
     price: courseInstances.price || 0,
     percentageCut: courseInstances.percentage_cut || 50
   })
-  const [editScheduleSlots, setEditScheduleSlots] = useState<any[]>(mapSchedulesToSlots(courseInstances.course_schedule))
+
+  // State initialization matches database keys: { day, start_time, duration }
+  const [editScheduleSlots, setEditScheduleSlots] = useState<{day: "sunday" | "monday" | "tuesday" | "wednesday" | "thursday" | "friday" | "saturday", start_time: string, duration: number}[]>(
+    mapSchedulesToSlots(courseInstances.course_schedule)
+  )
 
   const handleEditScheduleChange = (index: number, field: string, value: any) => {
     const updated = [...editScheduleSlots]
@@ -36,21 +41,48 @@ export function CourseInstancesInfoCard({ courseInstances, onRefresh }: { course
     e.preventDefault()
     if (isUpdatingCourse) return
 
-    if (editScheduleSlots.some(slot => !slot.dayOfWeek)) {
+    if (editScheduleSlots.some(slot => !slot.day)) {
       toast({ title: "Validation Error", description: "Please assign valid weekdays to all schedule slots.", variant: "destructive" })
       return
     }
 
     setIsUpdatingCourse(true)
     try {
+      const calculateEndTime = (startTimeStr: string | undefined, durationHours: number) => {
+        if (!startTimeStr) return "00:00";
+
+        // Split "HH:MM" into numbers
+        const [hours, minutes] = startTimeStr.split(':').map(Number);
+
+        // Convert everything to total minutes, add duration, and convert back
+        const totalMinutes = (hours * 60) + minutes + Math.round(durationHours * 60);
+
+        const endHours = Math.floor(totalMinutes / 60) % 24; // % 24 prevents overflow past midnight
+        const endMinutes = totalMinutes % 60;
+
+        // Pad single digits with a leading zero (e.g., 9 becomes "09")
+        return `${String(endHours).padStart(2, '0')}:${String(endMinutes).padStart(2, '0')}`;
+      };
+
+      // Your updated mapping block
+      const formattedSlotsForService = editScheduleSlots.map(slot => {
+        const cleanStartTime = slot.start_time?.slice(0, 5) || "00:00";
+
+        return {
+          day: slot.day,
+          start_time: cleanStartTime,
+          end_time: calculateEndTime(cleanStartTime, slot.duration || 0)
+        };
+      });
+
       await courseInstancesService.updateCourseInstance(courseInstances.id, {
         subject: editForm.subject,
         school_year: editForm.schoolYear,
         price: editForm.price,
         monthly_price: editForm.price,
         percentage_cut: editForm.percentageCut,
-      }, editScheduleSlots)
-      
+      }, formattedSlotsForService)
+
       toast({ title: "Success", description: "Course updated successfully." })
       setShowEditCourseDialog(false)
       onRefresh()
@@ -84,18 +116,19 @@ export function CourseInstancesInfoCard({ courseInstances, onRefresh }: { course
                   <Input id="cut" type="number" value={editForm.percentageCut} onChange={(e) => setEditForm({ ...editForm, percentageCut: parseInt(e.target.value) || 0 })} required />
                 </div>
               </div>
-              
+
               <div className="pt-2 border-t space-y-2">
                 <div className="flex items-center justify-between">
                   <Label className="text-sm font-semibold">Weekly Schedule Slots</Label>
-                  <Button type="button" variant="outline" size="sm" className="h-7 px-2 text-xs" onClick={() => setEditScheduleSlots([...editScheduleSlots, { dayOfWeek: "monday", startHour: "09:00", duration: 2 }])}>
+                  <Button type="button" variant="outline" size="sm" className="h-7 px-2 text-xs" onClick={() => setEditScheduleSlots([...editScheduleSlots, { day: "monday", start_time: "09:00", duration: 2 }])}>
                     <Plus className="h-3 w-3 mr-1" /> Slot
                   </Button>
                 </div>
                 {editScheduleSlots.map((slot, index) => (
                   <div key={index} className="flex items-center gap-2 p-2 border rounded-md bg-gray-50">
                     <div className="flex-1 space-y-1">
-                      <Select value={slot.dayOfWeek} onValueChange={(v) => handleEditScheduleChange(index, 'dayOfWeek', v)}>
+                      {/* FIXED: Changed target field name from 'dayOfWeek' to 'day' */}
+                      <Select value={slot.day} onValueChange={(v) => handleEditScheduleChange(index, 'day', v)}>
                         <SelectTrigger className="h-8 text-xs"><SelectValue placeholder="Day" /></SelectTrigger>
                         <SelectContent>
                           {["monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday"].map(d => (
@@ -104,8 +137,9 @@ export function CourseInstancesInfoCard({ courseInstances, onRefresh }: { course
                         </SelectContent>
                       </Select>
                       <div className="grid grid-cols-2 gap-1">
-                        <Input type="time" className="h-8 text-xs px-1" value={slot.startHour} onChange={(e) => handleEditScheduleChange(index, 'startHour', e.target.value)} />
-                        <Select value={slot.duration.toString()} onValueChange={(v) => handleEditScheduleChange(index, 'duration', parseFloat(v))}>
+                        {/* FIXED: Changed target field name from 'startHour' to 'start_time' */}
+                        <Input type="time" className="h-8 text-xs px-1" value={slot.start_time?.slice(0, 5)} onChange={(e) => handleEditScheduleChange(index, 'start_time', e.target.value)} />
+                        <Select value={slot.duration?.toString()} onValueChange={(v) => handleEditScheduleChange(index, 'duration', parseFloat(v))}>
                           <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
                           <SelectContent>
                             {["1", "1.5", "2", "2.5"].map(h => <SelectItem key={h} value={h}>{h}h</SelectItem>)}

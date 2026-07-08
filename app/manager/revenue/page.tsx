@@ -1,7 +1,6 @@
 "use client"
 import { useRevenue } from "@/hooks/usePayments"
 import RevenueTab from "@/components/tabs/RevenueTab"
-import SummaryCards from "@/components/dashboard/SummaryCards"
 
 export default function RevenuePage() {
   const { data: revenue, isLoading } = useRevenue()
