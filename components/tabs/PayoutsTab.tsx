@@ -7,19 +7,23 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Badge } from "@/components/ui/badge"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 import { DollarSign, Check, X, MoreHorizontal, ChevronLeft, ChevronRight } from "lucide-react"
-import { studentPaymentService } from "@/services/studentPaymentService"
+import { EnrichedStudentPayments, studentPaymentService } from "@/services/studentPaymentService"
 import { teacherPayoutService } from "@/services/teacherPayoutService"
 import Link from "next/link"
 import { Tables } from "@/types/database.types"
+import { EnrichedTeacherPayout } from "@/services/teacherPayoutService"
 
+interface PaginatedResponse<T> {
+  data: T[];
+  total: number;
+  page: number;
+  pageSize: number;
+}
+type PayoutData = PaginatedResponse<EnrichedStudentPayments> | PaginatedResponse<EnrichedTeacherPayout>;
 interface PayoutsTabProps {
   // payoutData now accepts the full response object from your service
-  payoutData: {
-    data: Tables<"teacher_payouts">[] | Tables<"student_payments">[]
-    total: number
-    page: number
-    pageSize: number
-  }
+  payoutData: PayoutData
+
   onPageChange?: (newPage: number) => void // Callback to pass page changes up to your parent component
   isManager?: boolean
   type: "teacher" | "student"
@@ -52,7 +56,7 @@ export default function PayoutsTab({
   const router = useRouter()
 
   // Safely normalize whether payoutData is wrapped in the backend object structure or is a fallback array
-  const payouts = Array.isArray(payoutData) ? payoutData : payoutData?.data
+  const payouts = payoutData.data
   const totalItems = Array.isArray(payoutData) ? payouts.length : payoutData?.total || 0
   const currentPage = Array.isArray(payoutData) ? 1 : payoutData?.page || 1
   const pageSize = Array.isArray(payoutData) ? payouts.length : payoutData?.pageSize || 10
@@ -87,8 +91,13 @@ export default function PayoutsTab({
     }
   }
 
-  const renderNameCell = (payout: Tables<"teacher_payouts"> | Tables<"student_payments">) => {
-    let { id, name } = type == "student"? payout.students : payout.teachers
+  const renderNameCell = (payout: EnrichedStudentPayments | EnrichedTeacherPayout) => {
+    // Use 'in' to check which type of payout we are dealing with
+    const person = 'students' in payout ? payout.students : payout.teachers;
+
+    // Optional chaining handle cases where the relation might be missing/null
+    const id = person?.id;
+    const name = person?.name ?? 'Unknown';
 
     if (id) {
       return (
@@ -99,10 +108,11 @@ export default function PayoutsTab({
         >
           {name}
         </Button>
-      )
+      );
     }
-    return name
-  }
+
+    return name;
+  };
 
   return (
     <Card>
@@ -139,16 +149,16 @@ export default function PayoutsTab({
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {pendingPayouts.map((payout: any, index: number) => {
+                  {pendingPayouts.map((payout, index: number) => {
                     const dateTime = formatDateTime(payout.created_at || payout.payment_date)
                     return (
                       <TableRow key={payout.id || index} className="group hover:bg-muted/50 transition-colors">
                         <TableCell className="font-medium">{renderNameCell(payout)}</TableCell>
-                        <TableCell className="font-medium"><Link href={`/course/${payout.course_instances.id}`}>{payout.course_instances.subject}</Link></TableCell>
+                        <TableCell className="font-medium"><Link href={`/course/${payout.course_instances?.id}`}>{payout.course_instances?.subject}</Link></TableCell>
                         <TableCell className="font-semibold text-primary">{payout.amount.toLocaleString()} DA</TableCell>
                         <TableCell>{dateTime.date}</TableCell>
                         <TableCell>{dateTime.time}</TableCell>
-                        <TableCell>{payout.profiles.full_name || '-'}</TableCell>
+                        <TableCell>{payout.profiles?.full_name || '-'}</TableCell>
                         <TableCell>
                           <div className="flex items-center justify-between">
                             <Badge variant="destructive" className="bg-amber-500 hover:bg-amber-600 text-white">Pending</Badge>

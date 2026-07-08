@@ -33,7 +33,7 @@ export function useStudentsPayments() {
   )
 
   return {
-    payments: data || [],
+    payments: data,
     isLoading,
     isValidating,
     error,
@@ -49,7 +49,7 @@ export function useTeachersPayments() {
   )
 
   return {
-    payments: data || [],
+    payments: data,
     isLoading,
     isValidating,
     error,
@@ -65,7 +65,7 @@ export function useStudentsData(billing_period_id: string) {
       ...swrConfig,
       revalidateOnMount: true,
       revalidateIfStale: true,
-      dedupingInterval: 0, 
+      dedupingInterval: 0,
     }
   )
 
@@ -74,7 +74,7 @@ export function useStudentsData(billing_period_id: string) {
     isLoading,
     isValidating,
     error,
-    mutate: () => mutate(), 
+    mutate: () => mutate(),
   }
 }
 

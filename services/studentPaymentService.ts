@@ -3,7 +3,12 @@ import { Tables, TablesInsert, TablesUpdate } from "@/types/database.types";
 
 const supabase = createClient();
 
-type EnrichedStudentPayments = Tables<"student_payments"> & {students: Tables<"students">}
+export type EnrichedStudentPayments = Tables<"student_payments"> & {
+    students: Tables<"students">,
+    profiles?: Tables<"profiles">,
+    course_instances?: Tables<"course_instances">,
+    billing_periods?: Tables<"billing_periods">
+}
 
 export const studentPaymentService = {
     async getStudentPaymentHistory(studentId: string) {
@@ -71,7 +76,7 @@ export const studentPaymentService = {
         const { data, error, count } = await query;
 
         if (error) throw error
-        const finalData = data || [];
+        const finalData: EnrichedStudentPayments[] = data || [];
 
         return {
             data: finalData,

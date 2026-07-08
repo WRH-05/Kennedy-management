@@ -3,7 +3,12 @@ import { Tables, TablesUpdate } from "@/types/database.types";
 
 const supabase = createClient();
 
-type EnrichedTeacherPayout = Tables<"teacher_payouts"> & {teachers?: Tables<"teachers">, profiles?: Tables<"profiles">}
+export type EnrichedTeacherPayout = Tables<"teacher_payouts"> & {
+    teachers?: Tables<"teachers">,
+    profiles?: Tables<"profiles">,
+    course_instances?: Tables<"course_instances">,
+    billing_periods?: Tables<"billing_periods">
+}
 
 export const teacherPayoutService = {
     async getAllTeachersPayouts(
@@ -102,7 +107,7 @@ export const teacherPayoutService = {
 
         let query = supabase
             .from('teacher_payouts')
-            .select('*, teachers (*), course_instances (*), billing_periods (*), profiles!teacher_payouts_recorded_by_fkey(full_name)', { count: pageSize > 0 ? 'exact' : 'estimated' })
+            .select('*, teachers (*), course_instances (*), billing_periods (*), profiles!teacher_payouts_recorded_by_fkey(*)', { count: pageSize > 0 ? 'exact' : 'estimated' })
 
         query = query.order('created_at', { ascending: false });
 
@@ -117,7 +122,7 @@ export const teacherPayoutService = {
         const { data, error, count } = await query;
 
         if (error) throw error
-        const finalData = data || [];
+        const finalData: EnrichedTeacherPayout[] = data || [];
 
         return {
             data: finalData,

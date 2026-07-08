@@ -1,7 +1,6 @@
 "use client"
 
-import { useState } from "react"
-import { useStudentsPayments, useTeachersPayments } from "@/hooks/usePayments" 
+import { useStudentsPayments, useTeachersPayments } from "@/hooks/usePayments"
 import PayoutsTab from "@/components/tabs/PayoutsTab"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { GraduationCap, Users } from "lucide-react"
@@ -24,19 +23,43 @@ export default function PayoutsPage() {
           </TabsTrigger>
         </TabsList>
 
+
         <TabsContent value="teachers" className="mt-4">
-          <PayoutsTab
-            payoutData={teachersPayouts} // ✨ Directly uses your hook state data
-            type="teacher"
-          />
+          {
+            !teachersLoading || !teachersPayouts ?
+              (
+                <div className="p-8 text-center text-gray-500">
+                  Loading Teacher Records...
+                </div>
+              ) :
+              (
+                <PayoutsTab
+                  payoutData={teachersPayouts} // ✨ Directly uses your hook state data
+                  type="teacher"
+                />
+              )
+          }
         </TabsContent>
 
+
         <TabsContent value="students" className="mt-4">
-          <PayoutsTab
-            payoutData={studentsPayouts} // ✨ Directly uses your hook state data
-            type="student"
-          />
+          {
+            !studentLoading || !studentsPayouts ?
+
+              (
+                <div className="p-8 text-center text-gray-500">
+                  Loading Student Records...
+                </div>
+              ) :
+              (
+                <PayoutsTab
+                  payoutData={studentsPayouts} // ✨ Directly uses your hook state data
+                  type="student"
+                />
+              )
+          }
         </TabsContent>
+
       </Tabs>
     </div>
   )
