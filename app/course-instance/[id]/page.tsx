@@ -15,7 +15,6 @@ import { PaymentSummaryCard } from "./payment-summary-card"
 import { BillingPeriodToolbar } from "./billing-period-toolbar"
 import { StudentsManagementCard } from "./students-management-card"
 import { useStudents } from "@/hooks/useStudents"
-import { studentPaymentService } from "@/services/studentPaymentService"
 import { teacherPayoutService } from "@/services/teacherPayoutService"
 import { Tables } from "@/types/database.types"
 

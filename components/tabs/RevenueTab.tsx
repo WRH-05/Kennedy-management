@@ -80,7 +80,7 @@ export default function RevenueTab({ revenue }: RevenueTabProps) {
                       <Button
                         variant="link"
                         className="p-0 h-auto font-medium text-left"
-                        onClick={() => router.push(`/course/${item.course_id}`)}
+                        onClick={() => router.push(`/course-instance/${item.course_id}`)}
                       >
                         {item.course || 'N/A'}
                       </Button>

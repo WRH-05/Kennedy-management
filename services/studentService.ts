@@ -1,5 +1,4 @@
 import { Tables, TablesInsert, TablesUpdate } from "@/types/database.types"
-import { PostgrestError } from "@supabase/supabase-js"
 
 import { createClient } from "@/lib/supabase/client"
 

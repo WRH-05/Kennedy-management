@@ -3,32 +3,32 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Table, TableBody, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { BookOpen } from "lucide-react"
-import { AddCourseDialog } from "./CoursesTab/AddCourseDialog"
-import { CourseTableRow } from "./CoursesTab/CourseTableRow"
 import { Tables } from "@/types/database.types"
+import { AddGradeLevelDialog } from "./GradeLevelsTab/AddGradeLevelsDialog"
+import { GradeLevelTableRow } from "./GradeLevelsTab/GradeLevelTableRow"
 
-interface CoursesTabProps {
-  courses: Tables<"courses">[]
-  onCoursesUpdate: () => void
+interface GradeLevelsTabProps {
+  gradeLevels: Tables<"grade_levels">[]
+  onGradeLevelsUpdate: () => void
   canAdd?: boolean
 }
 
-export default function CourseTab({
-  courses,
-  onCoursesUpdate,
+export default function GradeLevelTab({
+  gradeLevels: gradeLevels,
+  onGradeLevelsUpdate: onGradeLevelsUpdate,
   canAdd = false,
-}: CoursesTabProps) {
+}: GradeLevelsTabProps) {
   return (
     <Card>
       <CardHeader>
         <div className="flex justify-between items-center">
           <CardTitle className="flex items-center">
             <BookOpen className="h-5 w-5 mr-2" />
-            All Courses
+            All Grades
           </CardTitle>
           {canAdd && (
-            <AddCourseDialog
-              onCourseAdded={onCoursesUpdate}
+            <AddGradeLevelDialog
+              ongradeLevelAdded={onGradeLevelsUpdate}
             />
           )}
         </div>
@@ -38,16 +38,16 @@ export default function CourseTab({
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>Type</TableHead>
                 <TableHead>Name</TableHead>
+                <TableHead>Action</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
-              {courses.map((course) => (
-                <CourseTableRow
-                  key={course.id}
-                  onCourseUpdated={onCoursesUpdate}
-                  course={course}
+              {gradeLevels.map((gradeLevel) => (
+                <GradeLevelTableRow
+                  key={gradeLevel.id}
+                  onGradeLevelUpdated={onGradeLevelsUpdate}
+                  gradeLevel={gradeLevel}
                 />
               ))}
             </TableBody>

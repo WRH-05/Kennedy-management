@@ -5,7 +5,7 @@ import { paymentService, UnifiedPaymentActivity } from "@/services/paymentServic
 import { swrConfig } from './swr-config'
 import { useStudents } from './useStudents'
 import { useTeachers } from './useTeachers'
-import { useCourses } from './useCourses'
+import { useCourseInstances } from './useCourseInstances'
 import { studentPaymentService } from '@/services/studentPaymentService'
 import { teacherPayoutService } from '@/services/teacherPayoutService'
 
@@ -127,7 +127,7 @@ export function useTeachersPayouts() {
 export function useDashboardData() {
   const { students, isLoading: studentsLoading, error: studentsError } = useStudents()
   const { teachers, isLoading: teachersLoading, error: teachersError } = useTeachers()
-  const { data: courseInstances, isLoading: coursesLoading, error: coursesError } = useCourses()
+  const { data: courseInstances, isLoading: coursesLoading, error: coursesError } = useCourseInstances()
   const { payments, isLoading: paymentsLoading, error: paymentsError } = usePayments()
 
   const isLoading = studentsLoading || teachersLoading || coursesLoading || paymentsLoading

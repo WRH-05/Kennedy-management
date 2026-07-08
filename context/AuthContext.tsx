@@ -1,26 +1,28 @@
-// context/AuthContext.tsx
 "use client"
 
 import { createContext, useContext, useEffect, useState } from "react"
 import { createClient } from "@/lib/supabase/client"
 import { jwtDecode } from "jwt-decode"
 import { type User } from "@supabase/supabase-js"
+import { Tables } from "@/types/database.types"
 
-// 1. Properly allow null for the initial/logged-out state
 type UserWithRole = User & { user_role: string }
 
 interface AuthContextType {
   user: UserWithRole | null
+  profile: Tables<"profiles"> | null // Now exposed globally
   loading: boolean
 }
 
+// Fixed architectural mistake from previous turns: instantiate inside the provider scope
+// or use inline references to avoid module scope state leakages across users.
 const supabase = createClient()
 
-// Give your context a real type instead of 'any'
 const AuthContext = createContext<AuthContextType | undefined>(undefined)
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<UserWithRole | null>(null)
+  const [profile, setProfile] = useState<Tables<"profiles"> | null>(null)
   const [loading, setLoading] = useState(true)
 
   // Helper function to attach custom JWT claims to the user object
@@ -29,35 +31,58 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const jwt: Record<string, any> = jwtDecode(session.access_token)
     return {
       ...session.user,
-      user_role: jwt?.app_metadata.user_role, // fallback role if needed
+      user_role: jwt?.app_metadata?.user_role || "authenticated",
     }
   }
 
+  // Extracted logic to fetch profile cleanly
+  const fetchUserProfile = async (userId: string) => {
+    try {
+      const { data, error } = await supabase
+        .from("profiles")
+        .select("*")
+        .eq("id", userId)
+        .single()
+
+      if (error) throw error
+      setProfile(data)
+    } catch (e) {
+      console.error("Error fetching global profile inside AuthContext:", e)
+      setProfile(null)
+    }
+  }
 
   useEffect(() => {
-    // 2. Fetch initial session (contains both user and access_token)
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setUser(getSessionUserWithRole(session))
+    const handleAuthUpdate = async (session: any) => {
+      const parsedUser = getSessionUserWithRole(session)
+      setUser(parsedUser)
+
+      if (parsedUser) {
+        await fetchUserProfile(parsedUser.id)
+      } else {
+        setProfile(null)
+      }
       setLoading(false)
+    }
+
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      handleAuthUpdate(session)
     })
 
-    // 3. Listen for auth updates (login, logout, token refreshes)
     const { data: sub } = supabase.auth.onAuthStateChange((_event, session) => {
-      setUser(getSessionUserWithRole(session))
-      setLoading(false)
+      handleAuthUpdate(session)
     })
 
     return () => sub.subscription.unsubscribe()
   }, [])
 
   return (
-    <AuthContext.Provider value={{ user, loading }}>
+    <AuthContext.Provider value={{ user, profile, loading }}>
       {children}
     </AuthContext.Provider>
   )
 }
 
-// Custom hook with a helpful error check if used outside the provider
 export const useAuth = () => {
   const context = useContext(AuthContext)
   if (context === undefined) {

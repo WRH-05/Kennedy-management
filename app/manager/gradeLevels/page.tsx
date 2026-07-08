@@ -1,9 +1,10 @@
 "use client"
-import { useMemo, useState } from "react"
-import { usePaginatedCourseInstances } from "@/hooks/useCourseInstances"
-import { usePendingArchives } from "@/hooks/usePayments"
-import CourseInstancesTab from "@/components/tabs/CoursesInstancesTab"
+
+import { useState } from "react"
 import { Pagination, PaginationContent, PaginationItem, PaginationLink, PaginationPrevious, PaginationNext, PaginationEllipsis } from "@/components/ui/pagination"
+import { usePaginatedGradeLevels } from "@/hooks/useGradeLevels"
+import GradeLevelTab from "@/components/tabs/GradeLevelsTab"
+
 
 const PAGE_SIZE = 6
 
@@ -39,36 +40,39 @@ function getPageItems(page: number, totalPages: number) {
   return pages
 }
 
-export default function CoursesPage() {
+export default function GradeLevelsPage() {
   const [page, setPage] = useState(1)
-  const { courseInstances: allCourses, total, isLoading: isCourseLoading, mutate } = usePaginatedCourseInstances(page, PAGE_SIZE)
-  const { data: pendingArchiveMap } = usePendingArchives()
+  const { gradeLevels, total, isLoading: coursesLoading, mutate } = usePaginatedGradeLevels(page, PAGE_SIZE)
 
-
-  const courseInstances = useMemo(() => {
-    const list = allCourses;
-    return list;
-  }, [allCourses]);
-
-
-
-  if (isCourseLoading) return <div className="p-8 text-center text-gray-500">Loading courseInstances Directory...</div>
+  if (coursesLoading) {
+    return (
+      <div className="p-8 text-center text-gray-500">
+        Loading Courses Records...
+      </div>
+    )
+  }
 
   const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE))
 
   return (
     <div className="space-y-6">
-      <CourseInstancesTab
-        courseInstances={courseInstances}
-        onCoursesUpdate={() => mutate()}
+      <GradeLevelTab
+        gradeLevels={gradeLevels}
+        onGradeLevelsUpdate={() => mutate()}
         canAdd={true}
-        pendingArchiveIds={pendingArchiveMap?.course || new Set()}
       />
 
       <Pagination className="pt-4">
         <PaginationContent>
           <PaginationItem>
-            <PaginationPrevious aria-disabled={page <= 1} onClick={() => setPage(Math.max(1, page - 1))} />
+            <PaginationPrevious
+              aria-disabled={page <= 1}
+              onClick={() => {
+                if (page > 1) {
+                  setPage(page - 1)
+                }
+              }}
+            />
           </PaginationItem>
 
           {getPageItems(page, totalPages).map((item, index) =>
@@ -89,7 +93,14 @@ export default function CoursesPage() {
           )}
 
           <PaginationItem>
-            <PaginationNext aria-disabled={page >= totalPages} onClick={() => setPage(Math.min(totalPages, page + 1))} />
+            <PaginationNext
+              aria-disabled={page >= totalPages}
+              onClick={() => {
+                if (page < totalPages) {
+                  setPage(page + 1)
+                }
+              }}
+            />
           </PaginationItem>
         </PaginationContent>
       </Pagination>

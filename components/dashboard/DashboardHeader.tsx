@@ -2,11 +2,10 @@
 import { useState, useMemo } from "react"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
-import { useAuth } from "@/context/AuthContext"
 import { authService } from "@/services/authService"
 import { useStudents } from "@/hooks/useStudents"
 import { useTeachers } from "@/hooks/useTeachers"
-import { useCourses } from "@/hooks/useCourses"
+import { useCourseInstances } from "@/hooks/useCourseInstances"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
@@ -23,24 +22,19 @@ import { Search, LogOut, Menu } from "lucide-react"
 import { Tables } from "@/types/database.types"
 import { profileService } from "@/services/profileService"
 import { CourseInstanceWithEnrichment } from "@/services/courseInstancesService"
+import { useAuth } from "@/context/AuthContext"
 
 
 
 export default function DashboardHeader() {
   const router = useRouter()
   const [searchQuery, setSearchQuery] = useState("")
-  const [profile, setProfile] = useState<Tables<"profiles">>();
-
-  profileService.getCurrentUserProfile().then((v) =>
-    setProfile(v)
-  ).catch(e => {
-    console.error(`No profile found: ${e}`)
-  })
+  const { profile } = useAuth()
 
 
   const { students: allStudents } = useStudents();
   const { teachers: allTeachers } = useTeachers();
-  const { data: allCourses } = useCourses();
+  const { data: allCourses } = useCourseInstances();
 
   const students = useMemo(() =>
     (allStudents && 'data' in allStudents ? allStudents.data : []),
@@ -95,7 +89,7 @@ export default function DashboardHeader() {
     } else if (result.type === "teacher") {
       router.push(`/teacher/${result.id}`)
     } else if (result.type === "course") {
-      router.push(`/course/${result.id}`)
+      router.push(`/course-instance/${result.id}`)
     }
     setSearchQuery("")
   }
@@ -127,7 +121,7 @@ export default function DashboardHeader() {
                   <Link href="/manager" className="p-2 hover:bg-slate-100 rounded-md transition-colors">Main Menu</Link>
                   <Link href="/manager/students" className="p-2 hover:bg-slate-100 rounded-md transition-colors">Students Registry</Link>
                   <Link href="/manager/teachers" className="p-2 hover:bg-slate-100 rounded-md transition-colors">Teachers Registry</Link>
-                  <Link href="/manager/courseInstances" className="p-2 hover:bg-slate-100 rounded-md transition-colors">Active courseInstances</Link>
+                  <Link href="/manager/course-instances" className="p-2 hover:bg-slate-100 rounded-md transition-colors">Active Course Instances</Link>
                   <Link href="/manager/payouts" className="p-2 hover:bg-slate-100 rounded-md transition-colors">Payments</Link>
                   <Link href="/manager/archive" className="p-2 hover:bg-slate-100 rounded-md transition-colors">Archives</Link>
                   <Link href="/manager/revenue" className="p-2 hover:bg-slate-100 rounded-md transition-colors">Revenue</Link>
@@ -142,7 +136,7 @@ export default function DashboardHeader() {
             <div className="relative">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
               <Input
-                placeholder="Search students, teachers, courseInstances..."
+                placeholder="Search students, teachers, course instances..."
                 className="pl-10"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}

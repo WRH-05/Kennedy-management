@@ -7,28 +7,22 @@ import { Tables } from "@/types/database.types"
 import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem } from "@/components/ui/dropdown-menu"
 import { Button } from "@/components/ui/button"
 import { MoreHorizontal } from "lucide-react"
-import { UpdateCourseDialog } from "./UpdateCourseDialog"
+import { UpdateCourseDialog } from "./UpdateGradeLevelsDialog"
 import { useState } from "react"
 
-interface CourseTableRowProps {
-  course: Tables<"courses">,
-  onCourseUpdated: () => void
+interface GradeLevelTableRowProps {
+  gradeLevel: Tables<"grade_levels">,
+  onGradeLevelUpdated: () => void
 }
 
-export function CourseTableRow({ course, onCourseUpdated }: CourseTableRowProps) {
+export function GradeLevelTableRow({ gradeLevel: gradeLevel, onGradeLevelUpdated: onGradeLevelUpdated }: GradeLevelTableRowProps) {
   // Move dialog state up to control it cleanly from the dropdown click
   const [isDialogOpen, setIsDialogOpen] = useState(false)
 
   return (
     <>
       <TableRow className="group">
-        <TableCell>
-          <Badge variant={course.type === "academic" ? "default" : "secondary"}>
-            {course.type}
-          </Badge>
-        </TableCell>
-
-        <TableCell>{course.name}</TableCell>
+        <TableCell>{gradeLevel.name}</TableCell>
         <TableCell>
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
@@ -51,8 +45,8 @@ export function CourseTableRow({ course, onCourseUpdated }: CourseTableRowProps)
 
       {/* Render the dialog outside the table row / dropdown flow completely */}
       <UpdateCourseDialog 
-        course={course} 
-        onCourseUpdated={onCourseUpdated} 
+        GradeLevel={gradeLevel} 
+        onGradeLevelUpdated={onGradeLevelUpdated} 
         open={isDialogOpen} 
         onOpenChange={setIsDialogOpen}
       />

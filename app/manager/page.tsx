@@ -1,7 +1,7 @@
 "use client"
 
 import Link from "next/link"
-import { ArrowRight, Users, BookOpen, DollarSign, Archive, LibraryBig, Banknote } from "lucide-react"
+import { ArrowRight, Users, BookOpen, DollarSign, Archive, LibraryBig, Banknote, Book, ScrollText } from "lucide-react"
 import { useAuth } from "@/context/AuthContext"
 
 export default function DashboardHubPage() {
@@ -51,6 +51,20 @@ export default function DashboardHubPage() {
       description: "Process partner and contractor earnings",
       href: `/manager/payouts`,
       icon: <Banknote className="h-5 w-5 text-green-700" />,
+      allowedRoles: ["manager"],
+    },
+    {
+      title: "Manage Courses",
+      description: "Process new courses",
+      href: `/manager/courses`,
+      icon: <Book className="h-5 w-5 text-green-700" />,
+      allowedRoles: ["manager"],
+    },
+    {
+      title: "Manage Levels",
+      description: "Process new Levels",
+      href: `/manager/gradeLevels`,
+      icon: <ScrollText className="h-5 w-5 text-green-700" />,
       allowedRoles: ["manager"],
     },
   ]

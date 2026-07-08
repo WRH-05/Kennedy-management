@@ -154,7 +154,7 @@ export default function PayoutsTab({
                     return (
                       <TableRow key={payout.id || index} className="group hover:bg-muted/50 transition-colors">
                         <TableCell className="font-medium">{renderNameCell(payout)}</TableCell>
-                        <TableCell className="font-medium"><Link href={`/course/${payout.course_instances?.id}`}>{payout.course_instances?.subject}</Link></TableCell>
+                        <TableCell className="font-medium"><Link href={`/course-instance/${payout.course_instances?.id}`}>{payout.course_instances?.subject}</Link></TableCell>
                         <TableCell className="font-semibold text-primary">{payout.amount.toLocaleString()} DA</TableCell>
                         <TableCell>{dateTime.date}</TableCell>
                         <TableCell>{dateTime.time}</TableCell>
@@ -231,7 +231,7 @@ export default function PayoutsTab({
                     return (
                       <TableRow key={payout.id || index} className="opacity-80 hover:opacity-100 transition-opacity">
                         <TableCell className="font-medium">{renderNameCell(payout)}</TableCell>
-                        <TableCell className="font-medium"><Link href={`/course/${payout.course_instances.id}`}>{payout.course_instances.subject}</Link></TableCell>
+                        <TableCell className="font-medium"><Link href={`/course-instance/${payout.course_instances.id}`}>{payout.course_instances.subject}</Link></TableCell>
                         <TableCell>{(payout.amount || 0).toLocaleString()} DA</TableCell>
                         <TableCell>{dateTime.date}</TableCell>
                         <TableCell>{dateTime.time}</TableCell>

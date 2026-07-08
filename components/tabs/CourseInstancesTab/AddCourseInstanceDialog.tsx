@@ -5,13 +5,13 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Badge } from "@/components/ui/badge"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 import { Plus } from "lucide-react"
 import { ScheduleSlotRow } from "./ScheduleSlotRow"
 import { courseInstancesService } from "@/services/courseInstancesService"
 import { useToast } from "@/hooks/use-toast"
 import { useTeachers } from "@/hooks/useTeachers"
+import { Database, Tables, TablesInsert } from "@/types/database.types"
 
 interface ScheduleSlot {
   dayOfWeek: string
@@ -19,13 +19,23 @@ interface ScheduleSlot {
   duration: number
 }
 
-interface AddCourseDialogProps {
+interface AddCourseInstanceDialogProps {
   onCourseAdded: (updatedCourses: any[]) => void
+}
+
+const calculateEndHour = (startHour: string, duration: number) => {
+  if (!startHour) return "--:--"
+  const [hours, minutes] = startHour.split(":").map(Number)
+  const startMinutes = hours * 60 + minutes
+  const endMinutes = startMinutes + duration * 60
+  const endHours = Math.floor(endMinutes / 60)
+  const endMins = endMinutes % 60
+  return `${endHours.toString().padStart(2, "0")}:${endMins.toString().padStart(2, "0")}`
 }
 
 const DAYS_OF_WEEK = ["monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday"]
 
-export function AddCourseDialog({ onCourseAdded }: AddCourseDialogProps) {
+export function AddCourseDialog({ onCourseAdded }: AddCourseInstanceDialogProps) {
   const { toast } = useToast()
   const [isOpen, setIsOpen] = useState(false)
   const [isSubmitting, setIsSubmitting] = useState(false)
@@ -103,8 +113,15 @@ export function AddCourseDialog({ onCourseAdded }: AddCourseDialogProps) {
         monthly_price: newCourse.price,
         status: "active",
       }
-
-      await courseInstancesService.addCourseInstance(coursePayload, scheduleSlots)
+      const schedule: TablesInsert<"course_schedule">[] = scheduleSlots.map(s => {
+        return {
+          course_id: '',
+          day: s.dayOfWeek as Database['public']['Enums']['week_day'],
+          start_time: s.startHour,
+          end_time: calculateEndHour(s.startHour, s.duration)
+        }
+      })
+      await courseInstancesService.addCourseInstance(coursePayload, schedule)
       const updatedCourses = await courseInstancesService.getAllCourseInstances()
       onCourseAdded(updatedCourses.data)
 

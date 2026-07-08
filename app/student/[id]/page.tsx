@@ -362,7 +362,7 @@ function StudentDashboardContent() {
                                 <Button
                                   variant="link"
                                   className="p-0 h-auto font-medium text-left"
-                                  onClick={() => router.push(`/course/${course.id}`)}
+                                  onClick={() => router.push(`/course-instance/${course.id}`)}
                                 >
                                   {course.subject} - {course.school_year}
                                 </Button>

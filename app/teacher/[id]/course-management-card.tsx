@@ -40,7 +40,7 @@ export function CourseManagementCard({ activeCourses, completedCourses }: Course
                   {activeCourses.map((course) => (
                     <TableRow key={course.id}>
                       <TableCell className="font-medium">
-                        <Link href={`/course/${course.id}`} className="hover:underline">
+                        <Link href={`/course-instance/${course.id}`} className="hover:underline">
                           {course.subject}
                         </Link>
                       </TableCell>

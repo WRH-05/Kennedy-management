@@ -1,7 +1,7 @@
 "use client"
 import { useMemo, useState } from "react"
 import { usePaginatedTeachers } from "@/hooks/useTeachers"
-import { useCourses } from "@/hooks/useCourses"
+import { useCourseInstances } from "@/hooks/useCourseInstances"
 import { usePendingArchives } from "@/hooks/usePayments"
 import TeachersTab from "@/components/tabs/TeachersTab"
 import { Pagination, PaginationContent, PaginationItem, PaginationLink, PaginationPrevious, PaginationNext, PaginationEllipsis } from "@/components/ui/pagination"
@@ -44,7 +44,7 @@ function getPageItems(page: number, totalPages: number) {
 export default function TeachersPage() {
   const [page, setPage] = useState(1)
   const { teachers: allTeachers, total, isLoading: isTeacherLoading, mutate } = usePaginatedTeachers(page, PAGE_SIZE)
-  const { courseInstances: allCourses, isLoading: isCourseLoading } = useCourses()
+  const { courseInstances: allCourses, isLoading: isCourseLoading } = useCourseInstances()
   const { data: pendingArchiveMap } = usePendingArchives()
 
   const teachers = useMemo(() =>

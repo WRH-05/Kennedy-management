@@ -1,35 +1,35 @@
 "use client"
 
 import useSWR, { mutate } from 'swr'
-import { courseInstancesService } from "@/services/courseInstancesService"
+import { coursesService } from '@/services/coursesService'
 import { swrConfig } from './swr-config'
 
 export function useCourses() {
   const { data, error, isLoading, isValidating } = useSWR(
-    'courseInstances',
-    () => courseInstancesService.getAllCourseInstances(),
+    'courses',
+    () => coursesService.getAllCourses(),
     swrConfig
   )
 
   return {
-    data: data?.data || [],
+    courses: data || [],
     isLoading,
     isValidating,
     error,
-    mutate: () => mutate('courseInstances'),
+    mutate: () => mutate('courses'),
   }
 }
 
 export function usePaginatedCourses(page: number, pageSize: number) {
-  const key = `courseInstances-page-${page}-size-${pageSize}`
+  const key = `courses-page-${page}-size-${pageSize}`
   const { data, error, isLoading, isValidating } = useSWR(
     key,
-    () => courseInstancesService.getAllCourseInstances(page, pageSize),
+    () => coursesService.getAllCourses(page, pageSize),
     swrConfig
   )
 
   return {
-    courseInstances: data?.data || [],
+    courses: data?.data || [],
     total: data?.total ?? 0,
     page: data?.page ?? page,
     pageSize: data?.pageSize ?? pageSize,
@@ -43,46 +43,15 @@ export function usePaginatedCourses(page: number, pageSize: number) {
 export function useCourse(id: string) {
   const { data, error, isLoading, isValidating } = useSWR(
     id ? `course-${id}` : null,
-    () => courseInstancesService.getCourseInstanceById(id),
+    () => coursesService.getCourseById(id),
     swrConfig
   )
+
   return {
     course: data,
     isLoading,
     isValidating,
     error,
     mutate: () => mutate(`course-${id}`),
-  }
-}
-
-export function useCoursesByTeacher(teacherId: string) {
-  const { data, error, isLoading, isValidating } = useSWR(
-    teacherId ? `courseInstances-teacher-${teacherId}` : null,
-    () => courseInstancesService.getCourseInstancesByTeacherId(teacherId),
-    swrConfig
-  )
-
-  return {
-    courseInstances: data || [],
-    isLoading,
-    isValidating,
-    error,
-    mutate: () => mutate(`courseInstances-teacher-${teacherId}`),
-  }
-}
-
-export function useCoursesByStudent(studentId: string ) {
-  const { data, error, isLoading, isValidating } = useSWR(
-    studentId ? `courseInstances-student-${studentId}` : null,
-    () => courseInstancesService.getCourseInstancesByStudentId(studentId),
-    swrConfig
-  )
-
-  return {
-    courseInstances: data || [],
-    isLoading,
-    isValidating,
-    error,
-    mutate: () => mutate(`courseInstances-student-${studentId}`),
   }
 }

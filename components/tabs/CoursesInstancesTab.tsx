@@ -3,14 +3,14 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Table, TableBody, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { BookOpen } from "lucide-react"
-import { AddCourseDialog } from "./CourseInstancesTab/AddCourseDialog"
-import { CourseTableRow } from "./CourseInstancesTab/CourseTableRow"
+import { AddCourseDialog } from "./CourseInstancesTab/AddCourseInstanceDialog"
+import { CourseInstanceTableRow } from "./CourseInstancesTab/CourseInstanceTableRow"
 import { archiveService } from "@/services/archiveService"
 import { useToast } from "@/hooks/use-toast"
 import { Tables } from "@/types/database.types"
 import { CourseInstanceWithEnrichment } from "@/services/courseInstancesService"
 
-interface CoursesTabProps {
+interface CourseIntancesTabProps {
   courseInstances: CourseInstanceWithEnrichment[]
   onCoursesUpdate: (courseInstances: CourseInstanceWithEnrichment[]) => void
   canAdd?: boolean
@@ -22,7 +22,7 @@ export default function CoursesTab({
   onCoursesUpdate,
   canAdd = false,
   pendingArchiveIds = new Set(),
-}: CoursesTabProps) {
+}: CourseIntancesTabProps) {
   const { toast } = useToast()
 
   const handleArchiveCourse = async (courseId: number, courseName: string) => {
@@ -72,7 +72,7 @@ export default function CoursesTab({
             </TableHeader>
             <TableBody>
               {courseInstances.map((course) => (
-                <CourseTableRow
+                <CourseInstanceTableRow
                   key={course.id}
                   course={course}
                   pendingArchiveIds={pendingArchiveIds}

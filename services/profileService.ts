@@ -1,20 +1,21 @@
 import { createClient } from "@/lib/supabase/client"
-import { Tables } from "@/types/database.types";
-
-const supabase = createClient();
+import { Tables } from "@/types/database.types"
 
 export const profileService = {
-    async getCurrentUserProfile(): Promise<Tables<"profiles">> {
-        const { data: { user }, error } = await supabase.auth.getUser()
-        if (error || !user) throw Error("No user found")
+  async getCurrentUserProfile(): Promise<Tables<"profiles">> {
+    const supabase = createClient()
 
-        const { data: profile } = await supabase
-            .from('profiles')
-            .select('*')
-            .eq('id', user.id)
-            .single()
-            .throwOnError()
+    const { data: { user }, error: authError } = await supabase.auth.getUser()
+    console.error(authError)
+    if (authError || !user) throw new Error("No user found")
 
-        return profile
-    }
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('*')
+      .eq('id', user.id)
+      .single()
+      .throwOnError()
+
+    return profile as Tables<"profiles">
+  }
 }

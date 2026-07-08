@@ -6,17 +6,16 @@ import { TableCell, TableRow } from "@/components/ui/table"
 import { Badge } from "@/components/ui/badge"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 import { MoreHorizontal, Pencil, Archive } from "lucide-react"
-import { courseEnrollmentService } from "@/services/courseEnrollmentService"
-import { useEffect, useMemo } from "react"
+import { useMemo } from "react"
 import { useCourseEnrollementStudentsByCourseId } from "@/hooks/useCourseEnrollement"
 
-interface CourseTableRowProps {
+interface CourseInstanceTableRowProps {
   course: any
   pendingArchiveIds: Set<string>
   onArchive: (courseId: number, courseName: string) => void
 }
 
-export function CourseTableRow({ course, pendingArchiveIds, onArchive }: CourseTableRowProps) {
+export function CourseInstanceTableRow({ course, pendingArchiveIds, onArchive }: CourseInstanceTableRowProps) {
   const router = useRouter()
   const { students: allStudents, isLoading } = useCourseEnrollementStudentsByCourseId(course.id);
   const students = useMemo(() => {
@@ -34,7 +33,7 @@ export function CourseTableRow({ course, pendingArchiveIds, onArchive }: CourseT
         <Button
           variant="link"
           className="p-0 h-auto font-medium text-left"
-          onClick={() => router.push(`/course/${course.id}`)}
+          onClick={() => router.push(`/course-instance/${course.id}`)}
         >
           {course.subject} - {course.school_year}
         </Button>
@@ -70,7 +69,7 @@ export function CourseTableRow({ course, pendingArchiveIds, onArchive }: CourseT
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
-              <DropdownMenuItem onClick={() => router.push(`/course/${course.id}`)}>
+              <DropdownMenuItem onClick={() => router.push(`/course-instance/${course.id}`)}>
                 <Pencil className="mr-2 h-4 w-4" /> Edit
               </DropdownMenuItem>
               <DropdownMenuItem
