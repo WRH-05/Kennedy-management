@@ -15,7 +15,7 @@ import {
 } from "@/components/ui/alert-dialog"
 
 import { teacherService } from "@/services/teacherService"
-import { CourseInstanceDetail, courseInstancesService, CourseInstanceWithEnrichment } from "@/services/courseInstancesService"
+import {  courseInstancesService, CourseInstanceWithEnrichment } from "@/services/courseInstancesService"
 
 // Sub-components imports
 import { TeacherHeader } from "./teacher-header"
@@ -31,7 +31,7 @@ function TeacherProfileContent() {
   
   const [teacher, setTeacher] = useState<Tables<"teachers"> | null>(null)
   const [isEditing, setIsEditing] = useState(false)
-  const [editedTeacher, setEditedTeacher] = useState<TablesUpdate<"teachers">>()
+  const [editedTeacher, setEditedTeacher] = useState<TablesUpdate<"teachers">>({})
   const [courseInstances, setCourses] = useState<CourseInstanceWithEnrichment[]>([])
   const [showSaveConfirmation, setShowSaveConfirmation] = useState(false)
   const [loading, setLoading] = useState(true)

@@ -4,6 +4,11 @@ import { createClient } from "@/lib/supabase/client"
 
 const supabase = createClient();
 
+export type AssociatedGradeLevelsCourses = {
+    courses: Tables<"courses">,
+    grade_levels: Tables<"grade_levels">
+}
+
 export const gradeLevelsService = {
     async getAllGradeLevels(
         page = 1,
@@ -35,6 +40,35 @@ export const gradeLevelsService = {
             pageSize: pageSize > 0 ? pageSize : finalData.length,
         };
     },
+
+    async getAllGradeLevelsByName(
+        name: string,
+        page = 1,
+        pageSize = 0
+    ): Promise<{ data: Tables<"grade_levels">[]; total: number; page: number; pageSize: number }> {
+        let query = supabase
+            .from('grade_levels')
+            .select('*', { count: 'exact' })
+            .ilike('name', `%${name}%`)
+            .order('created_at', { ascending: false });
+
+        if (pageSize > 0) {
+            const from = (page - 1) * pageSize;
+            const to = from + pageSize - 1;
+            query = query.range(from, to);
+        }
+
+        const { data, count } = await query.throwOnError();
+        const finalData = data || [];
+
+        return {
+            data: finalData,
+            total: count ?? finalData.length,
+            page,
+            pageSize: pageSize > 0 ? pageSize : finalData.length,
+        };
+    },
+
 
     async getGradeLevelById(id: string): Promise<Tables<"grade_levels">> {
 

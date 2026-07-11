@@ -44,7 +44,7 @@ function getPageItems(page: number, totalPages: number) {
 export default function TeachersPage() {
   const [page, setPage] = useState(1)
   const { teachers: allTeachers, total, isLoading: isTeacherLoading, mutate } = usePaginatedTeachers(page, PAGE_SIZE)
-  const { courseInstances: allCourses, isLoading: isCourseLoading } = useCourseInstances()
+  const { data: allCourses, isLoading: isCourseLoading } = useCourseInstances()
   const { data: pendingArchiveMap } = usePendingArchives()
 
   const teachers = useMemo(() =>

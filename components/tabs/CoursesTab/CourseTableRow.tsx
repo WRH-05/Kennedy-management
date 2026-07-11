@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button"
 import { MoreHorizontal } from "lucide-react"
 import { UpdateCourseDialog } from "./UpdateCourseDialog"
 import { useState } from "react"
+import { useRouter } from "next/navigation"
 
 interface CourseTableRowProps {
   course: Tables<"courses">,
@@ -19,6 +20,8 @@ export function CourseTableRow({ course, onCourseUpdated }: CourseTableRowProps)
   // Move dialog state up to control it cleanly from the dropdown click
   const [isDialogOpen, setIsDialogOpen] = useState(false)
 
+  const router = useRouter()
+
   return (
     <>
       <TableRow className="group">
@@ -28,7 +31,16 @@ export function CourseTableRow({ course, onCourseUpdated }: CourseTableRowProps)
           </Badge>
         </TableCell>
 
-        <TableCell>{course.name}</TableCell>
+        <TableCell>
+          <Button
+                    variant="link"
+                    className="p-0 h-auto font-medium text-left"
+                    onClick={() => router.push(`/course/${course.id}`)}
+                  >
+                   {course.name}
+                  </Button>
+          
+        </TableCell>
         <TableCell>
           <DropdownMenu>
             <DropdownMenuTrigger asChild>

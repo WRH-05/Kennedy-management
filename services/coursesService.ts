@@ -36,6 +36,34 @@ export const coursesService = {
         };
     },
 
+    async getAllCoursesByName(
+            name: string,
+            page = 1,
+            pageSize = 0
+        ): Promise<{ data: Tables<"courses">[]; total: number; page: number; pageSize: number }> {
+            let query = supabase
+                .from('courses')
+                .select('*', { count: 'exact' })
+                .ilike('name', `%${name}%`)
+                .order('created_at', { ascending: false });
+    
+            if (pageSize > 0) {
+                const from = (page - 1) * pageSize;
+                const to = from + pageSize - 1;
+                query = query.range(from, to);
+            }
+    
+            const { data, count } = await query.throwOnError();
+            const finalData = data || [];
+    
+            return {
+                data: finalData,
+                total: count ?? finalData.length,
+                page,
+                pageSize: pageSize > 0 ? pageSize : finalData.length,
+            };
+        },
+
     async getCourseById(id: string): Promise<Tables<"courses">> {
 
         const { data } = await supabase
@@ -59,7 +87,7 @@ export const coursesService = {
         return data
     },
 
-    async updateCourse(id: number, updatedData: TablesUpdate<"courses">): Promise<Tables<"courses">> {
+    async updateCourse(id: string, updatedData: TablesUpdate<"courses">): Promise<Tables<"courses">> {
         const { data } = await supabase
             .from('courses')
             .update(updatedData)
@@ -71,7 +99,7 @@ export const coursesService = {
         return data
     },
 
-    async deleteCourse(id: number): Promise<Tables<"courses">> {
+    async deleteCourse(id: string): Promise<Tables<"courses">> {
         const { data } = await supabase
             .from('courses')
             .delete()
