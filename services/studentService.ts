@@ -46,11 +46,11 @@ export const studentService = {
     };
   },
 
-  async getStudentById(id: string): Promise<Tables<"students">> {
+  async getStudentById(id: string): Promise<EnrichedStudent> {
 
     const { data } = await supabase
       .from('students')
-      .select('*')
+      .select('*, grade_levels(*)')
       .eq('id', id)
       .single()
       .throwOnError()
@@ -69,12 +69,13 @@ export const studentService = {
     return data
   },
 
-  async updateStudent(id: string, updatedData: TablesUpdate<"students">): Promise<Tables<"students">> {
+  async updateStudent(id: string, updatedData: TablesUpdate<"students">): Promise<EnrichedStudent> {
+    console.log(updatedData)
     const { data } = await supabase
       .from('students')
       .update(updatedData)
       .eq('id', id)
-      .select()
+      .select('*, grade_levels(*)')
       .single()
       .throwOnError()
 

@@ -23,7 +23,6 @@ export function AddStudentDialog({ onStudentAdded }: AddStudentDialogProps) {
     const [isSubmitting, setIsSubmitting] = useState(false)
     const [gradeSearchQuery, setGradeSearchQuery] = useState("")
     const [showGradeLevelsResults, setShowGradeLevelsResults] = useState(false)
-    const [selectedLevel, setSelectedLevel] = useState("")
     const [filteredGradeLevels, setFilteredGradeLevels] = useState<Tables<"grade_levels">[]>([])
 
     const inputSearch = (name: string) => {
