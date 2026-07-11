@@ -4,16 +4,20 @@ import { createClient } from "@/lib/supabase/client"
 
 const supabase = createClient();
 
+export type EnrichedStudent = Tables<"students"> & {
+  grade_levels: Tables<"grade_levels">
+}
+
 export const studentService = {
   // Get all students (excluding archived unless specified)
   async getAllStudents(
     page = 1,
     pageSize = 0,
     includeArchived = false
-  ): Promise<{ data: Tables<"students">[]; total: number; page: number; pageSize: number }> {
+  ): Promise<{ data: EnrichedStudent[]; total: number; page: number; pageSize: number }> {
     let query = supabase
       .from('students')
-      .select('*', { count: pageSize > 0 ? 'exact' : 'estimated' });
+      .select('*, grade_levels(*)', { count: pageSize > 0 ? 'exact' : 'estimated' });
 
     if (!includeArchived) {
       query = query.eq('archived', false);
@@ -103,7 +107,7 @@ export const studentService = {
 
     return data
   },
-  
+
   async unarchiveStudent(id: string): Promise<Tables<"students">> {
     const { data } = await supabase
       .from('students')

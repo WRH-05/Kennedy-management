@@ -67,7 +67,6 @@ export default function StudentsPage() {
         students={studentList}
         onStudentsUpdate={() => mutate()}
         canAdd={true}
-        showCourses={true}
         showPaymentStatus={true}
         pendingArchiveIds={pendingArchiveMap?.student || new Set()}
       />
