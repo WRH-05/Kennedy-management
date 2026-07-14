@@ -8,11 +8,11 @@ import { Badge } from "@/components/ui/badge"
 import { Users } from "lucide-react"
 import { AddStudentDialog } from "./StudentsTab/AddStudentDialog"
 import { StudentActionsMenu } from "./StudentsTab/StudentActionsMenu"
-import { EnrichedStudent } from "@/services/studentService"
+import { Student } from "@/services/studentService"
 import { TablesUpdate } from "@/types/database.types"
 
 interface StudentsTabProps {
-  students: EnrichedStudent[]
+  students: Student[]
   onStudentsUpdate: (students: TablesUpdate<"students">[]) => void
   canAdd?: boolean
   showPaymentStatus?: boolean
@@ -63,8 +63,6 @@ export default function StudentsTab({
                     </Button>
                   </TableCell>
                   <TableCell className="capitalize">{student.grade_levels.name}</TableCell>
-
-                  {/* Fixed: You headers dynamically accounted for this field but the map cell skipped it */}
                   {showPaymentStatus && (
                     <TableCell>
                       <Badge variant={student.registration_fee_paid ? "default" : "destructive"}>

@@ -8,16 +8,21 @@ export type EnrichedStudent = Tables<"students"> & {
   grade_levels: Tables<"grade_levels">
 }
 
+export type StudentsResponse = Awaited<
+  ReturnType<typeof studentService.getAllStudents>
+>
+
+export type Student = StudentsResponse['data'][number]
+
 export const studentService = {
-  // Get all students (excluding archived unless specified)
   async getAllStudents(
     page = 1,
     pageSize = 0,
     includeArchived = false
-  ): Promise<{ data: EnrichedStudent[]; total: number; page: number; pageSize: number }> {
+  ) {
     let query = supabase
       .from('students')
-      .select('*, grade_levels(*)', { count: pageSize > 0 ? 'exact' : 'estimated' });
+      .select('*, grade_levels(*), course_enrollments(*, course_instances(*)), student_payments(*, course_instances(*))', { count: pageSize > 0 ? 'exact' : 'estimated' });
 
     if (!includeArchived) {
       query = query.eq('archived', false);
