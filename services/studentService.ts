@@ -14,6 +14,8 @@ export type StudentsResponse = Awaited<
 
 export type Student = StudentsResponse['data'][number]
 
+const studentQuery = '*, grade_levels(*), course_enrollments(*, course_instances(*, teachers(*), course_eligibility(id, courses(*), grade_levels(*)))), student_payments(*, course_instances(*))'
+
 export const studentService = {
   async getAllStudents(
     page = 1,
@@ -22,7 +24,7 @@ export const studentService = {
   ) {
     let query = supabase
       .from('students')
-      .select('*, grade_levels(*), course_enrollments(*, course_instances(*)), student_payments(*, course_instances(*))', { count: pageSize > 0 ? 'exact' : 'estimated' });
+      .select(studentQuery, { count: pageSize > 0 ? 'exact' : 'estimated' });
 
     if (!includeArchived) {
       query = query.eq('archived', false);
@@ -51,11 +53,11 @@ export const studentService = {
     };
   },
 
-  async getStudentById(id: string): Promise<EnrichedStudent> {
+  async getStudentById(id: string) {
 
     const { data } = await supabase
       .from('students')
-      .select('*, grade_levels(*)')
+      .select(studentQuery)
       .eq('id', id)
       .single()
       .throwOnError()
@@ -74,13 +76,23 @@ export const studentService = {
     return data
   },
 
-  async updateStudent(id: string, updatedData: TablesUpdate<"students">): Promise<EnrichedStudent> {
-    console.log(updatedData)
+  async updateStudent(id: string, updatedData: TablesUpdate<"students">) {
+    const cleanedData = {
+      address: updatedData.address,
+      archived: updatedData.archived,
+      birth_date: updatedData.birth_date,
+      email: updatedData.email,
+      name: updatedData.name,
+      phone: updatedData.phone,
+      registration_fee_paid: updatedData.registration_fee_paid,
+      school: updatedData.school,
+      school_level: updatedData.school_level,
+    }
     const { data } = await supabase
       .from('students')
-      .update(updatedData)
+      .update(cleanedData)
       .eq('id', id)
-      .select('*, grade_levels(*)')
+      .select(studentQuery)
       .single()
       .throwOnError()
 

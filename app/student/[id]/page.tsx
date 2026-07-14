@@ -22,8 +22,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
 import { ArrowLeft, Download, User, BookOpen, AlertTriangle, CheckCircle } from "lucide-react"
-import { EnrichedStudent, studentService } from "@/services/studentService"
-import { courseInstancesService, CourseInstanceWithEnrichment } from "@/services/courseInstancesService"
+import { Student, studentService } from "@/services/studentService"
 import { Tables, TablesUpdate } from "@/types/database.types"
 import { gradeLevelsService } from "@/services/gradeLevelsService"
 
@@ -31,10 +30,8 @@ function StudentDashboardContent() {
   const router = useRouter()
   const params = useParams()
   const studentId = params.id as string
-  const [student, setStudent] = useState<EnrichedStudent>()
+  const [student, setStudent] = useState<Student>()
   const [editedStudent, setEditedStudent] = useState<TablesUpdate<"students">>()
-  const [courseInstances, setCourses] = useState<CourseInstanceWithEnrichment[]>([])
-  const [payments, setPayments] = useState<Tables<"student_payments">[]>([])
   const [loading, setLoading] = useState(true)
   const [isEditing, setIsEditing] = useState(false)
   const [showSaveConfirmation, setShowSaveConfirmation] = useState(false)
@@ -65,8 +62,6 @@ function StudentDashboardContent() {
         setEditedStudent({
           ...cleaned
         })
-        const studentCourses = await courseInstancesService.getCourseInstancesByStudentId(studentId)
-        setCourses(studentCourses)
       } catch (error) {
         console.error(error)
       } finally {
@@ -127,19 +122,20 @@ function StudentDashboardContent() {
     )
   }
 
-  const studentCourses = courseInstances.filter((course) => course.student_ids?.includes(studentId))
-  const activeCourses = studentCourses.filter((course) => !course.archived)
-  const completedCourses = studentCourses.filter((course) => course.archived)
+  const studentCourseInstances = student.course_enrollments.flatMap((ce) => ce.course_instances)
+  const activeCourses = studentCourseInstances.filter((course) => !course.archived)
+  const completedCourses = studentCourseInstances.filter((course) => course.archived)
 
-  const totalMonthlyFees = activeCourses.reduce((sum, course) => sum + (course.monthly_price || 0), 0)
-  const paidThisMonth = 0 // Payment tracking to be implemented with payments table
+  const payments = student.student_payments
+
+  const totalMonthlyFees = student.course_enrollments.reduce((sum, ce) => ce.status === "enrolled" ? sum + (ce.course_instances.monthly_price || 0) : sum + 0, 0)
+  const paidThisMonth = '?' // Payment tracking to be implemented with payments table
 
   // Calculate alerts
-  const missedPayments = 0 // Payment tracking to be implemented with payments table
+  const missedPayments = payments.filter((p) => p.status == 'paid').length
 
   return (
     <div className="min-h-screen bg-gray-50">
-      {/* Header */}
       <header className="bg-white shadow-sm border-b">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-16">
@@ -168,7 +164,6 @@ function StudentDashboardContent() {
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          {/* Student Info */}
           <div className="lg:col-span-1 space-y-6">
             <Card>
               <CardHeader>
@@ -195,10 +190,9 @@ function StudentDashboardContent() {
                   <div className="space-y-2">
                     <Label htmlFor="school_year">School Level</Label>
                     {isEditing ? (
-                      // Added "relative" here so the absolute dropdown anchors perfectly
                       <div className="relative">
                         <Input
-                          id="studentSearch"
+                          id=";evelSearch"
                           placeholder="Search for a level..."
                           value={gradeSearchQuery}
                           onChange={(e) => {
@@ -206,7 +200,6 @@ function StudentDashboardContent() {
                             setShowGradeLevelsResults(e.target.value.length > 0)
                             inputSearch(e.target.value)
                           }}
-                          // Fixed: Use standard timeout cleanup if necessary, or keep the buffer
                           onBlur={() => setTimeout(() => setShowGradeLevelsResults(false), 150)}
                           onFocus={() => setShowGradeLevelsResults(gradeSearchQuery.length > 0)}
                           required
@@ -378,7 +371,7 @@ function StudentDashboardContent() {
                 <div className="space-y-6">
                   {/* Active courseInstances */}
                   <div>
-                    <h3 className="font-medium text-lg mb-4">Active courseInstances</h3>
+                    <h3 className="font-medium text-lg mb-4">Active Course Instances</h3>
                     <Table>
                       <TableHeader>
                         <TableRow>
@@ -401,7 +394,7 @@ function StudentDashboardContent() {
                                   className="p-0 h-auto font-medium text-left"
                                   onClick={() => router.push(`/course-instance/${course.id}`)}
                                 >
-                                  {course.subject} - {course.school_year}
+                                  {course.course_eligibility.courses.name} - {course.course_eligibility.grade_levels?.name}
                                 </Button>
                               </TableCell>
                               <TableCell>
@@ -444,7 +437,7 @@ function StudentDashboardContent() {
                           {completedCourses.map((course) => (
                             <TableRow key={course.id} className="opacity-60">
                               <TableCell className="font-medium">
-                                {course.subject} - {course.school_year}
+                                {course.course_eligibility.courses.name} - {course.course_eligibility.grade_levels?.name}
                               </TableCell>
                               <TableCell>
                                 <Button
