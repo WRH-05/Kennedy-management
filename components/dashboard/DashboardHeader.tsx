@@ -1,15 +1,11 @@
 "use client"
-import { useState, useMemo } from "react"
+import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
 import { authService } from "@/services/authService"
-import { useStudents } from "@/hooks/useStudents"
-import { useTeachers } from "@/hooks/useTeachers"
-import { useCourseInstances } from "@/hooks/useCourseInstances"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
-// Imported Sheet components for the side slider
 import {
   Sheet,
   SheetContent,
@@ -19,37 +15,14 @@ import {
   SheetTrigger,
 } from "@/components/ui/sheet"
 import { Search, LogOut, Menu } from "lucide-react"
-import { Tables } from "@/types/database.types"
-import { profileService } from "@/services/profileService"
-import { CourseInstanceWithEnrichment } from "@/services/courseInstancesService"
 import { useAuth } from "@/context/AuthContext"
-
-
+import { FoundPeople, searchAllCourseInstancesTeachersStudents } from "@/services/courseInstanceTeacherStudentSearch"
 
 export default function DashboardHeader() {
   const router = useRouter()
   const [searchQuery, setSearchQuery] = useState("")
+  const [searchResults, setSearchResult] = useState<FoundPeople[]>([])
   const { profile } = useAuth()
-
-
-  const { students: allStudents } = useStudents();
-  const { teachers: allTeachers } = useTeachers();
-  const { data: allCourses } = useCourseInstances();
-
-  const students = useMemo(() =>
-    (allStudents && 'data' in allStudents ? allStudents.data : []),
-    [allStudents]
-  )
-
-  const teachers = useMemo(() =>
-    (allTeachers && 'data' in allTeachers ? allTeachers.data : []),
-    [allTeachers]
-  )
-
-  const courseInstances = useMemo(() =>
-    (allCourses),
-    [allCourses]
-  )
 
   const handleSignOut = async () => {
     await authService.signOut()
@@ -67,38 +40,38 @@ export default function DashboardHeader() {
       )
     )
 
-  const searchResults = useMemo(() => {
-    if (!searchQuery.trim()) return []
+  // Debounced Search Effect
+  useEffect(() => {
+    // 1. Immediately clear results if query is empty
+    if (!searchQuery.trim()) {
+      setSearchResult([])
+      return
+    }
 
-    const query = searchQuery.toLowerCase()
+    // 2. Set up a 200ms debounce timer
+    const delayDebounceFn = setTimeout(() => {
+      const query = searchQuery.toLowerCase()
 
-    const studentResults = students
-      .filter((student: Tables<"students">) => student.name?.toLowerCase().includes(query))
-      .map((student: Tables<"students">) => ({ ...student, type: "student" }))
+      searchAllCourseInstancesTeachersStudents(query)
+        .then((cits) => {
+          setSearchResult(cits.data)
+        })
+        .catch((e) => {
+          console.error("Can't perform search: ", e)
+        })
+    }, 200) // 200ms delay
 
-    const teacherResults = teachers
-      .filter((teacher: Tables<"teachers">) => teacher.name?.toLowerCase().includes(query))
-      .map((teacher: Tables<"teachers">) => ({ ...teacher, type: "teacher" }))
-
-    const courseResults = courseInstances
-      .filter(
-        (course: CourseInstanceWithEnrichment) =>
-          course.teachers.name?.toLowerCase().includes(query),
-      )
-      .map((course: CourseInstanceWithEnrichment) => ({ ...course, type: "course" }))
-
-    return [...studentResults, ...teacherResults, ...courseResults]
-  }, [searchQuery, students, teachers, courseInstances])
+    // 3. Clean up the timer if the user types again before 200ms passes
+    return () => clearTimeout(delayDebounceFn)
+  }, [searchQuery])
 
   const showSearchResults = searchQuery.trim().length > 0 && searchResults.length > 0
 
-  const handleSearchResultClick = (result: { id: string, type: "student" | "teacher" | "course" }) => {
+  const handleSearchResultClick = (result: FoundPeople) => {
     if (result.type === "student") {
       router.push(`/student/${result.id}`)
     } else if (result.type === "teacher") {
       router.push(`/teacher/${result.id}`)
-    } else if (result.type === "course") {
-      router.push(`/course-instance/${result.id}`)
     }
     setSearchQuery("")
   }
@@ -124,7 +97,6 @@ export default function DashboardHeader() {
 
               {/* Content inside the slider */}
               <div className="py-6 flex flex-col gap-4">
-
                 <div className="flex flex-col gap-2 text-sm border-t pt-4">
                   <p className="font-medium text-slate-900">Mobile Navigation</p>
                   <Link href="/manager" className="p-2 hover:bg-slate-100 rounded-md transition-colors">Main Menu</Link>
@@ -138,10 +110,9 @@ export default function DashboardHeader() {
               </div>
             </SheetContent>
           </Sheet>
+
           {/* Search Bar */}
           <div className="flex-1 max-w-md mx-4 relative">
-
-
             <div className="relative">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
               <Input
@@ -170,18 +141,6 @@ export default function DashboardHeader() {
                         {result.type === "student" ? "Student" : result.type === "teacher" ? "Teacher" : "Course"}
                       </Badge>
                     </div>
-                    {result.type === "student" && (
-                      <p className="text-sm text-gray-600">
-                        {result.school_year} - {result.school}
-                      </p>
-                    )}
-                    {result.type === "teacher" && (
-                      <p className="text-sm text-gray-600">
-                        {getTeacherSubjects(result).length > 0
-                          ? getTeacherSubjects(result).join(", ")
-                          : "No subjects"}
-                      </p>
-                    )}
                     {result.type === "course" && (
                       <p className="text-sm text-gray-600">
                         {result.teacher_name} - {result.school_year} - {result.schedule}
@@ -195,7 +154,6 @@ export default function DashboardHeader() {
 
           {/* Right Side Actions */}
           <div className="flex items-center space-x-2 sm:space-x-4 shrink-0">
-
             <span className="text-sm text-gray-600 hidden lg:inline">
               Welcome, {profile?.full_name || 'Manager'}
             </span>
