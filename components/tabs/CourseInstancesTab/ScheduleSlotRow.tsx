@@ -52,9 +52,6 @@ export function ScheduleSlotRow({
           <SelectTrigger className="h-9">
             <SelectValue placeholder="Select day" />
           </SelectTrigger>
-          <SelectTrigger className="h-9">
-            <SelectValue placeholder="Select day" />
-          </SelectTrigger>
           <SelectContent>
             {daysOfWeek.map((d) => (
               <SelectItem key={d} value={d}>

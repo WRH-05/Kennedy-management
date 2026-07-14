@@ -10,8 +10,8 @@ import { Plus } from "lucide-react"
 import { ScheduleSlotRow } from "./ScheduleSlotRow"
 import { courseInstancesService } from "@/services/courseInstancesService"
 import { useToast } from "@/hooks/use-toast"
-import { useTeachers } from "@/hooks/useTeachers"
-import { Database, Tables, TablesInsert } from "@/types/database.types"
+import { Database, TablesInsert } from "@/types/database.types"
+import { Teacher, teacherService } from "@/services/teacherService"
 
 interface ScheduleSlot {
   dayOfWeek: string
@@ -39,22 +39,12 @@ export function AddCourseDialog({ onCourseAdded }: AddCourseInstanceDialogProps)
   const { toast } = useToast()
   const [isOpen, setIsOpen] = useState(false)
   const [isSubmitting, setIsSubmitting] = useState(false)
-  const [selectedPrivateStudents, setSelectedPrivateStudents] = useState<string[]>([])
   const [newCourse, setNewCourse] = useState({
     teacherId: "",
-    teacherName: "",
-    subject: "",
-    schoolYear: "",
+    course_eligibility_id: "",
     percentageCut: 50,
-    courseType: "Group",
     price: 500,
   })
-
-  const { teachers: allTeachers, isLoading: loading } = useTeachers()
-  const teachers = useMemo(() => {
-    const list = Array.isArray(allTeachers) ? allTeachers : allTeachers?.data;
-    return list;
-  }, [allTeachers]);
 
   const [scheduleSlots, setScheduleSlots] = useState<ScheduleSlot[]>([
     { dayOfWeek: "", startHour: "09:00", duration: 2 },
@@ -62,20 +52,25 @@ export function AddCourseDialog({ onCourseAdded }: AddCourseInstanceDialogProps)
 
   const [teacherSearchQuery, setTeacherSearchQuery] = useState("")
   const [showTeacherResults, setShowTeacherResults] = useState(false)
-  const [filteredTeachers, setFilteredTeachers] = useState<any[]>([])
+  const [filteredTeachers, setFilteredTeachers] = useState<Teacher[]>([])
+  const [selectedTeacherData, setSelectedTeacherData] = useState<Teacher>()
 
   useEffect(() => {
     if (teacherSearchQuery.trim()) {
-      const filtered = teachers.filter((t) =>
-        t.name.toLowerCase().includes(teacherSearchQuery.toLowerCase())
-      )
-      setFilteredTeachers(filtered)
+      teacherService.searchAllTeachers(teacherSearchQuery)
+        .then((response) => {
+          setFilteredTeachers(response.data);
+          console.log(response.data)
+        })
+        .catch((e) => {
+          console.error('Teacher Search Error: ', e)
+        })
       setShowTeacherResults(true)
     } else {
       setFilteredTeachers([])
       setShowTeacherResults(false)
     }
-  }, [teacherSearchQuery, teachers])
+  }, [teacherSearchQuery])
 
   const handleUpdateSlot = (index: number, fields: Partial<ScheduleSlot>) => {
     setScheduleSlots(scheduleSlots.map((slot, i) => (i === index ? { ...slot, ...fields } : slot)))
@@ -96,22 +91,18 @@ export function AddCourseDialog({ onCourseAdded }: AddCourseInstanceDialogProps)
 
     setIsSubmitting(true)
     try {
-      const teacher = teachers.find((t) => t.id.toString() === newCourse.teacherId)
-      if (!teacher) {
+      if (!selectedTeacherData) {
         toast({ title: "Error", description: "Selected teacher not found", variant: "destructive" })
         setIsSubmitting(false)
         return
       }
 
       const coursePayload = {
-        teacher_id: teacher.id,
-        subject: newCourse.subject,
-        school_year: newCourse.schoolYear,
+        teacher_id: selectedTeacherData.id,
         percentage_cut: newCourse.percentageCut,
-        course_type: newCourse.courseType,
+        course_eligibility_id: newCourse.course_eligibility_id,
         price: newCourse.price,
         monthly_price: newCourse.price,
-        status: "active",
       }
       const schedule: TablesInsert<"course_schedule">[] = scheduleSlots.map(s => {
         return {
@@ -128,21 +119,17 @@ export function AddCourseDialog({ onCourseAdded }: AddCourseInstanceDialogProps)
       // Reset
       setNewCourse({
         teacherId: "",
-        teacherName: "",
-        subject: "",
-        schoolYear: "",
+        course_eligibility_id: '',
         percentageCut: 50,
-        courseType: "Group",
         price: 500,
       })
       setScheduleSlots([{ dayOfWeek: "", startHour: "09:00", duration: 2 }])
-      setSelectedPrivateStudents([])
       setTeacherSearchQuery("")
       setIsOpen(false)
 
       toast({
         title: "Course added",
-        description: `${coursePayload.subject} has been successfully added.`,
+        description: `Course Instance has been successfully added.`,
       })
     } catch (error) {
       toast({
@@ -154,31 +141,6 @@ export function AddCourseDialog({ onCourseAdded }: AddCourseInstanceDialogProps)
       setIsSubmitting(false)
     }
   }
-
-  const selectedTeacherData = teachers.find((t) => t.id.toString() === newCourse.teacherId)
-
-  const getTeacherSubjects = (teacher: any) =>
-    Array.from(
-      new Set(
-        teacher?.teachers_course_eligibility?.flatMap((eligibility: any) =>
-          eligibility.course_eligibility?.courses?.name
-            ? [eligibility.course_eligibility.courses.name]
-            : []
-        ) ?? []
-      )
-    )
-
-  const getTeacherSchoolYears = (teacher: any) =>
-    Array.from(
-      new Set(
-        teacher?.teachers_course_eligibility?.flatMap((eligibility: any) =>
-          eligibility.course_eligibility?.grade_levels?.name
-            ? [eligibility.course_eligibility.grade_levels.name]
-            : []
-        ) ?? []
-      )
-    )
-
   return (
     <Dialog open={isOpen} onOpenChange={setIsOpen}>
       <DialogTrigger asChild>
@@ -200,6 +162,7 @@ export function AddCourseDialog({ onCourseAdded }: AddCourseInstanceDialogProps)
                 <Input
                   id="teacherSearch"
                   placeholder="Search for a teacher..."
+                  autoComplete="off"
                   value={teacherSearchQuery}
                   onChange={(e) => setTeacherSearchQuery(e.target.value)}
                   required
@@ -214,8 +177,8 @@ export function AddCourseDialog({ onCourseAdded }: AddCourseInstanceDialogProps)
                           setNewCourse({
                             ...newCourse,
                             teacherId: teacher.id.toString(),
-                            teacherName: teacher.name,
                           })
+                          setSelectedTeacherData(teacher)
                           setTeacherSearchQuery(teacher.name)
                           setShowTeacherResults(false)
                         }}
@@ -228,44 +191,23 @@ export function AddCourseDialog({ onCourseAdded }: AddCourseInstanceDialogProps)
               </div>
             </div>
 
-            {newCourse.teacherId && (
+            {selectedTeacherData && (
               <>
                 {/* Subject Selector */}
                 <div className="space-y-2">
-                  <Label htmlFor="subject">Subject</Label>
+                  <Label htmlFor="subject">Subject & Grade</Label>
                   <Select
-                    value={newCourse.subject}
-                    onValueChange={(val) => setNewCourse({ ...newCourse, subject: val })}
+                    value={newCourse.course_eligibility_id}
+                    onValueChange={(val) => setNewCourse({ ...newCourse, course_eligibility_id: val })}
                     required
                   >
                     <SelectTrigger>
                       <SelectValue placeholder="Select subject" />
                     </SelectTrigger>
                     <SelectContent>
-                      {getTeacherSubjects(selectedTeacherData).map((subject: string) => (
-                        <SelectItem key={subject} value={subject}>
-                          {subject}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                {/* School Year Selector */}
-                <div className="space-y-2">
-                  <Label htmlFor="schoolYear">School Year</Label>
-                  <Select
-                    value={newCourse.schoolYear}
-                    onValueChange={(val) => setNewCourse({ ...newCourse, schoolYear: val })}
-                    required
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select school year" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {getTeacherSchoolYears(selectedTeacherData).map((year: string) => (
-                        <SelectItem key={year.trim()} value={year.trim()}>
-                          {year.trim()}
+                      {selectedTeacherData.teachers_course_eligibility.map((tce) => (
+                        <SelectItem key={tce.course_eligibility.id} value={tce.course_eligibility.id}>
+                          {tce.course_eligibility.courses.name + ' ' + tce.course_eligibility.grade_levels?.name}
                         </SelectItem>
                       ))}
                     </SelectContent>
@@ -287,28 +229,7 @@ export function AddCourseDialog({ onCourseAdded }: AddCourseInstanceDialogProps)
               />
             </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="courseType">Course Type</Label>
-              <Select
-                value={newCourse.courseType}
-                onValueChange={(val) => {
-                  setNewCourse({ ...newCourse, courseType: val })
-                  if (val !== "Private") setSelectedPrivateStudents([])
-                }}
-                required
-              >
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="Group">Group</SelectItem>
-                  <SelectItem value="Private">Private</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
 
-
-            {/* Dynamic Multi-Schedule Sub-Section */}
             <div className="space-y-3 md:col-span-2 border border-slate-100 p-4 rounded-lg bg-slate-50/50">
               <div className="flex justify-between items-center mb-1">
                 <Label className="text-sm font-semibold text-slate-800">Course Schedule Slots</Label>

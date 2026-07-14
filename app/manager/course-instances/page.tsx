@@ -52,7 +52,7 @@ export default function CoursesPage() {
 
 
 
-  if (isCourseLoading) return <div className="p-8 text-center text-gray-500">Loading courseInstances Directory...</div>
+  if (isCourseLoading) return <div className="p-8 text-center text-gray-500">Loading Course Instances...</div>
 
   const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE))
 

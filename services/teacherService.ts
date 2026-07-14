@@ -51,6 +51,52 @@ export const teacherService = {
 
     },
 
+    async searchAllTeachers(
+        name: string,
+        page = 1,
+        pageSize = 0,
+        includeArchived = false
+    ) {
+
+        let query = supabase
+            .from('teachers')
+            .select('*, teachers_course_eligibility(course_eligibility(id, courses(*), grade_levels(*)))', { count: pageSize > 0 ? 'exact' : 'estimated' })
+        if (name && name.trim().length > 0) {
+            const words = name.trim().split(/\s+/).filter(Boolean);
+
+            words.forEach((word) => {
+                query = query.or(`name.ilike.%${word}%`);
+            });
+        }
+
+        if (!includeArchived) {
+            query = query.eq('archived', false);
+        }
+
+        query = query.order('created_at', { ascending: false });
+
+        if (pageSize > 0) {
+            const from = (page - 1) * pageSize;
+            const to = from + pageSize - 1;
+            query = query.range(from, to);
+        }
+
+
+
+        const { data, count } = await query.throwOnError();
+
+
+        const finalData = data;
+
+        return {
+            data: finalData,
+            total: pageSize > 0 ? (count ?? 0) : finalData.length,
+            page,
+            pageSize: pageSize > 0 ? pageSize : finalData.length,
+        };
+
+    },
+
     async getTeacherById(id: string) {
         const { data } = await supabase
             .from('teachers')

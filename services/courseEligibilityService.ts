@@ -46,18 +46,14 @@ export const coursesEligiblityService = {
         page = 1,
         pageSize = 0
     ) {
-        // 1. Query the view instead of the base table.
-        // The view already pre-joins courses and grade_levels, so we select '*'
         let query = supabase
             .from('course_eligibility_search_view')
             .select('*', { count: pageSize > 0 ? 'exact' : 'estimated' });
 
-        // 2. Apply tokenized search if a name query is provided
         if (name && name.trim().length > 0) {
             const words = name.trim().split(/\s+/).filter(Boolean);
 
             words.forEach((word) => {
-                // For every word, it must be matched in either column
                 query = query.or(`grade_level_name.ilike.%${word}%,course_name.ilike.%${word}%`);
             });
         }

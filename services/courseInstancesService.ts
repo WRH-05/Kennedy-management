@@ -14,17 +14,23 @@ export type CourseInstanceDetail = Tables<"course_instances"> & {
     teachers: Tables<"teachers">;
 };
 
+export type CourseInstancesResponse = Awaited<
+    ReturnType<typeof courseInstancesService.getAllCourseInstances>
+>
+
+export type CourseInstance = CourseInstancesResponse["data"][number];
+
 
 export const courseInstancesService = {
     async getAllCourseInstances(
         page = 1,
         pageSize = 0,
         includeArchived = false
-    ): Promise<{ data: CourseInstanceWithEnrichment[]; total: number; page: number; pageSize: number }> {
+    ) {
 
         let query = supabase
             .from('course_instances')
-            .select('*, teachers(*)', { count: 'exact' });
+            .select('*, teachers(*), course_eligibility(id, courses(*), grade_levels(*)), course_enrollments(*, students(*))', { count: 'exact' });
 
         if (!includeArchived) {
             query = query.eq('archived', false);
@@ -41,7 +47,7 @@ export const courseInstancesService = {
         const { data, count } = await query.throwOnError();
 
         // Optimized batch enrichment instead of N+1 requests
-        const enrichedData = await this.enrichCoursesWithStudentsBatch(data || []);
+        const enrichedData = data;
         const totalCount = count !== null ? count : (data?.length || 0);
 
         return {
@@ -131,15 +137,14 @@ export const courseInstancesService = {
         const { data } = await supabase.rpc('add_course_instance_with_schedule', {
             p_instance: {
                 teacher_id: instanceData.teacher_id,
-                subject: instanceData.subject,
-                school_year: instanceData.school_year,
                 percentage_cut: instanceData.percentage_cut,
+                course_eligibility_id: instanceData.course_eligibility_id,
                 price: instanceData.price,
                 monthly_price: instanceData.monthly_price
             },
             p_schedules: scheduleSlots
         })
-        .throwOnError();
+            .throwOnError();
 
         return data;
     },
@@ -149,9 +154,9 @@ export const courseInstancesService = {
         const { data } = await supabase.rpc('update_course_instance_with_schedule', {
             p_course_id: id,
             p_updated_data: updatedData,
-            p_schedules: scheduleSlots 
+            p_schedules: scheduleSlots
         })
-        .throwOnError();
+            .throwOnError();
 
         return data;
     },

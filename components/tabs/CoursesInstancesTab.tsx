@@ -7,12 +7,11 @@ import { AddCourseDialog } from "./CourseInstancesTab/AddCourseInstanceDialog"
 import { CourseInstanceTableRow } from "./CourseInstancesTab/CourseInstanceTableRow"
 import { archiveService } from "@/services/archiveService"
 import { useToast } from "@/hooks/use-toast"
-import { Tables } from "@/types/database.types"
-import { CourseInstanceWithEnrichment } from "@/services/courseInstancesService"
+import { CourseInstance } from "@/services/courseInstancesService"
 
 interface CourseIntancesTabProps {
-  courseInstances: CourseInstanceWithEnrichment[]
-  onCoursesUpdate: (courseInstances: CourseInstanceWithEnrichment[]) => void
+  courseInstances: CourseInstance[]
+  onCoursesUpdate: (courseInstances: CourseInstance[]) => void
   canAdd?: boolean
   pendingArchiveIds?: Set<string>
 }
@@ -48,11 +47,11 @@ export default function CoursesTab({
         <div className="flex justify-between items-center">
           <CardTitle className="flex items-center">
             <BookOpen className="h-5 w-5 mr-2" />
-            All courseInstances
+            All Course Instances
           </CardTitle>
           {canAdd && (
-            <AddCourseDialog 
-              onCourseAdded={onCoursesUpdate} 
+            <AddCourseDialog
+              onCourseAdded={onCoursesUpdate}
             />
           )}
         </div>
@@ -62,10 +61,8 @@ export default function CoursesTab({
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>Status</TableHead>
                 <TableHead>Course</TableHead>
                 <TableHead>Teacher</TableHead>
-                <TableHead>Type</TableHead>
                 <TableHead>Students</TableHead>
                 <TableHead>Price</TableHead>
               </TableRow>

@@ -3,31 +3,22 @@
 import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { TableCell, TableRow } from "@/components/ui/table"
-import { Badge } from "@/components/ui/badge"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 import { MoreHorizontal, Pencil, Archive } from "lucide-react"
 import { useMemo } from "react"
 import { useCourseEnrollementStudentsByCourseId } from "@/hooks/useCourseEnrollement"
+import { CourseInstance } from "@/services/courseInstancesService"
 
 interface CourseInstanceTableRowProps {
-  course: any
+  course: CourseInstance
   pendingArchiveIds: Set<string>
   onArchive: (courseId: string, courseName: string) => void
 }
 
 export function CourseInstanceTableRow({ course, pendingArchiveIds, onArchive }: CourseInstanceTableRowProps) {
   const router = useRouter()
-  const { students: allStudents, isLoading } = useCourseEnrollementStudentsByCourseId(course.id);
-  const students = useMemo(() => {
-    const list = Array.isArray(allStudents) ? allStudents : allStudents.data;
-    return list;
-  }, [allStudents]);
-  const isArchiveDisabled = pendingArchiveIds.has(course.id)
   return (
     <TableRow className="group">
-      <TableCell>
-        <div className={`w-3 h-3 rounded-full ${course.status === "active" ? "bg-green-500" : "bg-red-500"}`} />
-      </TableCell>
 
       <TableCell className="font-medium">
         <Button
@@ -35,7 +26,7 @@ export function CourseInstanceTableRow({ course, pendingArchiveIds, onArchive }:
           className="p-0 h-auto font-medium text-left"
           onClick={() => router.push(`/course-instance/${course.id}`)}
         >
-          {course.subject} - {course.school_year}
+          {course.course_eligibility.courses.name} - {course.course_eligibility.grade_levels?.name}
         </Button>
       </TableCell>
 
@@ -49,18 +40,13 @@ export function CourseInstanceTableRow({ course, pendingArchiveIds, onArchive }:
         </Button>
       </TableCell>
 
-      <TableCell>
-        <Badge variant={course.course_type === "Group" ? "default" : "secondary"}>
-          {course.course_type}
-        </Badge>
-      </TableCell>
 
-      <TableCell>{students.length} students</TableCell>
+      <TableCell>{course.course_enrollments.filter((ce) => ce.status == 'enrolled').length} students</TableCell>
 
       <TableCell>
         <div className="flex items-center justify-between">
           <span>
-            {course.price} DA {course.course_type === "Group" ? "/month" : "/session"}
+            {course.price} DA
           </span>
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
@@ -71,14 +57,6 @@ export function CourseInstanceTableRow({ course, pendingArchiveIds, onArchive }:
             <DropdownMenuContent align="end">
               <DropdownMenuItem onClick={() => router.push(`/course-instance/${course.id}`)}>
                 <Pencil className="mr-2 h-4 w-4" /> Edit
-              </DropdownMenuItem>
-              <DropdownMenuItem
-                onClick={() => onArchive(course.id, `${course.subject} - ${course.school_year}`)}
-                className={isArchiveDisabled ? "text-gray-400 cursor-not-allowed" : "text-orange-600"}
-                disabled={isArchiveDisabled}
-              >
-                <Archive className="mr-2 h-4 w-4" />
-                {isArchiveDisabled ? "Archive Pending" : "Archive"}
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
