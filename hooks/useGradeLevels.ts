@@ -2,7 +2,7 @@
 
 import useSWR, { mutate } from 'swr'
 import { swrConfig } from './swr-config'
-import { gradeLevelsService } from '@/services/gardeLevelsService'
+import { gradeLevelsService } from '@/services/gradeLevelsService'
 
 export function useGradeLevels() {
   const { data, error, isLoading, isValidating } = useSWR(

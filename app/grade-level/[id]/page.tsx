@@ -7,7 +7,7 @@ import { CourseHeader } from "./grade-level-header"
 import { GradeLevelInfoCard } from "./grade-level-info-card"
 import { CourseManagementCard } from "./courses-management-card"
 import { Tables } from "@/types/database.types"
-import { AssociatedGradeLevelsCourses, gradeLevelsService } from "@/services/gardeLevelsService"
+import { AssociatedGradeLevelsCourses, gradeLevelsService } from "@/services/gradeLevelsService"
 import { coursesEligiblityService } from "@/services/courseEligibilityService"
 
 function GradeLevelProfileContent() {

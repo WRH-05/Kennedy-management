@@ -11,7 +11,7 @@ import { CourseHeader } from "./course-header"
 import { CourseInfoCard } from "./course-info-card"
 import { GradeLevelManagementCard } from "./grade-levels-management-card"
 import { Tables } from "@/types/database.types"
-import { AssociatedGradeLevelsCourses, gradeLevelsService } from "@/services/gardeLevelsService"
+import { AssociatedGradeLevelsCourses, gradeLevelsService } from "@/services/gradeLevelsService"
 import { coursesEligiblityService } from "@/services/courseEligibilityService"
 function TeacherProfileContent() {
     const router = useRouter()

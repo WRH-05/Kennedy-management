@@ -8,7 +8,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Plus } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
 import { TablesInsert } from "@/types/database.types"
-import { gradeLevelsService } from "@/services/gardeLevelsService"
+import { gradeLevelsService } from "@/services/gradeLevelsService"
 
 
 

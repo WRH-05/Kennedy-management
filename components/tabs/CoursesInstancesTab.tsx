@@ -25,7 +25,7 @@ export default function CoursesTab({
 }: CourseIntancesTabProps) {
   const { toast } = useToast()
 
-  const handleArchiveCourse = async (courseId: number, courseName: string) => {
+  const handleArchiveCourse = async (courseId: string, courseName: string) => {
     try {
       await archiveService.createArchiveRequest("course", courseId, courseName)
       toast({

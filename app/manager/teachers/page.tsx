@@ -44,7 +44,6 @@ function getPageItems(page: number, totalPages: number) {
 export default function TeachersPage() {
   const [page, setPage] = useState(1)
   const { teachers: allTeachers, total, isLoading: isTeacherLoading, mutate } = usePaginatedTeachers(page, PAGE_SIZE)
-  const { data: allCourses, isLoading: isCourseLoading } = useCourseInstances()
   const { data: pendingArchiveMap } = usePendingArchives()
 
   const teachers = useMemo(() =>
@@ -52,12 +51,7 @@ export default function TeachersPage() {
     [allTeachers]
   )
 
-  const courseInstances = useMemo(() => {
-    const list = allCourses;
-    return list;
-  }, [allCourses]);
-
-  if (isCourseLoading || isTeacherLoading) return <div className="p-8 text-center text-gray-500">Loading Teachers Directory...</div>
+  if (isTeacherLoading) return <div className="p-8 text-center text-gray-500">Loading Teachers Directory...</div>
 
   const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE))
 
@@ -65,7 +59,6 @@ export default function TeachersPage() {
     <div className="space-y-6">
       <TeachersTab
         teachers={teachers}
-        courseInstances={courseInstances || []}
         onTeachersUpdate={() => mutate()}
         canAdd={true}
         showCourses={true}

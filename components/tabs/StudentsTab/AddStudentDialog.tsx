@@ -11,7 +11,7 @@ import { Plus } from "lucide-react"
 import { Tables, TablesInsert, TablesUpdate } from "@/types/database.types"
 import { studentService } from "@/services/studentService"
 import { useToast } from "@/hooks/use-toast"
-import { gradeLevelsService } from "@/services/gardeLevelsService"
+import { gradeLevelsService } from "@/services/gradeLevelsService"
 
 interface AddStudentDialogProps {
     onStudentAdded: (updatedStudents: TablesUpdate<"students">[]) => void

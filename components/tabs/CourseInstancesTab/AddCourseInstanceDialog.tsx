@@ -157,6 +157,28 @@ export function AddCourseDialog({ onCourseAdded }: AddCourseInstanceDialogProps)
 
   const selectedTeacherData = teachers.find((t) => t.id.toString() === newCourse.teacherId)
 
+  const getTeacherSubjects = (teacher: any) =>
+    Array.from(
+      new Set(
+        teacher?.teachers_course_eligibility?.flatMap((eligibility: any) =>
+          eligibility.course_eligibility?.courses?.name
+            ? [eligibility.course_eligibility.courses.name]
+            : []
+        ) ?? []
+      )
+    )
+
+  const getTeacherSchoolYears = (teacher: any) =>
+    Array.from(
+      new Set(
+        teacher?.teachers_course_eligibility?.flatMap((eligibility: any) =>
+          eligibility.course_eligibility?.grade_levels?.name
+            ? [eligibility.course_eligibility.grade_levels.name]
+            : []
+        ) ?? []
+      )
+    )
+
   return (
     <Dialog open={isOpen} onOpenChange={setIsOpen}>
       <DialogTrigger asChild>
@@ -220,7 +242,7 @@ export function AddCourseDialog({ onCourseAdded }: AddCourseInstanceDialogProps)
                       <SelectValue placeholder="Select subject" />
                     </SelectTrigger>
                     <SelectContent>
-                      {selectedTeacherData?.subjects?.map((subject: string) => (
+                      {getTeacherSubjects(selectedTeacherData).map((subject: string) => (
                         <SelectItem key={subject} value={subject}>
                           {subject}
                         </SelectItem>
@@ -241,7 +263,7 @@ export function AddCourseDialog({ onCourseAdded }: AddCourseInstanceDialogProps)
                       <SelectValue placeholder="Select school year" />
                     </SelectTrigger>
                     <SelectContent>
-                      {selectedTeacherData?.school_years?.map((year: string) => (
+                      {getTeacherSchoolYears(selectedTeacherData).map((year: string) => (
                         <SelectItem key={year.trim()} value={year.trim()}>
                           {year.trim()}
                         </SelectItem>

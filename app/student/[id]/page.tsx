@@ -25,7 +25,7 @@ import { ArrowLeft, Download, User, BookOpen, AlertTriangle, CheckCircle } from 
 import { EnrichedStudent, studentService } from "@/services/studentService"
 import { courseInstancesService, CourseInstanceWithEnrichment } from "@/services/courseInstancesService"
 import { Tables, TablesUpdate } from "@/types/database.types"
-import { gradeLevelsService } from "@/services/gardeLevelsService"
+import { gradeLevelsService } from "@/services/gradeLevelsService"
 
 function StudentDashboardContent() {
   const router = useRouter()

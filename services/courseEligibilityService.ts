@@ -13,7 +13,7 @@ export const coursesEligiblityService = {
     async getAllCourseEligibilities(
         page = 1,
         pageSize = 0
-    ): Promise<{ data: AssociatedGradeLevelsCourses[]; total: number; page: number; pageSize: number }> {
+    ) {
         let query = supabase
             .from('course_eligibility')
             .select('*, courses(*), grade_levels(*)', { count: pageSize > 0 ? 'exact' : 'estimated' });
@@ -41,7 +41,48 @@ export const coursesEligiblityService = {
         };
     },
 
-    async getCourseEligibilityById(id: string): Promise<AssociatedGradeLevelsCourses> {
+    async searchAllCourseEligibilities(
+        name: string,
+        page = 1,
+        pageSize = 0
+    ) {
+        // 1. Query the view instead of the base table.
+        // The view already pre-joins courses and grade_levels, so we select '*'
+        let query = supabase
+            .from('course_eligibility_search_view')
+            .select('*', { count: pageSize > 0 ? 'exact' : 'estimated' });
+
+        // 2. Apply tokenized search if a name query is provided
+        if (name && name.trim().length > 0) {
+            const words = name.trim().split(/\s+/).filter(Boolean);
+
+            words.forEach((word) => {
+                // For every word, it must be matched in either column
+                query = query.or(`grade_level_name.ilike.%${word}%,course_name.ilike.%${word}%`);
+            });
+        }
+
+        if (pageSize > 0) {
+            const from = (page - 1) * pageSize;
+            const to = from + pageSize - 1;
+            query = query.range(from, to);
+        }
+
+        const { data, count } = await query.throwOnError();
+
+        const finalData = data || [];
+
+        return {
+            data: finalData,
+            total: pageSize > 0 ? (count ?? 0) : finalData.length,
+            page,
+            pageSize: pageSize > 0 ? pageSize : finalData.length,
+        };
+    },
+
+
+
+    async getCourseEligibilityById(id: string) {
 
         const { data } = await supabase
             .from('course_eligibility')
@@ -52,7 +93,7 @@ export const coursesEligiblityService = {
 
         return data
     },
-    async getCourseEligibilityByCourseId(id: string): Promise<AssociatedGradeLevelsCourses> {
+    async getCourseEligibilityByCourseId(id: string) {
 
         const { data } = await supabase
             .from('course_eligibility')
@@ -63,7 +104,7 @@ export const coursesEligiblityService = {
 
         return data
     },
-    async getCourseEligibilityByGradeLevelId(id: string): Promise<AssociatedGradeLevelsCourses> {
+    async getCourseEligibilityByGradeLevelId(id: string) {
 
         const { data } = await supabase
             .from('course_eligibility')
@@ -135,7 +176,7 @@ export const coursesEligiblityService = {
         };
     },
 
-    async addCourseEligibility(courseEligibilityData: TablesInsert<"course_eligibility">): Promise<AssociatedGradeLevelsCourses> {
+    async addCourseEligibility(courseEligibilityData: TablesInsert<"course_eligibility">) {
         const { data } = await supabase
             .from('course_eligibility')
             .insert([courseEligibilityData])
@@ -146,7 +187,7 @@ export const coursesEligiblityService = {
         return data
     },
 
-    async updateCourseEligibility(id: string, updatedData: TablesUpdate<"course_eligibility">): Promise<AssociatedGradeLevelsCourses> {
+    async updateCourseEligibility(id: string, updatedData: TablesUpdate<"course_eligibility">) {
         const { data } = await supabase
             .from('course_eligibility')
             .update(updatedData)
@@ -158,7 +199,7 @@ export const coursesEligiblityService = {
         return data
     },
 
-    async deleteCourseEligibility(id: string): Promise<AssociatedGradeLevelsCourses> {
+    async deleteCourseEligibility(id: string) {
         const { data } = await supabase
             .from('course_eligibility')
             .delete()

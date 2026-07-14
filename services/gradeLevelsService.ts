@@ -93,7 +93,7 @@ export const gradeLevelsService = {
         return data
     },
 
-    async updateGradeLevel(id: number, updatedData: TablesUpdate<"grade_levels">): Promise<Tables<"grade_levels">> {
+    async updateGradeLevel(id: string, updatedData: TablesUpdate<"grade_levels">): Promise<Tables<"grade_levels">> {
         const { data } = await supabase
             .from('grade_levels')
             .update(updatedData)
@@ -105,7 +105,7 @@ export const gradeLevelsService = {
         return data
     },
 
-    async deleteGradeLevel(id: number): Promise<Tables<"grade_levels">> {
+    async deleteGradeLevel(id: string): Promise<Tables<"grade_levels">> {
         const { data } = await supabase
             .from('grade_levels')
             .delete()

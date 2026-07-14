@@ -46,7 +46,7 @@ export default function StudentsTab({
               <TableRow>
                 <TableHead>Name</TableHead>
                 <TableHead>School Level</TableHead>
-                {showPaymentStatus && <TableHead>Payment Status</TableHead>}
+                {showPaymentStatus && <TableHead>Fee Payment</TableHead>}
                 <TableHead className="w-15"></TableHead>
               </TableRow>
             </TableHeader>

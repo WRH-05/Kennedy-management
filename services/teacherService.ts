@@ -4,16 +4,24 @@ const supabase = createClient();
 import { Tables, TablesInsert, TablesUpdate } from "@/types/database.types";
 import { PostgrestError } from "@supabase/supabase-js";
 
+
+export type TeachersResponse = Awaited<
+    ReturnType<typeof teacherService.getAllTeachers>
+>;
+
+export type Teacher = TeachersResponse["data"][number];
+
 export const teacherService = {
     async getAllTeachers(
         page = 1,
         pageSize = 0,
         includeArchived = false
-    ): Promise<{ data: Tables<"teachers">[]; total: number; page: number; pageSize: number }> {
+    ) {
 
         let query = supabase
             .from('teachers')
-            .select('*', { count: pageSize > 0 ? 'exact' : 'estimated' });
+            .select('*, teachers_course_eligibility(course_eligibility(id, courses(*), grade_levels(*)))', { count: pageSize > 0 ? 'exact' : 'estimated' });
+
 
         if (!includeArchived) {
             query = query.eq('archived', false);
@@ -27,10 +35,12 @@ export const teacherService = {
             query = query.range(from, to);
         }
 
+
+
         const { data, count } = await query.throwOnError();
 
 
-        const finalData = data || [];
+        const finalData = data;
 
         return {
             data: finalData,
@@ -41,10 +51,10 @@ export const teacherService = {
 
     },
 
-    async getTeacherById(id: string): Promise<Tables<"teachers">> {
+    async getTeacherById(id: string) {
         const { data } = await supabase
             .from('teachers')
-            .select('*')
+            .select('*, teachers_course_eligibility(id, course_eligibility(id, courses(*), grade_levels(*)))')
             .eq('id', id)
             .single()
             .throwOnError()
@@ -63,17 +73,28 @@ export const teacherService = {
         return data
     },
 
-    async updateTeacher(id: string, updatedData: TablesUpdate<"teachers">): Promise<Tables<"teachers">> {
+    async addCourseEligibility(teacherId: string, courseEligibilityId: string) {
         const { data } = await supabase
-            .from('teachers')
-            .update(updatedData)
-            .eq('id', id)
+            .from('teachers_course_eligibility')
+            .insert({ course_eligibility: courseEligibilityId, teacher_id: teacherId })
             .select()
-            .single()
             .throwOnError()
 
         return data
     },
+
+    async updateTeacher(id: string, updatedData: TablesUpdate<"teachers"> & { grade_level_ids: string[] }) {
+        const { grade_level_ids, ...teacherProfileData } = updatedData;
+
+        const { data } = await supabase.rpc('update_teacher_and_eligibility', {
+            p_teacher_id: id,
+            p_profile_data: teacherProfileData,
+            p_grade_level_ids: grade_level_ids
+        }).throwOnError();
+
+        return data
+    },
+
 
     async deleteTeacher(id: string): Promise<Tables<"teachers"> | PostgrestError> {
         const { data } = await supabase

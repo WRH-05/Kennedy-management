@@ -12,7 +12,7 @@ import { useCourseEnrollementStudentsByCourseId } from "@/hooks/useCourseEnrolle
 interface CourseInstanceTableRowProps {
   course: any
   pendingArchiveIds: Set<string>
-  onArchive: (courseId: number, courseName: string) => void
+  onArchive: (courseId: string, courseName: string) => void
 }
 
 export function CourseInstanceTableRow({ course, pendingArchiveIds, onArchive }: CourseInstanceTableRowProps) {

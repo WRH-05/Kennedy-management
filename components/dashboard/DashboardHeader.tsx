@@ -56,6 +56,17 @@ export default function DashboardHeader() {
     router.push('/')
   }
 
+  const getTeacherSubjects = (teacher: any) =>
+    Array.from(
+      new Set(
+        teacher?.teachers_course_eligibility?.flatMap((eligibility: any) =>
+          eligibility.course_eligibility?.courses?.name
+            ? [eligibility.course_eligibility.courses.name]
+            : []
+        ) ?? []
+      )
+    )
+
   const searchResults = useMemo(() => {
     if (!searchQuery.trim()) return []
 
@@ -72,8 +83,6 @@ export default function DashboardHeader() {
     const courseResults = courseInstances
       .filter(
         (course: CourseInstanceWithEnrichment) =>
-          course.subject?.toLowerCase().includes(query) ||
-          course.school_year?.toLowerCase().includes(query) ||
           course.teachers.name?.toLowerCase().includes(query),
       )
       .map((course: CourseInstanceWithEnrichment) => ({ ...course, type: "course" }))
@@ -168,10 +177,9 @@ export default function DashboardHeader() {
                     )}
                     {result.type === "teacher" && (
                       <p className="text-sm text-gray-600">
-                        {result.subjects ? (Array.isArray(result.subjects)
-                          ? result.subjects.join(", ")
-                          : (typeof result.subjects === 'string' ? result.subjects : "No subjects")
-                        ) : "No subjects"}
+                        {getTeacherSubjects(result).length > 0
+                          ? getTeacherSubjects(result).join(", ")
+                          : "No subjects"}
                       </p>
                     )}
                     {result.type === "course" && (

@@ -9,7 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { useToast } from "@/hooks/use-toast"
 import { Enums, Tables, TablesUpdate } from "@/types/database.types"
-import { gradeLevelsService } from "@/services/gardeLevelsService"
+import { gradeLevelsService } from "@/services/gradeLevelsService"
 
 interface UpdateGradeLevelDialogProps {
     GradeLevel: Tables<"grade_levels">
