@@ -62,22 +62,9 @@ export const authService = {
   },
 
   // Sign up new user (via invitation token)
+  // NOTE: Invitations intentionally deferred — no invitations table yet
   async signUp(email, password, token, fullName = '', phone = '') {
-    // First verify the invitation token
-    const { data: invitation, error: inviteError } = await supabase
-      .from('invitations')
-      .select('*')
-      .eq('token', token)
-      .eq('email', email)
-      .gt('expires_at', new Date().toISOString())
-      .is('accepted_at', null)
-      .single()
-
-    if (inviteError || !invitation) {
-      throw new Error('Invalid or expired invitation')
-    }
-
-    // Sign up the user
+    // Sign up the user directly (invitation verification deferred)
     const { data, error } = await supabase.auth.signUp({
       email,
       password,
@@ -92,7 +79,7 @@ export const authService = {
     })
 
     if (error) throw error
-    return { data, invitation }
+    return { data, invitation: null }
   },
 
   // Sign in user
@@ -114,125 +101,21 @@ export const authService = {
   },
 
   // Send invitation
+  // NOTE: Invitations intentionally deferred — no invitations table yet
   async sendInvitation(email, role) {
-    // Get current user
-    const currentUser = await this.getCurrentUser()
-    if (!currentUser?.id) {
-      throw new Error('User not authenticated')
-    }
-
-    // Check if user has permission to invite
-    if (!['manager', 'receptionist'].includes(currentUser.profile?.role)) {
-      throw new Error('Only managers and receptionists can send invitations')
-    }
-
-    // Validate role - ensure it's a valid user_role enum value
-    const validRoles = ['manager', 'receptionist']
-    if (!validRoles.includes(role)) {
-      throw new Error('Invalid role. Must be "manager" or "receptionist"')
-    }
-
-    const normalizedEmail = email.toLowerCase().trim()
-
-    // Check if invitation already exists (exclude accepted)
-    const { data: existingInvite, error: checkError } = await supabase
-      .from('invitations')
-      .select('*')
-      .eq('email', normalizedEmail)
-      .is('accepted_at', null)
-
-    if (checkError) {
-      console.error('Error checking existing invitations:', checkError)
-    }
-
-    // Check for pending (non-expired) invitations
-    const pendingInvite = existingInvite?.find(inv => new Date(inv.expires_at) > new Date())
-    if (pendingInvite) {
-      throw new Error('An active invitation already exists for this email')
-    }
-
-    // Create invitation
-    const { data: invitation, error } = await supabase
-      .from('invitations')
-      .insert([{
-        email: normalizedEmail,
-        role: role,
-        invited_by: currentUser.id,
-        expires_at: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString() // 7 days
-      }])
-      .select()
-      .single()
-
-    if (error) {
-      console.error('Invitation creation error:', error)
-      // Handle unique constraint violation
-      if (error.code === '23505') {
-        throw new Error('An invitation already exists for this email')
-      }
-      throw new Error(`Failed to create invitation: ${error.message}`)
-    }
-
-    // Create invitation link
-    const inviteLink = `${window.location.origin}/auth/signup?token=${invitation.token}&email=${encodeURIComponent(normalizedEmail)}`
-
-    return { invitation, inviteLink, emailSent: false }
+    throw new Error('Invitations are not available yet. This feature is coming soon.')
   },
 
   // Get all invitations created by current user
+  // NOTE: Invitations intentionally deferred — no invitations table yet
   async getInvitations() {
-    const currentUser = await this.getCurrentUser()
-    if (!currentUser?.id) return []
-
-    const { data, error } = await supabase
-      .from('invitations')
-      .select('*')
-      .eq('invited_by', currentUser.id)
-      .order('created_at', { ascending: false })
-
-    if (error) throw error
-
-    // Enrich with inviter name
-    const enriched = await Promise.all(
-      (data || []).map(async (invite) => {
-        if (invite.invited_by) {
-          const { data: inviter } = await supabase
-            .from('profiles')
-            .select('full_name')
-            .eq('id', invite.invited_by)
-            .single()
-          return { ...invite, invited_by_profile: inviter }
-        }
-        return { ...invite, invited_by_profile: null }
-      })
-    )
-
-    return enriched
+    return []
   },
 
   // Verify invitation token
+  // NOTE: Invitations intentionally deferred — no invitations table yet
   async verifyInvitation(token, email) {
-    const { data, error } = await supabase
-      .from('invitations')
-      .select('*')
-      .eq('token', token)
-      .eq('email', email.toLowerCase().trim())
-      .gt('expires_at', new Date().toISOString())
-      .is('accepted_at', null)
-      .single()
-
-    if (error) throw error
-
-    // Enrich with inviter name
-    if (data && data.invited_by) {
-      const { data: inviter } = await supabase
-        .from('profiles')
-        .select('full_name')
-        .eq('id', data.invited_by)
-        .single()
-      return { ...data, invited_by_profile: inviter }
-    }
-
-    return data ? { ...data, invited_by_profile: null } : null
+    throw new Error('Invitations are not available yet. This feature is coming soon.')
   },
 
   // Update user profile
@@ -300,22 +183,9 @@ export const authService = {
   },
 
   // Cancel invitation (managers only)
+  // NOTE: Invitations intentionally deferred — no invitations table yet
   async cancelInvitation(invitationId) {
-    const currentUser = await this.getCurrentUser()
-    if (currentUser?.profile?.role !== 'manager') {
-      throw new Error('Only managers can cancel invitations')
-    }
-
-    const { data, error } = await supabase
-      .from('invitations')
-      .update({ canceled_at: new Date().toISOString() })
-      .eq('id', invitationId)
-      .is('accepted_at', null)
-      .select()
-      .single()
-
-    if (error) throw error
-    return data
+    throw new Error('Invitations are not available yet. This feature is coming soon.')
   },
 
   // Listen to auth changes

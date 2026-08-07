@@ -6,7 +6,7 @@ import { courseEnrollmentService } from '@/services/courseEnrollmentService'
 
 export function useCourseEnrollementStudentsByCourseId(course_id: string) {
     const { data, error, isLoading, isValidating } = useSWR(
-        'course-enrolled-students',
+        course_id ? `course-enrolled-students-${course_id}` : null,
         () => courseEnrollmentService.getAllStudentsEnrolledInACourse(course_id),
         swrConfig
     )
@@ -15,6 +15,6 @@ export function useCourseEnrollementStudentsByCourseId(course_id: string) {
         isLoading,
         isValidating,
         error,
-        mutate: () => mutate('course-enrolled-students'),
+        mutate: () => mutate(`course-enrolled-students-${course_id}`),
     }
 }

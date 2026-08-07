@@ -26,15 +26,19 @@ export default function PayoutsPage() {
 
         <TabsContent value="teachers" className="mt-4">
           {
-            !teachersLoading || !teachersPayouts ?
+            teachersLoading ?
               (
                 <div className="p-8 text-center text-gray-500">
                   Loading Teacher Records...
                 </div>
+              ) : !teachersPayouts ? (
+                <div className="p-8 text-center text-gray-500">
+                  No teacher payout records found.
+                </div>
               ) :
               (
                 <PayoutsTab
-                  payoutData={teachersPayouts} // ✨ Directly uses your hook state data
+                  payoutData={teachersPayouts}
                   type="teacher"
                 />
               )
@@ -44,16 +48,19 @@ export default function PayoutsPage() {
 
         <TabsContent value="students" className="mt-4">
           {
-            !studentLoading || !studentsPayouts ?
-
+            studentLoading ?
               (
                 <div className="p-8 text-center text-gray-500">
                   Loading Student Records...
                 </div>
+              ) : !studentsPayouts ? (
+                <div className="p-8 text-center text-gray-500">
+                  No student payout records found.
+                </div>
               ) :
               (
                 <PayoutsTab
-                  payoutData={studentsPayouts} // ✨ Directly uses your hook state data
+                  payoutData={studentsPayouts}
                   type="student"
                 />
               )

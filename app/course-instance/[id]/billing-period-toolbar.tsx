@@ -23,6 +23,9 @@ export function BillingPeriodToolbar({ courseInstanceId, billingPeriods, selecte
   const [showAddBillingDialog, setShowAddBillingDialog] = useState(false)
   const [newBillingForm, setNewBillingForm] = useState({ startDate: "", endDate: "" })
 
+  // Navigate between billing periods (ordered newest-first by start_date DESC)
+  // 'prev' = chronologically previous (older) = higher index in array
+  // 'next' = chronologically next (newer) = lower index in array
   const stepBillingPeriod = (direction: 'next' | 'prev') => {
     const currentIndex = billingPeriods.findIndex(p => p.id === selectedPeriodId)
     if (direction === 'next' && currentIndex > 0) {

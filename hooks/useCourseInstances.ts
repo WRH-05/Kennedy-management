@@ -16,7 +16,7 @@ export function useCourseInstances() {
     isLoading,
     isValidating,
     error,
-    mutate: () => mutate('course-instance'),
+    mutate: () => mutate('course-instances'),
   }
 }
 

@@ -132,7 +132,7 @@ function StudentDashboardContent() {
   const paidThisMonth = '?' // Payment tracking to be implemented with payments table
 
   // Calculate alerts
-  const missedPayments = payments.filter((p) => p.status == 'paid').length
+  const missedPayments = payments.filter((p) => p.status != 'paid').length
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -385,7 +385,7 @@ function StudentDashboardContent() {
                         {activeCourses.map((course) => {
                           const isPaymentMissing = payments.filter((p) => {
                             return p.course_id == course.id && p.status != 'paid'
-                          }).length > 1
+                          }).length > 0
                           return (
                             <TableRow key={course.id}>
                               <TableCell className="font-medium">
