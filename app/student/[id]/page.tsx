@@ -25,6 +25,7 @@ import { ArrowLeft, Download, User, BookOpen, AlertTriangle, CheckCircle } from 
 import { Student, studentService } from "@/services/studentService"
 import { Tables, TablesUpdate } from "@/types/database.types"
 import { gradeLevelsService } from "@/services/gradeLevelsService"
+import { toast } from "@/hooks/use-toast"
 
 function StudentDashboardContent() {
   const router = useRouter()
@@ -109,7 +110,7 @@ function StudentDashboardContent() {
   }
 
   const downloadStudentCard = () => {
-    // Student card download functionality would be implemented here
+    toast({ title: "Coming Soon", description: "Student card download is coming soon." })
   }
 
   if (!student || loading) {
@@ -129,7 +130,16 @@ function StudentDashboardContent() {
   const payments = student.student_payments
 
   const totalMonthlyFees = student.course_enrollments.reduce((sum, ce) => ce.status === "enrolled" ? sum + (ce.course_instances.monthly_price || 0) : sum + 0, 0)
-  const paidThisMonth = '?' // Payment tracking to be implemented with payments table
+  const now = new Date()
+  const paidThisMonth = payments
+    .filter((p) => {
+      if (p.status !== 'paid') return false
+      const dateStr = p.payment_date || p.created_at
+      if (!dateStr) return false
+      const d = new Date(dateStr)
+      return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear()
+    })
+    .reduce((sum, p) => sum + (p.amount || 0), 0)
 
   // Calculate alerts
   const missedPayments = payments.filter((p) => p.status != 'paid').length

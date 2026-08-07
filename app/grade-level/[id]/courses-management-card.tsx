@@ -146,7 +146,7 @@ export function CourseManagementCard({ courses, gradeLevelId, onRefresh }: Cours
                   {courses.data.map((course) => (
                     <TableRow key={course.courses.id}>
                       <TableCell className="font-medium">
-                        <Link href={`/grade-level/${course.courses.id}`} className="hover:underline">
+                        <Link href={`/course/${course.courses.id}`} className="hover:underline">
                           {course.courses.name}
                         </Link>
                       </TableCell>

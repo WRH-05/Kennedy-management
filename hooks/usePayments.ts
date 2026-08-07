@@ -8,6 +8,7 @@ import { useTeachers } from './useTeachers'
 import { useCourseInstances } from './useCourseInstances'
 import { studentPaymentService } from '@/services/studentPaymentService'
 import { teacherPayoutService } from '@/services/teacherPayoutService'
+import { archiveService } from '@/services/archiveService'
 
 export function usePayments() {
   const { data, error, isLoading, isValidating } = useSWR(
@@ -96,13 +97,14 @@ export function useRevenue() {
 }
 
 export function usePendingArchives() {
+  const { data, error, isLoading } = useSWR(
+    'pending-archives',
+    () => archiveService.getPendingArchiveEntityIds(),
+    swrConfig
+  )
   return {
-    data: {
-      student: new Set<string>(),
-      teacher: new Set<string>(),
-      course: new Set<string>()
-    },
-    isLoading: false
+    data: data || { student: new Set<string>(), teacher: new Set<string>(), course: new Set<string>() },
+    isLoading,
   }
 }
 
