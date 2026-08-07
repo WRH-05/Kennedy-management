@@ -9,9 +9,8 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { Archive, Check, X, Undo, MoreHorizontal } from "lucide-react"
 import { studentService } from "@/services/studentService"
 import { teacherService } from "@/services/teacherService"
-import { courseService } from "@/services/courseService"
+import { courseInstancesService } from "@/services/courseInstancesService"
 import { archiveService } from "@/services/archiveService"
-import { useAuth } from "@/contexts/AuthContext"
 
 interface ArchiveTabProps {
   isManager?: boolean
@@ -34,7 +33,6 @@ interface ArchiveRequest {
 }
 
 export default function ArchiveTab({ isManager = false }: ArchiveTabProps) {
-  const { user } = useAuth()
   const [archiveRequests, setArchiveRequests] = useState<ArchiveRequest[]>([])
   const [loading, setLoading] = useState(true)
   const [processingIds, setProcessingIds] = useState<Set<string>>(new Set())
@@ -58,10 +56,9 @@ export default function ArchiveTab({ isManager = false }: ArchiveTabProps) {
 
   const handleApproveArchive = async (requestId: string) => {
     // Optimistic update - immediately update UI
-    const approverName = user?.profile?.full_name || 'Manager'
     setArchiveRequests(prev => prev.map(req => 
       req.id === requestId 
-        ? { ...req, status: 'approved' as const, approved_by_name: approverName, approved_date: new Date().toISOString() }
+        ? { ...req, status: 'approved' as const, approved_date: new Date().toISOString() }
         : req
     ))
     setProcessingIds(prev => new Set(prev).add(requestId))
@@ -84,10 +81,9 @@ export default function ArchiveTab({ isManager = false }: ArchiveTabProps) {
 
   const handleDenyArchive = async (requestId: string) => {
     // Optimistic update - immediately update UI
-    const approverName = user?.profile?.full_name || 'Manager'
     setArchiveRequests(prev => prev.map(req => 
       req.id === requestId 
-        ? { ...req, status: 'denied' as const, approved_by_name: approverName, approved_date: new Date().toISOString() }
+        ? { ...req, status: 'denied' as const, approved_date: new Date().toISOString() }
         : req
     ))
     setProcessingIds(prev => new Set(prev).add(requestId))
@@ -116,7 +112,7 @@ export default function ArchiveTab({ isManager = false }: ArchiveTabProps) {
       } else if (type === 'teacher') {
         await teacherService.unarchiveTeacher(entityId)
       } else if (type === 'course') {
-        await courseService.unarchiveCourse(entityId)
+        await courseInstancesService.unarchiveCourse(entityId)
       }
 
       // Reload archive requests

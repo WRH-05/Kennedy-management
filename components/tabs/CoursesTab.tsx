@@ -3,43 +3,21 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Table, TableBody, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { BookOpen } from "lucide-react"
-import { AddCourseDialog } from "./CourseTab/AddCourseDialog"
-import { CourseTableRow } from "./CourseTab/CourseTableRow"
-import { archiveService } from "@/services/archiveService"
-import { useToast } from "@/hooks/use-toast"
+import { AddCourseDialog } from "./CoursesTab/AddCourseDialog"
+import { CourseTableRow } from "./CoursesTab/CourseTableRow"
+import { Tables } from "@/types/database.types"
 
 interface CoursesTabProps {
-  courses: any[]
-  onCoursesUpdate: (courses: any[]) => void
+  courses: Tables<"courses">[]
+  onCoursesUpdate: () => void
   canAdd?: boolean
-  pendingArchiveIds?: Set<string>
 }
 
-export default function CoursesTab({
+export default function CourseTab({
   courses,
   onCoursesUpdate,
   canAdd = false,
-  pendingArchiveIds = new Set(),
 }: CoursesTabProps) {
-  const { toast } = useToast()
-
-  const handleArchiveCourse = async (courseId: number, courseName: string) => {
-    try {
-      await archiveService.createArchiveRequest("course", courseId, courseName)
-      toast({
-        title: "Archive request submitted",
-        description: "Waiting for manager approval.",
-      })
-    } catch (error) {
-      console.error("Error creating archive request:", error)
-      toast({
-        title: "Error",
-        description: "Failed to create archive request.",
-        variant: "destructive",
-      })
-    }
-  }
-
   return (
     <Card>
       <CardHeader>
@@ -49,8 +27,8 @@ export default function CoursesTab({
             All Courses
           </CardTitle>
           {canAdd && (
-            <AddCourseDialog 
-              onCourseAdded={onCoursesUpdate} 
+            <AddCourseDialog
+              onCourseAdded={onCoursesUpdate}
             />
           )}
         </div>
@@ -60,21 +38,16 @@ export default function CoursesTab({
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>Status</TableHead>
-                <TableHead>Course</TableHead>
-                <TableHead>Teacher</TableHead>
                 <TableHead>Type</TableHead>
-                <TableHead>Students</TableHead>
-                <TableHead>Price</TableHead>
+                <TableHead>Name</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {courses.map((course) => (
                 <CourseTableRow
                   key={course.id}
+                  onCourseUpdated={onCoursesUpdate}
                   course={course}
-                  pendingArchiveIds={pendingArchiveIds}
-                  onArchive={handleArchiveCourse}
                 />
               ))}
             </TableBody>

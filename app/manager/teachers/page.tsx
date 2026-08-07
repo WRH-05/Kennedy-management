@@ -1,10 +1,11 @@
 "use client"
 import { useMemo, useState } from "react"
 import { usePaginatedTeachers } from "@/hooks/useTeachers"
-import { useCourses } from "@/hooks/useCourses"
+import { useCourseInstances } from "@/hooks/useCourseInstances"
 import { usePendingArchives } from "@/hooks/usePayments"
 import TeachersTab from "@/components/tabs/TeachersTab"
 import { Pagination, PaginationContent, PaginationItem, PaginationLink, PaginationPrevious, PaginationNext, PaginationEllipsis } from "@/components/ui/pagination"
+import { Tables } from "@/types/database.types"
 
 const PAGE_SIZE = 6
 
@@ -43,20 +44,14 @@ function getPageItems(page: number, totalPages: number) {
 export default function TeachersPage() {
   const [page, setPage] = useState(1)
   const { teachers: allTeachers, total, isLoading: isTeacherLoading, mutate } = usePaginatedTeachers(page, PAGE_SIZE)
-  const { courses: allCourses, isLoading: isCourseLoading } = useCourses()
   const { data: pendingArchiveMap } = usePendingArchives()
 
   const teachers = useMemo(() =>
-    (allTeachers || []).filter((teacher: any) => !teacher.archived),
+    (allTeachers || []).filter((teacher: Tables<"teachers">) => !teacher.archived),
     [allTeachers]
   )
 
-  const courses = useMemo(() => {
-    const list = allCourses;
-    return list;
-  }, [allCourses]);
-
-  if (isCourseLoading || isTeacherLoading) return <div className="p-8 text-center text-gray-500">Loading Teachers Directory...</div>
+  if (isTeacherLoading) return <div className="p-8 text-center text-gray-500">Loading Teachers Directory...</div>
 
   const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE))
 
@@ -64,7 +59,6 @@ export default function TeachersPage() {
     <div className="space-y-6">
       <TeachersTab
         teachers={teachers}
-        courses={courses || []}
         onTeachersUpdate={() => mutate()}
         canAdd={true}
         showCourses={true}
@@ -75,7 +69,7 @@ export default function TeachersPage() {
       <Pagination className="pt-4">
         <PaginationContent>
           <PaginationItem>
-            <PaginationPrevious disabled-area={page <= 1} onClick={() => setPage(Math.max(1, page - 1))} />
+            <PaginationPrevious aria-disabled={page <= 1} onClick={() => setPage(Math.max(1, page - 1))} />
           </PaginationItem>
 
           {getPageItems(page, totalPages).map((item, index) =>
@@ -96,7 +90,7 @@ export default function TeachersPage() {
           )}
 
           <PaginationItem>
-            <PaginationNext disabled-area={page >= totalPages} onClick={() => setPage(Math.min(totalPages, page + 1))} />
+            <PaginationNext aria-disabled={page >= totalPages} onClick={() => setPage(Math.min(totalPages, page + 1))} />
           </PaginationItem>
         </PaginationContent>
       </Pagination>

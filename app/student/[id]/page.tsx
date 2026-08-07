@@ -22,51 +22,55 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
 import { ArrowLeft, Download, User, BookOpen, AlertTriangle, CheckCircle } from "lucide-react"
-import { studentService } from "@/services/studentService"
-import { courseService } from "@/services/courseService"
-import { useAuth } from "@/contexts/AuthContext"
-import AuthGuard from "@/components/auth/AuthGuard"
+import { Student, studentService } from "@/services/studentService"
+import { Tables, TablesUpdate } from "@/types/database.types"
+import { gradeLevelsService } from "@/services/gradeLevelsService"
 
 function StudentDashboardContent() {
   const router = useRouter()
   const params = useParams()
   const studentId = params.id as string
-  const { user } = useAuth()
-  const [student, setStudent] = useState<any>(null)
-  const [editedStudent, setEditedStudent] = useState<any>(null)
-  const [courses, setCourses] = useState<any[]>([])
+  const [student, setStudent] = useState<Student>()
+  const [editedStudent, setEditedStudent] = useState<TablesUpdate<"students">>()
   const [loading, setLoading] = useState(true)
   const [isEditing, setIsEditing] = useState(false)
   const [showSaveConfirmation, setShowSaveConfirmation] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [gradeSearchQuery, setGradeSearchQuery] = useState("")
+  const [showGradeLevelsResults, setShowGradeLevelsResults] = useState(false)
+  const [filteredGradeLevels, setFilteredGradeLevels] = useState<Tables<"grade_levels">[]>([])
+
+  const inputSearch = (name: string) => {
+    if (name.length == 0) return
+    gradeLevelsService.getAllGradeLevelsByName(name).then((v) => {
+      console.log(v)
+      setFilteredGradeLevels(v.data);
+    })
+      .catch((e) => {
+        console.error(e);
+      })
+  }
 
   useEffect(() => {
-    // Load student data
     const loadStudentData = async () => {
       setLoading(true)
       try {
         const studentData = await studentService.getStudentById(studentId)
-        if (!studentData) {
-          // Redirect based on user role
-          const redirectPath = user?.profile?.role === 'receptionist' ? '/receptionist' : '/manager'
-          router.push(redirectPath)
-          return
-        }
+        if (!studentData) router.push('/')
         setStudent(studentData)
-        setEditedStudent(JSON.parse(JSON.stringify(studentData)))
-        // Load courses for this student
-        const studentCourses = await courseService.getCoursesByStudentId(studentId)
-        setCourses(studentCourses)
+        const { grade_levels, ...cleaned } = studentData
+        setEditedStudent({
+          ...cleaned
+        })
       } catch (error) {
-        const redirectPath = user?.profile?.role === 'receptionist' ? '/receptionist' : '/manager'
-        router.push(redirectPath)
+        console.error(error)
       } finally {
         setLoading(false)
       }
     }
 
     loadStudentData()
-  }, [studentId, router, user])
+  }, [studentId, router])
 
   const handleEdit = () => {
     setIsEditing(true)
@@ -118,19 +122,20 @@ function StudentDashboardContent() {
     )
   }
 
-  const studentCourses = courses.filter((course) => course.student_ids?.includes(studentId))
-  const activeCourses = studentCourses.filter((course) => course.status === "active")
-  const completedCourses = studentCourses.filter((course) => course.status === "completed")
+  const studentCourseInstances = student.course_enrollments.flatMap((ce) => ce.course_instances)
+  const activeCourses = studentCourseInstances.filter((course) => !course.archived)
+  const completedCourses = studentCourseInstances.filter((course) => course.archived)
 
-  const totalMonthlyFees = activeCourses.reduce((sum, course) => sum + (course.monthly_price || 0), 0)
-  const paidThisMonth = 0 // Payment tracking to be implemented with payments table
+  const payments = student.student_payments
+
+  const totalMonthlyFees = student.course_enrollments.reduce((sum, ce) => ce.status === "enrolled" ? sum + (ce.course_instances.monthly_price || 0) : sum + 0, 0)
+  const paidThisMonth = '?' // Payment tracking to be implemented with payments table
 
   // Calculate alerts
-  const missedPayments = 0 // Payment tracking to be implemented with payments table
+  const missedPayments = payments.filter((p) => p.status == 'paid').length
 
   return (
     <div className="min-h-screen bg-gray-50">
-      {/* Header */}
       <header className="bg-white shadow-sm border-b">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-16">
@@ -141,25 +146,24 @@ function StudentDashboardContent() {
               </Button>
               <h1 className="text-xl font-semibold text-gray-900">Student Dashboard</h1>
             </div>
-            {user?.profile?.role && ["manager", "receptionist"].includes(user.profile.role) && (
-              <div className="flex items-center space-x-2">
-                {!isEditing ? (
-                  <Button onClick={handleEdit}>Edit Student</Button>
-                ) : (
-                  <>
-                    <Button onClick={handleSave}>Save</Button>
-                    <Button variant="outline" onClick={handleCancel}>Cancel</Button>
-                  </>
-                )}
-              </div>
-            )}
+
+            <div className="flex items-center space-x-2">
+              {!isEditing ? (
+                <Button onClick={handleEdit}>Edit Student</Button>
+              ) : (
+                <>
+                  <Button onClick={handleSave}>Save</Button>
+                  <Button variant="outline" onClick={handleCancel}>Cancel</Button>
+                </>
+              )}
+            </div>
+
           </div>
         </div>
       </header>
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          {/* Student Info */}
           <div className="lg:col-span-1 space-y-6">
             <Card>
               <CardHeader>
@@ -184,41 +188,59 @@ function StudentDashboardContent() {
                   </div>
 
                   <div className="space-y-2">
-                    <Label htmlFor="school_year">School Year</Label>
+                    <Label htmlFor="school_year">School Level</Label>
                     {isEditing ? (
-                      <Input
-                        id="school_year"
-                        value={editedStudent?.school_year ?? ""}
-                        onChange={(e) => handleInputChange("school_year", e.target.value)}
-                      />
-                    ) : (
-                      <p className="text-gray-600">{student.school_year}</p>
-                    )}
-                  </div>
+                      <div className="relative">
+                        <Input
+                          id=";evelSearch"
+                          placeholder="Search for a level..."
+                          value={gradeSearchQuery}
+                          onChange={(e) => {
+                            setGradeSearchQuery(e.target.value)
+                            setShowGradeLevelsResults(e.target.value.length > 0)
+                            inputSearch(e.target.value)
+                          }}
+                          onBlur={() => setTimeout(() => setShowGradeLevelsResults(false), 150)}
+                          onFocus={() => setShowGradeLevelsResults(gradeSearchQuery.length > 0)}
+                          required
+                        />
 
-                  <div className="space-y-2">
-                    <Label htmlFor="specialty">Specialty</Label>
-                    {isEditing ? (
-                      <Input
-                        id="specialty"
-                        value={editedStudent?.specialty ?? ""}
-                        onChange={(e) => handleInputChange("specialty", e.target.value)}
-                      />
+                        {showGradeLevelsResults && filteredGradeLevels.length > 0 && (
+                          <div className="absolute top-full left-0 right-0 mt-1 bg-white border rounded-md shadow-lg z-50 max-h-40 overflow-y-auto">
+                            {filteredGradeLevels.map((level) => (
+                              <div
+                                key={level.id}
+                                className="px-4 py-2 hover:bg-gray-50 cursor-pointer border-b last:border-0"
+                                // onMouseDown runs BEFORE onBlur, securing the selection
+                                onMouseDown={() => {
+                                  handleInputChange('school_level', level.id.toString())
+                                  setGradeSearchQuery(level.name)
+                                  setShowGradeLevelsResults(false)
+                                }}
+                              >
+                                <div className="font-medium text-sm text-gray-900">{level.name}</div>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </div>
                     ) : (
-                      <p className="text-gray-600">{student.specialty || 'Not provided'}</p>
+                      <p className="text-gray-600">{student.grade_levels.name}</p>
                     )}
                   </div>
 
                   <div className="space-y-2">
                     <Label htmlFor="school">School</Label>
                     {isEditing ? (
-                      <Input
-                        id="school"
-                        value={editedStudent?.school ?? ""}
-                        onChange={(e) => handleInputChange("school", e.target.value)}
-                      />
+                      <>
+                        <Input
+                          id="school"
+                          value={editedStudent?.school ?? ""}
+                          onChange={(e) => handleInputChange("school", e.target.value)}
+                        />
+                      </>
                     ) : (
-                      <p className="text-gray-600">{student.school}</p>
+                      <p className="text-gray-600">{student.school || '-'}</p>
                     )}
                   </div>
 
@@ -336,7 +358,7 @@ function StudentDashboardContent() {
 
           </div>
 
-          {/* Courses */}
+          {/* courseInstances */}
           <div className="lg:col-span-2">
             <Card>
               <CardHeader>
@@ -347,57 +369,60 @@ function StudentDashboardContent() {
               </CardHeader>
               <CardContent>
                 <div className="space-y-6">
-                  {/* Active Courses */}
+                  {/* Active courseInstances */}
                   <div>
-                    <h3 className="font-medium text-lg mb-4">Active Courses</h3>
+                    <h3 className="font-medium text-lg mb-4">Active Course Instances</h3>
                     <Table>
                       <TableHeader>
                         <TableRow>
                           <TableHead>Course</TableHead>
                           <TableHead>Teacher</TableHead>
-                          <TableHead>Schedule</TableHead>
                           <TableHead>Monthly Price</TableHead>
                           <TableHead>Payment Status</TableHead>
                         </TableRow>
                       </TableHeader>
                       <TableBody>
-                        {activeCourses.map((course) => (
-                          <TableRow key={course.id}>
-                            <TableCell className="font-medium">
-                              <Button
-                                variant="link"
-                                className="p-0 h-auto font-medium text-left"
-                                onClick={() => router.push(`/course/${course.id}`)}
-                              >
-                                {course.subject} - {course.schoolYear}
-                              </Button>
-                            </TableCell>
-                            <TableCell>
-                              <Button
-                                variant="link"
-                                className="p-0 h-auto font-medium text-left"
-                                onClick={() => router.push(`/teacher/${course.teacher_id}`)}
-                              >
-                                {course.teacher_name}
-                              </Button>
-                            </TableCell>
-                            <TableCell>{course.schedule}</TableCell>
-                            <TableCell>{course.monthly_price} DA</TableCell>
-                            <TableCell>
-                              <Badge variant="outline">
-                                N/A
-                              </Badge>
-                            </TableCell>
-                          </TableRow>
-                        ))}
+                        {activeCourses.map((course) => {
+                          const isPaymentMissing = payments.filter((p) => {
+                            return p.course_id == course.id && p.status != 'paid'
+                          }).length > 1
+                          return (
+                            <TableRow key={course.id}>
+                              <TableCell className="font-medium">
+                                <Button
+                                  variant="link"
+                                  className="p-0 h-auto font-medium text-left"
+                                  onClick={() => router.push(`/course-instance/${course.id}`)}
+                                >
+                                  {course.course_eligibility.courses.name} - {course.course_eligibility.grade_levels?.name}
+                                </Button>
+                              </TableCell>
+                              <TableCell>
+                                <Button
+                                  variant="link"
+                                  className="p-0 h-auto font-medium text-left"
+                                  onClick={() => router.push(`/teacher/${course.teacher_id}`)}
+                                >
+                                  {course.teachers.name}
+                                </Button>
+                              </TableCell>
+                              <TableCell>{course.monthly_price} DA</TableCell>
+                              <TableCell>
+                                <Badge variant="outline">
+                                  {isPaymentMissing ? "Missing payment" : "Paid"}
+                                </Badge>
+                              </TableCell>
+                            </TableRow>
+                          )
+                        })}
                       </TableBody>
                     </Table>
                   </div>
 
-                  {/* Completed Courses */}
+                  {/* Completed courseInstances */}
                   {completedCourses.length > 0 && (
                     <div>
-                      <h3 className="font-medium text-lg mb-4">Completed Courses</h3>
+                      <h3 className="font-medium text-lg mb-4">Completed courseInstances</h3>
                       <Table>
                         <TableHeader>
                           <TableRow>
@@ -412,7 +437,7 @@ function StudentDashboardContent() {
                           {completedCourses.map((course) => (
                             <TableRow key={course.id} className="opacity-60">
                               <TableCell className="font-medium">
-                                {course.subject} - {course.schoolYear}
+                                {course.course_eligibility.courses.name} - {course.course_eligibility.grade_levels?.name}
                               </TableCell>
                               <TableCell>
                                 <Button
@@ -420,11 +445,10 @@ function StudentDashboardContent() {
                                   className="p-0 h-auto font-medium text-left"
                                   onClick={() => router.push(`/teacher/${course.teacher_id}`)}
                                 >
-                                  {course.teacher_name}
+                                  {course.teachers.name}
                                 </Button>
                               </TableCell>
-                              <TableCell>{course.schedule}</TableCell>
-                              <TableCell>{course.monthlyPrice} DA</TableCell>
+                              <TableCell>{course.monthly_price} DA</TableCell>
                               <TableCell>
                                 <Badge variant="default">Completed</Badge>
                               </TableCell>
@@ -446,8 +470,6 @@ function StudentDashboardContent() {
 
 export default function StudentDashboard() {
   return (
-    <AuthGuard requiredRoles={['manager', 'receptionist']}>
-      <StudentDashboardContent />
-    </AuthGuard>
+    <StudentDashboardContent />
   )
 }

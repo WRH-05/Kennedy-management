@@ -2,7 +2,7 @@
 import Link from "next/link"
 import { usePathname } from "next/navigation"
 import { Settings } from "lucide-react"
-import { useAuth } from "@/contexts/AuthContext"
+import { useAuth } from "@/context/AuthContext"
 
 export default function DashboardNavTabs() {
   const pathname = usePathname()
@@ -13,7 +13,7 @@ export default function DashboardNavTabs() {
     { name: "Payouts", href: "/dashboard/payouts" },
     { name: "Students", href: "/dashboard/students" },
     { name: "Teachers", href: "/dashboard/teachers" },
-    { name: "Courses", href: "/dashboard/courses" },
+    { name: "courseInstances", href: "/dashboard/courseInstances" },
     { name: "Archive", href: "/dashboard/archive" },
   ]
 

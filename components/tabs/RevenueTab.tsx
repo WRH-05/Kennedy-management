@@ -6,9 +6,10 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Badge } from "@/components/ui/badge"
 import { TrendingUp } from "lucide-react"
+import { UnifiedPaymentActivity } from "@/services/paymentService"
 
 interface RevenueTabProps {
-  revenue: any[]
+  revenue: UnifiedPaymentActivity[]
 }
 
 // Helper function to format date and time
@@ -79,7 +80,7 @@ export default function RevenueTab({ revenue }: RevenueTabProps) {
                       <Button
                         variant="link"
                         className="p-0 h-auto font-medium text-left"
-                        onClick={() => router.push(`/course/${item.course_id}`)}
+                        onClick={() => router.push(`/course-instance/${item.course_id}`)}
                       >
                         {item.course || 'N/A'}
                       </Button>

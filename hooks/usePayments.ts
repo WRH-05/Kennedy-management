@@ -1,11 +1,13 @@
 "use client"
 
 import useSWR, { mutate } from 'swr'
-import { paymentService } from "@/services/paymentService"
+import { paymentService, UnifiedPaymentActivity } from "@/services/paymentService"
 import { swrConfig } from './swr-config'
 import { useStudents } from './useStudents'
 import { useTeachers } from './useTeachers'
-import { useCourses } from './useCourses'
+import { useCourseInstances } from './useCourseInstances'
+import { studentPaymentService } from '@/services/studentPaymentService'
+import { teacherPayoutService } from '@/services/teacherPayoutService'
 
 export function usePayments() {
   const { data, error, isLoading, isValidating } = useSWR(
@@ -23,15 +25,47 @@ export function usePayments() {
   }
 }
 
+export function useStudentsPayments() {
+  const { data, error, isLoading, isValidating, mutate } = useSWR(
+    'students-payments',
+    () => studentPaymentService.getAllStudentsPayments(),
+    swrConfig
+  )
+
+  return {
+    payments: data,
+    isLoading,
+    isValidating,
+    error,
+    mutate, // Returns the bound mutator for this specific key
+  }
+}
+
+export function useTeachersPayments() {
+  const { data, error, isLoading, isValidating, mutate } = useSWR(
+    'teachers-payments', // ✨ Fixed cache key collision
+    () => teacherPayoutService.getAllTeachersPayments(),
+    swrConfig
+  )
+
+  return {
+    payments: data,
+    isLoading,
+    isValidating,
+    error,
+    mutate, // Returns the bound mutator for this specific key
+  }
+}
+
 export function useStudentsData(billing_period_id: string) {
   const { data, error, isLoading, isValidating, mutate } = useSWR(
-    billing_period_id ? ['payment-students-data', billing_period_id] : null,
-    ([_, id]) => paymentService.getStudentData(id),
+    billing_period_id ? ['payment-students-data', billing_period_id] : null, // Guard against empty IDs
+    ([_, id]) => studentPaymentService.getStudentData(id),
     {
-      ...swrConfig,                // Keep your other configs if necessary
-      revalidateOnMount: true,     // Forces revalidation when the component mounts
-      revalidateIfStale: true,     // Always revalidate even if data is cached
-      dedupingInterval: 0,         // Disables request deduping (no caching time window)
+      ...swrConfig,
+      revalidateOnMount: true,
+      revalidateIfStale: true,
+      dedupingInterval: 0,
     }
   )
 
@@ -40,23 +74,7 @@ export function useStudentsData(billing_period_id: string) {
     isLoading,
     isValidating,
     error,
-    mutate: () => mutate(['payment-students-data', billing_period_id]),
-  }
-}
-
-export function useTeacherPaymentData() {
-  const { data, error, isLoading, isValidating } = useSWR(
-    'teacher-payment-data',
-    () => paymentService.getTeacherData(),
-    swrConfig
-  )
-
-  return {
-    paymentData: data || [],
-    isLoading,
-    isValidating,
-    error,
-    mutate: () => mutate('teacher-payment-data'),
+    mutate: () => mutate(),
   }
 }
 
@@ -64,8 +82,8 @@ export function useRevenue() {
   const { payments } = usePayments()
 
   const revenueData = payments
-    .filter((p: any) => p.type === 'student' && p.status === 'paid')
-    .map((p: any) => ({
+    .filter((p: UnifiedPaymentActivity) => p.type === 'student' && p.status === 'paid')
+    .map((p: UnifiedPaymentActivity) => ({
       ...p,
       paid: true
     }))
@@ -75,10 +93,6 @@ export function useRevenue() {
     error: null,
     isLoading: false
   }
-}
-
-export function usePayouts() {
-  return useSWR("dashboard/payouts", () => paymentService.getAllPayouts())
 }
 
 export function usePendingArchives() {
@@ -92,11 +106,28 @@ export function usePendingArchives() {
   }
 }
 
+
+export function useTeachersPayouts() {
+  const { data, error, isLoading, isValidating, mutate } = useSWR(
+    'teachers-payouts',
+    () => teacherPayoutService.getAllTeachersPayouts(),
+    swrConfig
+  )
+
+  return {
+    payments: data || [],
+    isLoading,
+    isValidating,
+    error,
+    mutate, // Returns the bound mutator for this specific key
+  }
+}
+
 // COMBINED DASHBOARD DATA HOOK
 export function useDashboardData() {
   const { students, isLoading: studentsLoading, error: studentsError } = useStudents()
   const { teachers, isLoading: teachersLoading, error: teachersError } = useTeachers()
-  const { courses, isLoading: coursesLoading, error: coursesError } = useCourses()
+  const { data: courseInstances, isLoading: coursesLoading, error: coursesError } = useCourseInstances()
   const { payments, isLoading: paymentsLoading, error: paymentsError } = usePayments()
 
   const isLoading = studentsLoading || teachersLoading || coursesLoading || paymentsLoading
@@ -105,14 +136,14 @@ export function useDashboardData() {
   return {
     students,
     teachers,
-    courses,
+    courseInstances,
     payments,
     isLoading,
     error,
     refreshAll: () => {
       mutate('students')
       mutate('teachers')
-      mutate('courses')
+      mutate('courseInstances')
       mutate('payments')
     },
   }

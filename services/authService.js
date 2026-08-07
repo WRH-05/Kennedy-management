@@ -1,5 +1,7 @@
 // Authentication Service for Kennedy Management System
-import { supabase } from '@/lib/supabase'
+import { createClient } from '@/lib/supabase/client'
+
+const supabase = createClient();
 
 // Conditional debug logging
 const DEBUG = process.env.NODE_ENV === 'development'

@@ -1,82 +1,77 @@
 "use client"
-import { useState, useMemo } from "react"
+import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
-import { useAuth } from "@/contexts/AuthContext"
-import { useDashboardData } from "@/hooks/usePayments"
-import { useStudents } from "@/hooks/useStudents"
-import { useTeachers } from "@/hooks/useTeachers"
-import { useCourses } from "@/hooks/useCourses"
+import Link from "next/link"
+import { authService } from "@/services/authService"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
-import { Search, LogOut, Calendar } from "lucide-react"
+import {
+  Sheet,
+  SheetContent,
+  SheetDescription,
+  SheetHeader,
+  SheetTitle,
+  SheetTrigger,
+} from "@/components/ui/sheet"
+import { Search, LogOut, Menu } from "lucide-react"
+import { useAuth } from "@/context/AuthContext"
+import { FoundPeople, searchAllCourseInstancesTeachersStudents } from "@/services/courseInstanceTeacherStudentSearch"
 
 export default function DashboardHeader() {
   const router = useRouter()
-  const { user, signOut } = useAuth()
   const [searchQuery, setSearchQuery] = useState("")
-
-  const { students: allStudents } = useStudents();
-  const { teachers: allTeachers } = useTeachers();
-  const { courses: allCourses } = useCourses();
-
-  const students = useMemo(() =>
-    (allStudents && 'data' in allStudents ? allStudents.data : []),
-    [allStudents]
-  )
-
-  const teachers = useMemo(() =>
-    (allTeachers && 'data' in allTeachers ? allTeachers.data : []),
-    [allTeachers]
-  )
-
-  const courses = useMemo(() =>
-    (allCourses && 'data' in allCourses ? allCourses.data : []),
-    [allCourses]
-  )
+  const [searchResults, setSearchResult] = useState<FoundPeople[]>([])
+  const { profile } = useAuth()
 
   const handleSignOut = async () => {
-    await signOut()
+    await authService.signOut()
+    router.push('/')
   }
 
-  const handleMonthlyRollover = () => {
-    // Implement structural rollover processing logic here
-  }
-
-  const searchResults = useMemo(() => {
-    if (!searchQuery.trim()) return []
-
-    const query = searchQuery.toLowerCase()
-
-    const studentResults = students
-      .filter((student: any) => student.name?.toLowerCase().includes(query))
-      .map((student: any) => ({ ...student, type: "student" }))
-
-    const teacherResults = teachers
-      .filter((teacher: any) => teacher.name?.toLowerCase().includes(query))
-      .map((teacher: any) => ({ ...teacher, type: "teacher" }))
-
-    const courseResults = courses
-      .filter(
-        (course: any) =>
-          course.subject?.toLowerCase().includes(query) ||
-          course.school_year?.toLowerCase().includes(query) ||
-          course.teacher_name?.toLowerCase().includes(query),
+  const getTeacherSubjects = (teacher: any) =>
+    Array.from(
+      new Set(
+        teacher?.teachers_course_eligibility?.flatMap((eligibility: any) =>
+          eligibility.course_eligibility?.courses?.name
+            ? [eligibility.course_eligibility.courses.name]
+            : []
+        ) ?? []
       )
-      .map((course: any) => ({ ...course, type: "course" }))
+    )
 
-    return [...studentResults, ...teacherResults, ...courseResults]
-  }, [searchQuery, students, teachers, courses])
+  // Debounced Search Effect
+  useEffect(() => {
+    // 1. Immediately clear results if query is empty
+    if (!searchQuery.trim()) {
+      setSearchResult([])
+      return
+    }
+
+    // 2. Set up a 200ms debounce timer
+    const delayDebounceFn = setTimeout(() => {
+      const query = searchQuery.toLowerCase()
+
+      searchAllCourseInstancesTeachersStudents(query)
+        .then((cits) => {
+          setSearchResult(cits.data)
+        })
+        .catch((e) => {
+          console.error("Can't perform search: ", e)
+        })
+    }, 200) // 200ms delay
+
+    // 3. Clean up the timer if the user types again before 200ms passes
+    return () => clearTimeout(delayDebounceFn)
+  }, [searchQuery])
 
   const showSearchResults = searchQuery.trim().length > 0 && searchResults.length > 0
 
-  const handleSearchResultClick = (result: any) => {
+  const handleSearchResultClick = (result: FoundPeople) => {
     if (result.type === "student") {
       router.push(`/student/${result.id}`)
     } else if (result.type === "teacher") {
       router.push(`/teacher/${result.id}`)
-    } else if (result.type === "course") {
-      router.push(`/course/${result.id}`)
     }
     setSearchQuery("")
   }
@@ -85,13 +80,43 @@ export default function DashboardHeader() {
     <header className="bg-white shadow-sm border-b">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between items-center h-16">
-          <h1 className="text-xl font-semibold text-gray-900"><a href="/">Manager Dashboard</a></h1>
+          {/* Side Slider Button (Sheet) */}
+          <Sheet>
+            <SheetTrigger asChild>
+              <Button variant="ghost" size="icon" title="Open Sidebar">
+                <Menu className="h-5 w-5" />
+              </Button>
+            </SheetTrigger>
+            <SheetContent side="left" className="w-75 sm:w-100">
+              <SheetHeader>
+                <SheetTitle>Quick Actions Panel</SheetTitle>
+                <SheetDescription>
+                  Access alternative utilities and global management tools here.
+                </SheetDescription>
+              </SheetHeader>
 
+              {/* Content inside the slider */}
+              <div className="py-6 flex flex-col gap-4">
+                <div className="flex flex-col gap-2 text-sm border-t pt-4">
+                  <p className="font-medium text-slate-900">Mobile Navigation</p>
+                  <Link href="/manager" className="p-2 hover:bg-slate-100 rounded-md transition-colors">Main Menu</Link>
+                  <Link href="/manager/students" className="p-2 hover:bg-slate-100 rounded-md transition-colors">Students Registry</Link>
+                  <Link href="/manager/teachers" className="p-2 hover:bg-slate-100 rounded-md transition-colors">Teachers Registry</Link>
+                  <Link href="/manager/course-instances" className="p-2 hover:bg-slate-100 rounded-md transition-colors">Active Course Instances</Link>
+                  <Link href="/manager/payouts" className="p-2 hover:bg-slate-100 rounded-md transition-colors">Payments</Link>
+                  <Link href="/manager/archive" className="p-2 hover:bg-slate-100 rounded-md transition-colors">Archives</Link>
+                  <Link href="/manager/revenue" className="p-2 hover:bg-slate-100 rounded-md transition-colors">Revenue</Link>
+                </div>
+              </div>
+            </SheetContent>
+          </Sheet>
+
+          {/* Search Bar */}
           <div className="flex-1 max-w-md mx-4 relative">
             <div className="relative">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
               <Input
-                placeholder="Search students, teachers, courses..."
+                placeholder="Search students, teachers, course instances..."
                 className="pl-10"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
@@ -116,19 +141,6 @@ export default function DashboardHeader() {
                         {result.type === "student" ? "Student" : result.type === "teacher" ? "Teacher" : "Course"}
                       </Badge>
                     </div>
-                    {result.type === "student" && (
-                      <p className="text-sm text-gray-600">
-                        {result.school_year} - {result.school}
-                      </p>
-                    )}
-                    {result.type === "teacher" && (
-                      <p className="text-sm text-gray-600">
-                        {result.subjects ? (Array.isArray(result.subjects)
-                          ? result.subjects.join(", ")
-                          : (typeof result.subjects === 'string' ? result.subjects : "No subjects")
-                        ) : "No subjects"}
-                      </p>
-                    )}
                     {result.type === "course" && (
                       <p className="text-sm text-gray-600">
                         {result.teacher_name} - {result.school_year} - {result.schedule}
@@ -140,9 +152,12 @@ export default function DashboardHeader() {
             )}
           </div>
 
-          <div className="flex items-center space-x-4">
-            <span className="text-sm text-gray-600">Welcome, {user?.profile?.full_name || 'Manager'}</span>
-            <Button variant="outline" size="sm" onClick={handleSignOut}>
+          {/* Right Side Actions */}
+          <div className="flex items-center space-x-2 sm:space-x-4 shrink-0">
+            <span className="text-sm text-gray-600 hidden lg:inline">
+              Welcome, {profile?.full_name || 'Manager'}
+            </span>
+            <Button variant="outline" size="sm" onClick={handleSignOut} className="hidden sm:flex">
               <LogOut className="h-4 w-4 mr-2" />
               Sign Out
             </Button>

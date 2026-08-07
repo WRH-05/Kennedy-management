@@ -8,8 +8,8 @@ A comprehensive school management platform built with Next.js, TypeScript, and S
 - **Role-based Access**: Different interfaces for managers, teachers, receptionists, and students
 - **School Management**: Complete school administration and management tools
 - **Student Portal**: Dedicated interface for student activities
-- **Teacher Dashboard**: Tools for educators to manage their courses and students
-- **Course Management**: Create and manage educational courses
+- **Teacher Dashboard**: Tools for educators to manage their courseInstances and students
+- **Course Management**: Create and manage educational courseInstances
 
 ## Tech Stack
 

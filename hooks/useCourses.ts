@@ -1,18 +1,18 @@
 "use client"
 
 import useSWR, { mutate } from 'swr'
-import { courseService } from "@/services/courseService"
+import { coursesService } from '@/services/coursesService'
 import { swrConfig } from './swr-config'
 
 export function useCourses() {
   const { data, error, isLoading, isValidating } = useSWR(
     'courses',
-    () => courseService.getAllCourseInstances(),
+    () => coursesService.getAllCourses(),
     swrConfig
   )
 
   return {
-    courses: data?.data || [],
+    courses: data || [],
     isLoading,
     isValidating,
     error,
@@ -24,7 +24,7 @@ export function usePaginatedCourses(page: number, pageSize: number) {
   const key = `courses-page-${page}-size-${pageSize}`
   const { data, error, isLoading, isValidating } = useSWR(
     key,
-    () => courseService.getAllCourseInstances(page, pageSize),
+    () => coursesService.getAllCourses(page, pageSize),
     swrConfig
   )
 
@@ -43,46 +43,15 @@ export function usePaginatedCourses(page: number, pageSize: number) {
 export function useCourse(id: string) {
   const { data, error, isLoading, isValidating } = useSWR(
     id ? `course-${id}` : null,
-    () => courseService.getCourseInstanceById(id),
+    () => coursesService.getCourseById(id),
     swrConfig
   )
+
   return {
     course: data,
     isLoading,
     isValidating,
     error,
     mutate: () => mutate(`course-${id}`),
-  }
-}
-
-export function useCoursesByTeacher(teacherId: string) {
-  const { data, error, isLoading, isValidating } = useSWR(
-    teacherId ? `courses-teacher-${teacherId}` : null,
-    () => courseService.getCoursesByTeacherId(teacherId),
-    swrConfig
-  )
-
-  return {
-    courses: data || [],
-    isLoading,
-    isValidating,
-    error,
-    mutate: () => mutate(`courses-teacher-${teacherId}`),
-  }
-}
-
-export function useCoursesByStudent(studentId: string ) {
-  const { data, error, isLoading, isValidating } = useSWR(
-    studentId ? `courses-student-${studentId}` : null,
-    () => courseService.getCoursesByStudentId(studentId),
-    swrConfig
-  )
-
-  return {
-    courses: data || [],
-    isLoading,
-    isValidating,
-    error,
-    mutate: () => mutate(`courses-student-${studentId}`),
   }
 }

@@ -5,6 +5,7 @@ import { usePaginatedStudents } from "@/hooks/useStudents"
 import { usePendingArchives } from "@/hooks/usePayments"
 import StudentsTab from "@/components/tabs/StudentsTab"
 import { Pagination, PaginationContent, PaginationItem, PaginationLink, PaginationPrevious, PaginationNext, PaginationEllipsis } from "@/components/ui/pagination"
+import { Tables } from "@/types/database.types"
 
 const PAGE_SIZE = 6
 
@@ -46,7 +47,7 @@ export default function StudentsPage() {
   const { data: pendingArchiveMap } = usePendingArchives()
 
   const studentList = useMemo(
-    () => (students || []).filter((student: any) => !student.archived),
+    () => (students || []).filter((student: Tables<"students">) => !student.archived),
     [students]
   )
 
@@ -66,7 +67,6 @@ export default function StudentsPage() {
         students={studentList}
         onStudentsUpdate={() => mutate()}
         canAdd={true}
-        showCourses={true}
         showPaymentStatus={true}
         pendingArchiveIds={pendingArchiveMap?.student || new Set()}
       />
