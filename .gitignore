@@ -25,6 +25,11 @@ yarn-error.log*
 .env
 
 
+# agents
+.claudeignore
+CLAUDE.md
+
+
 # vercel
 .vercel
 
@@ -33,10 +38,13 @@ yarn-error.log*
 next-env.d.ts
 
 # github
-/.github
+.github
 
 # logs
 browserConsole.log
 
 /sql
 plans
+
+.mcp.json
+PROMPT.md
