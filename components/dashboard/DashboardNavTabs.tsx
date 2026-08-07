@@ -6,7 +6,8 @@ import { useAuth } from "@/context/AuthContext"
 
 export default function DashboardNavTabs() {
   const pathname = usePathname()
-  const { hasRole } = useAuth()
+  const { profile } = useAuth()
+  const role = profile?.role
 
   const tabs = [
     { name: "Revenue", href: "/dashboard/revenue" },
@@ -35,7 +36,7 @@ export default function DashboardNavTabs() {
         </Link>
       ))}
       
-      {hasRole(['owner', 'manager']) && (
+      {(role === 'owner' || role === 'manager') && (
         <Link
           href="/dashboard/users"
           className={`flex items-center justify-center py-2 px-3 text-sm font-medium rounded-md transition-all text-center ${

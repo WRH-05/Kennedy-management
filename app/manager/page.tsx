@@ -65,8 +65,8 @@ const ALL_NAVIGATION_CARDS = [
 ]
 
 export default function DashboardHubPage() {
-  const { user, loading } = useAuth() // Assuming your AuthContext exposes a loading state
-  const role = user?.user_role
+  const { user, profile, loading } = useAuth()
+  const role = profile?.role // Use DB profile role (not JWT claim which may be missing)
 
   // 2. Filter down cards to only show what the current role is authorized to view
   const authorizedCards = ALL_NAVIGATION_CARDS.filter((card) => {
