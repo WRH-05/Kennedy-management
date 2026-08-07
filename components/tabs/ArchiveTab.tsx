@@ -19,17 +19,16 @@ interface ArchiveTabProps {
 
 interface ArchiveRequest {
   id: string
-  entity_type: 'student' | 'teacher' | 'course'
+  entity_type: string
   entity_id: string
   entity_name: string
   requested_by: string
-  requested_by_name: string
   created_at: string
-  status: 'pending' | 'approved' | 'denied'
-  approved_by?: string
-  approved_by_name?: string
-  approved_date?: string
-  reason?: string
+  status: string
+  approved_by?: string | null
+  approved_date?: string | null
+  reason?: string | null
+  updated_at?: string | null
 }
 
 export default function ArchiveTab({ isManager = false }: ArchiveTabProps) {
@@ -45,7 +44,7 @@ export default function ArchiveTab({ isManager = false }: ArchiveTabProps) {
     setLoading(true)
     try {
       const requests = await archiveService.getAllArchiveRequests()
-      setArchiveRequests(requests || [])
+      setArchiveRequests((requests || []) as ArchiveRequest[])
     } catch (error) {
       console.error('Error loading archive requests:', error)
       setArchiveRequests([])
@@ -92,7 +91,7 @@ export default function ArchiveTab({ isManager = false }: ArchiveTabProps) {
       await archiveService.denyArchiveRequest(requestId)
       // Notify parent to update pending archive IDs without full refetch
     } catch (error) {
-      console.error('Error denying archive request:', error)
+      console.error('Error denying archive request:', (error as Error)?.message ?? error)
       // Rollback on error
       await loadArchiveRequests()
     } finally {
@@ -177,7 +176,7 @@ export default function ArchiveTab({ isManager = false }: ArchiveTabProps) {
                       </Badge>
                     </TableCell>
                     <TableCell className="font-medium">{request.entity_name}</TableCell>
-                    <TableCell>{request.requested_by_name || 'Unknown'}</TableCell>
+                    <TableCell>{request.requested_by || 'Unknown'}</TableCell>
                     <TableCell>{new Date(request.created_at).toLocaleDateString()}</TableCell>
                     <TableCell>{request.reason || 'No reason provided'}</TableCell>
                     {isManager && (
@@ -243,13 +242,13 @@ export default function ArchiveTab({ isManager = false }: ArchiveTabProps) {
                       </Badge>
                     </TableCell>
                     <TableCell className="font-medium">{request.entity_name}</TableCell>
-                    <TableCell>{request.requested_by_name || 'Unknown'}</TableCell>
+                    <TableCell>{request.requested_by || 'Unknown'}</TableCell>
                     <TableCell>
                       <Badge variant={request.status === 'approved' ? 'default' : 'destructive'}>
                         {request.status}
                       </Badge>
                     </TableCell>
-                    <TableCell>{request.approved_by_name || '-'}</TableCell>
+                    <TableCell>{request.approved_by || '-'}</TableCell>
                     <TableCell>
                       {request.approved_date 
                         ? new Date(request.approved_date).toLocaleDateString() 

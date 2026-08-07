@@ -1,4 +1,4 @@
-// CourseTableRow.tsx
+// GradeLevelTableRow.tsx
 "use client"
 
 import { TableCell, TableRow } from "@/components/ui/table"
@@ -7,7 +7,7 @@ import { Tables } from "@/types/database.types"
 import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem } from "@/components/ui/dropdown-menu"
 import { Button } from "@/components/ui/button"
 import { MoreHorizontal } from "lucide-react"
-import { UpdateCourseDialog } from "./UpdateGradeLevelsDialog"
+import { UpdateGradeLevelDialog } from "./UpdateGradeLevelsDialog"
 import { useState } from "react"
 
 interface GradeLevelTableRowProps {
@@ -36,7 +36,7 @@ export function GradeLevelTableRow({ gradeLevel: gradeLevel, onGradeLevelUpdated
                 e.preventDefault() // Prevents focus-loss issues
                 setIsDialogOpen(true)
               }}>
-                Update Course
+                Update Grade Level
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
@@ -44,10 +44,10 @@ export function GradeLevelTableRow({ gradeLevel: gradeLevel, onGradeLevelUpdated
       </TableRow>
 
       {/* Render the dialog outside the table row / dropdown flow completely */}
-      <UpdateCourseDialog 
-        GradeLevel={gradeLevel} 
-        onGradeLevelUpdated={onGradeLevelUpdated} 
-        open={isDialogOpen} 
+      <UpdateGradeLevelDialog
+        GradeLevel={gradeLevel}
+        onGradeLevelUpdated={onGradeLevelUpdated}
+        open={isDialogOpen}
         onOpenChange={setIsDialogOpen}
       />
     </>

@@ -60,7 +60,6 @@ export function AddCourseDialog({ onCourseAdded }: AddCourseInstanceDialogProps)
       teacherService.searchAllTeachers(teacherSearchQuery)
         .then((response) => {
           setFilteredTeachers(response.data);
-          console.log(response.data)
         })
         .catch((e) => {
           console.error('Teacher Search Error: ', e)

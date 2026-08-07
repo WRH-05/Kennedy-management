@@ -6,7 +6,7 @@ export const profileService = {
     const supabase = createClient()
 
     const { data: { user }, error: authError } = await supabase.auth.getUser()
-    console.error(authError)
+    if (authError) console.error(authError)
     if (authError || !user) throw new Error("No user found")
 
     const { data: profile } = await supabase

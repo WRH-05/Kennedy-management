@@ -6,13 +6,13 @@ const supabase = createClient();
 // 1. Define explicit, discriminated union types for your unified transactions stream
 export type EnrichedStudentPayment = Tables<"student_payments"> & {
     type: 'student';
-    students?: Tables<"student_payments"> | null;
-    course_instances?: { subject: string } | null;
+    students?: Tables<"students"> | null;
+    course_instances?: Tables<"course_instances"> | null;
 };
 
 export type EnrichedTeacherPayout = Tables<"teacher_payouts"> & {
     type: 'teacher';
-    teachers?: Tables<"teacher_payouts"> | null;
+    teachers?: Tables<"teachers"> | null;
 };
 
 export type UnifiedPaymentActivity = EnrichedStudentPayment | EnrichedTeacherPayout;
@@ -76,6 +76,6 @@ export const paymentService = {
             })
             .throwOnError();
 
-        return data;
+        return data as Tables<"billing_periods">;
     }
 }

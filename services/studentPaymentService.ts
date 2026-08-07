@@ -38,13 +38,9 @@ export const studentPaymentService = {
     },
 
     async updatePaymentStatus(paymentId: string, status: string) {
-        const updateData = {
-            status,
-        }
-
         const { data, error } = await supabase
             .from('student_payments')
-            .update(updateData)
+            .update({ status } as any)
             .eq('id', paymentId)
             .select()
             .single()
@@ -95,7 +91,7 @@ export const studentPaymentService = {
                 amount: 0,
                 status: 'pending',
                 billing_period_id: billingPeriodId,
-            }])
+            }] as any)
             .select()
             .single()
             .throwOnError()

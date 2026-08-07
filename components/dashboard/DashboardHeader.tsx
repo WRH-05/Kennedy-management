@@ -111,6 +111,11 @@ export default function DashboardHeader() {
             </SheetContent>
           </Sheet>
 
+          {/* Home Button */}
+          <Link href="/manager" title="Home" className="shrink-0">
+            <img src="/home.png" alt="Home" className="h-12 w-25 rounded hover:opacity-80 transition-opacity" />
+          </Link>
+
           {/* Search Bar */}
           <div className="flex-1 max-w-md mx-4 relative">
             <div className="relative">

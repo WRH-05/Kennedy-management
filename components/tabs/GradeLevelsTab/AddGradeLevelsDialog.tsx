@@ -41,13 +41,13 @@ export function AddGradeLevelDialog({ ongradeLevelAdded: onGradeLevelAdded }: Ad
             setIsOpen(false)
 
             toast({
-                title: "Grade added",
+                title: "Grade Level added",
                 description: `${newGradeLevel.name} has been successfully added.`,
             })
         } catch (error) {
             toast({
                 title: "Error",
-                description: "Failed to add Grade: " + (error as Error).message,
+                description: "Failed to add Grade Level: " + (error as Error).message,
                 variant: "destructive",
             })
         } finally {
@@ -65,7 +65,7 @@ export function AddGradeLevelDialog({ ongradeLevelAdded: onGradeLevelAdded }: Ad
             </DialogTrigger>
             <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
                 <DialogHeader>
-                    <DialogTitle>Add New Grade</DialogTitle>
+                    <DialogTitle>Add New Grade Level</DialogTitle>
                 </DialogHeader>
                 <form onSubmit={handleAddGradeLevel} className="space-y-4">
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -85,7 +85,7 @@ export function AddGradeLevelDialog({ ongradeLevelAdded: onGradeLevelAdded }: Ad
                             Cancel
                         </Button>
                         <Button type="submit" disabled={isSubmitting}>
-                            {isSubmitting ? "Adding..." : "Add Level"}
+                            {isSubmitting ? "Adding..." : "Add Grade Level"}
                         </Button>
                     </div>
                 </form>

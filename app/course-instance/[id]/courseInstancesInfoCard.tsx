@@ -20,8 +20,6 @@ export function CourseInstancesInfoCard({ courseInstances, onRefresh }: { course
   const [isUpdatingCourse, setIsUpdatingCourse] = useState(false)
 
   const [editForm, setEditForm] = useState({
-    subject: courseInstances.subject || "",
-    schoolYear: courseInstances.school_year || "",
     price: courseInstances.price || 0,
     percentageCut: courseInstances.percentage_cut || 50
   })
@@ -76,8 +74,6 @@ export function CourseInstancesInfoCard({ courseInstances, onRefresh }: { course
       });
 
       await courseInstancesService.updateCourseInstance(courseInstances.id, {
-        subject: editForm.subject,
-        school_year: editForm.schoolYear,
         price: editForm.price,
         monthly_price: editForm.price,
         percentage_cut: editForm.percentageCut,
@@ -163,8 +159,8 @@ export function CourseInstancesInfoCard({ courseInstances, onRefresh }: { course
       </CardHeader>
       <CardContent className="space-y-4">
         <div>
-          <h3 className="font-semibold text-lg">{courseInstances.subject}</h3>
-          <p className="text-gray-600">{courseInstances.school_year}</p>
+          <h3 className="font-semibold text-lg">{courseInstances.course_eligibility?.courses?.name ?? "—"}</h3>
+          <p className="text-gray-600">{courseInstances.course_eligibility?.grade_levels?.name ?? "—"}</p>
         </div>
         <div className="space-y-2">
           <p><span className="font-medium">Teacher:</span> <Button variant="link" className="p-0 h-auto font-medium" onClick={() => router.push(`/teacher/${courseInstances.teacher_id}`)}>{courseInstances.teachers?.name}</Button></p>

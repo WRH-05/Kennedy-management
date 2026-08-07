@@ -5,41 +5,19 @@ import { Table, TableBody, TableHead, TableHeader, TableRow } from "@/components
 import { BookOpen } from "lucide-react"
 import { AddCourseDialog } from "./CourseInstancesTab/AddCourseInstanceDialog"
 import { CourseInstanceTableRow } from "./CourseInstancesTab/CourseInstanceTableRow"
-import { archiveService } from "@/services/archiveService"
-import { useToast } from "@/hooks/use-toast"
 import { CourseInstance } from "@/services/courseInstancesService"
 
 interface CourseIntancesTabProps {
   courseInstances: CourseInstance[]
   onCoursesUpdate: (courseInstances: CourseInstance[]) => void
   canAdd?: boolean
-  pendingArchiveIds?: Set<string>
 }
 
 export default function CoursesTab({
   courseInstances,
   onCoursesUpdate,
   canAdd = false,
-  pendingArchiveIds = new Set(),
 }: CourseIntancesTabProps) {
-  const { toast } = useToast()
-
-  const handleArchiveCourse = async (courseId: string, courseName: string) => {
-    try {
-      await archiveService.createArchiveRequest("course", courseId, courseName)
-      toast({
-        title: "Archive request submitted",
-        description: "Waiting for manager approval.",
-      })
-    } catch (error) {
-      console.error("Error creating archive request:", error)
-      toast({
-        title: "Error",
-        description: "Failed to create archive request.",
-        variant: "destructive",
-      })
-    }
-  }
 
   return (
     <Card>
@@ -72,8 +50,6 @@ export default function CoursesTab({
                 <CourseInstanceTableRow
                   key={course.id}
                   course={course}
-                  pendingArchiveIds={pendingArchiveIds}
-                  onArchive={handleArchiveCourse}
                 />
               ))}
             </TableBody>

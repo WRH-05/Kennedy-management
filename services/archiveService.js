@@ -151,7 +151,6 @@ export const archiveService = {
             .update({
                 status: 'denied',
                 approved_by: userProfile.id,
-                approved_by_name: userProfile.full_name,
                 approved_date: new Date().toISOString(),
                 updated_at: new Date().toISOString()
             })

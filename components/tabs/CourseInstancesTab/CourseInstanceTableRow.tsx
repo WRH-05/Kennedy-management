@@ -4,18 +4,14 @@ import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { TableCell, TableRow } from "@/components/ui/table"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
-import { MoreHorizontal, Pencil, Archive } from "lucide-react"
-import { useMemo } from "react"
-import { useCourseEnrollementStudentsByCourseId } from "@/hooks/useCourseEnrollement"
+import { MoreHorizontal, Pencil } from "lucide-react"
 import { CourseInstance } from "@/services/courseInstancesService"
 
 interface CourseInstanceTableRowProps {
   course: CourseInstance
-  pendingArchiveIds: Set<string>
-  onArchive: (courseId: string, courseName: string) => void
 }
 
-export function CourseInstanceTableRow({ course, pendingArchiveIds, onArchive }: CourseInstanceTableRowProps) {
+export function CourseInstanceTableRow({ course }: CourseInstanceTableRowProps) {
   const router = useRouter()
   return (
     <TableRow className="group">

@@ -7,11 +7,21 @@ const supabase = createClient();
 export type CourseInstanceWithEnrichment = Tables<"course_instances"> & {
     student_ids: string[];
     teachers: Tables<"teachers">;
+    course_eligibility: {
+        id: string;
+        courses: { name: string } | null;
+        grade_levels: { name: string } | null;
+    } | null;
 };
 
 export type CourseInstanceDetail = Tables<"course_instances"> & {
     course_schedule: Tables<"course_schedule">[];
     teachers: Tables<"teachers">;
+    course_eligibility: {
+        id: string;
+        courses: { name: string } | null;
+        grade_levels: { name: string } | null;
+    } | null;
 };
 
 export type CourseInstancesResponse = Awaited<
@@ -61,7 +71,7 @@ export const courseInstancesService = {
     async getCourseInstanceById(id: string): Promise<CourseInstanceDetail> {
         const { data } = await supabase
             .from('course_instances')
-            .select(`*, course_schedule (*), teachers (*)`)
+            .select(`*, course_schedule (*), teachers (*), course_eligibility(id, courses(*), grade_levels(*))`)
             .eq('id', id)
             .single()
             .throwOnError();
@@ -72,9 +82,8 @@ export const courseInstancesService = {
     async getCourseInstancesByTeacherId(teacherId: string): Promise<CourseInstanceWithEnrichment[]> {
         const { data } = await supabase
             .from('course_instances')
-            .select('*')
+            .select('*, teachers(*), course_eligibility(id, courses(*), grade_levels(*))')
             .eq('teacher_id', teacherId)
-            .eq('archived', false)
             .order('created_at', { ascending: false })
             .throwOnError();
 
@@ -101,7 +110,7 @@ export const courseInstancesService = {
     async getCourseInstanceEnrollments(courseId: string): Promise<Tables<"course_enrollments">[]> {
         const { data } = await supabase
             .from('course_enrollments')
-            .select('*')
+            .select('*, teachers(*), course_eligibility(id, courses(*), grade_levels(*))')
             .eq('course_id', courseId)
             .order('enrolled_at', { ascending: false })
             .throwOnError();

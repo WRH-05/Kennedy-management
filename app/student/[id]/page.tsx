@@ -44,7 +44,6 @@ function StudentDashboardContent() {
   const inputSearch = (name: string) => {
     if (name.length == 0) return
     gradeLevelsService.getAllGradeLevelsByName(name).then((v) => {
-      console.log(v)
       setFilteredGradeLevels(v.data);
     })
       .catch((e) => {

@@ -22,16 +22,15 @@ export function CourseManagementCard({ activeCourses, completedCourses }: Course
       </CardHeader>
       <CardContent>
         <div className="space-y-6">
-          {/* Active courseInstances */}
+          {/* Active Course Instances */}
           <div>
-            <h3 className="font-medium text-lg mb-4">Active course intances</h3>
+            <h3 className="font-medium text-lg mb-4">Active Course Instances</h3>
             {activeCourses.length > 0 ? (
               <Table>
                 <TableHeader>
                   <TableRow>
                     <TableHead>Subject</TableHead>
                     <TableHead>School Year</TableHead>
-                    <TableHead>Type</TableHead>
                     <TableHead>Price</TableHead>
                   </TableRow>
                 </TableHeader>
@@ -40,30 +39,29 @@ export function CourseManagementCard({ activeCourses, completedCourses }: Course
                     <TableRow key={course.id}>
                       <TableCell className="font-medium">
                         <Link href={`/course-instance/${course.id}`} className="hover:underline">
-                          {course.subject}
+                          {course.course_eligibility?.courses?.name ?? "—"}
                         </Link>
                       </TableCell>
-                      <TableCell>{course.school_year}</TableCell>
+                      <TableCell>{course.course_eligibility?.grade_levels?.name ?? "—"}</TableCell>
                       <TableCell>{course.price} DA</TableCell>
                     </TableRow>
                   ))}
                 </TableBody>
               </Table>
             ) : (
-              <p className="text-gray-600">No active course intances</p>
+              <p className="text-gray-600">No active course instances</p>
             )}
           </div>
 
-          {/* Completed courseInstances */}
+          {/* Completed Course Instances */}
           {completedCourses.length > 0 && (
             <div>
-              <h3 className="font-medium text-lg mb-4">Completed courseInstances</h3>
+              <h3 className="font-medium text-lg mb-4">Completed Course Instances</h3>
               <Table>
                 <TableHeader>
                   <TableRow>
                     <TableHead>Subject</TableHead>
                     <TableHead>School Year</TableHead>
-                    <TableHead>Type</TableHead>
                     <TableHead>Price</TableHead>
                     <TableHead>Students</TableHead>
                   </TableRow>
@@ -71,9 +69,8 @@ export function CourseManagementCard({ activeCourses, completedCourses }: Course
                 <TableBody>
                   {completedCourses.map((course) => (
                     <TableRow key={course.id} className="opacity-60">
-                      <TableCell className="font-medium">{course.subject}</TableCell>
-                      <TableCell>{course.school_year}</TableCell>
-                     
+                      <TableCell className="font-medium">{course.course_eligibility?.courses?.name ?? "—"}</TableCell>
+                      <TableCell>{course.course_eligibility?.grade_levels?.name ?? "—"}</TableCell>
                       <TableCell>{course.price} DA</TableCell>
                       <TableCell>{course.student_ids.length || 0}</TableCell>
                     </TableRow>

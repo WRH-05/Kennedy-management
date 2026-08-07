@@ -1,7 +1,7 @@
 "use client"
 import { useMemo, useState } from "react"
 import { usePaginatedCourseInstances } from "@/hooks/useCourseInstances"
-import { usePendingArchives } from "@/hooks/usePayments"
+
 import CourseInstancesTab from "@/components/tabs/CoursesInstancesTab"
 import { Pagination, PaginationContent, PaginationItem, PaginationLink, PaginationPrevious, PaginationNext, PaginationEllipsis } from "@/components/ui/pagination"
 
@@ -42,7 +42,7 @@ function getPageItems(page: number, totalPages: number) {
 export default function CoursesPage() {
   const [page, setPage] = useState(1)
   const { courseInstances: allCourses, total, isLoading: isCourseLoading, mutate } = usePaginatedCourseInstances(page, PAGE_SIZE)
-  const { data: pendingArchiveMap } = usePendingArchives()
+
 
 
   const courseInstances = useMemo(() => {
@@ -62,7 +62,6 @@ export default function CoursesPage() {
         courseInstances={courseInstances}
         onCoursesUpdate={() => mutate()}
         canAdd={true}
-        pendingArchiveIds={pendingArchiveMap?.course || new Set()}
       />
 
       <Pagination className="pt-4">

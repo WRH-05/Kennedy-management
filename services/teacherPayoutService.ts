@@ -24,7 +24,7 @@ export const teacherPayoutService = {
             .from('teacher_payouts')
             .select(`
                     *,
-                    teachers (name),
+                    teachers (*),
                     profiles!teacher_payouts_recorded_by_fkey (*)
                 `, { count: pageSize > 0 ? 'exact' : 'estimated' })
 
@@ -63,13 +63,9 @@ export const teacherPayoutService = {
 
     // Change for full update
     async updatePayoutStatus(id: string, status: string): Promise<Tables<"teacher_payouts">> {
-        const updateData = {
-            status,
-        }
-
         const { data, error } = await supabase
             .from('teacher_payouts')
-            .update(updateData)
+            .update({ status } as any)
             .eq('id', id)
             .select()
             .single()
