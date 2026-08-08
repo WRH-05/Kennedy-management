@@ -7,7 +7,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Badge } from "@/components/ui/badge"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 import { DollarSign, Check, X, MoreHorizontal, ChevronLeft, ChevronRight } from "lucide-react"
-import { EnrichedStudentPayments, studentPaymentService } from "@/services/studentPaymentService"
+import { EnrichedStudentPayments } from "@/services/studentPaymentService"
 import { revalidateData } from "@/hooks/swr-config"
 import { teacherPayoutService } from "@/services/teacherPayoutService"
 import Link from "next/link"
@@ -71,26 +71,16 @@ export default function PayoutsTab({
   const totalPages = Math.ceil(totalItems / (pageSize || 1))
   const onApprovePayout = async (paymentId: string) => {
     try {
-      if (type === "student") {
-        await studentPaymentService.payStudentPayment(paymentId)
-        revalidateData('payments')
-      } else if (type === "teacher") {
-        await teacherPayoutService.payTeacherPayout(paymentId)
-        revalidateData('teacher-payouts')
-      }
+      await teacherPayoutService.payTeacherPayout(paymentId)
+      revalidateData('teacher-payouts')
     } catch (error) {
       console.error(error)
     }
   }
   const onDenyPayout = async (paymentId: string) => {
     try {
-      if (type === "student") {
-        await studentPaymentService.denyStudentPayment(paymentId)
-        revalidateData('payments')
-      } else if (type === "teacher") {
-        await teacherPayoutService.denyTeacherPayout(paymentId)
-        revalidateData('teacher-payouts')
-      }
+      await teacherPayoutService.denyTeacherPayout(paymentId)
+      revalidateData('teacher-payouts')
     } catch (error) {
       console.error(error)
     }

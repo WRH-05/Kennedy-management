@@ -89,7 +89,8 @@ export const studentPaymentService = {
                 course_id: courseId,
                 student_id: studentId,
                 amount: 0,
-                status: 'pending',
+                status: 'paid',
+                payment_date: new Date().toISOString(),
                 billing_period_id: billingPeriodId,
             }] as any)
             .select()
@@ -164,5 +165,33 @@ export const studentPaymentService = {
             ...payment,
             recorded_by_name: payment.profiles?.full_name || '-'
         }))
+    },
+
+    async payRegistrationFee(studentId: string) {
+        // Mark registration fee as paid on the student record
+        const { error: updateError } = await supabase
+            .from('students')
+            .update({ registration_fee_paid: true })
+            .eq('id', studentId)
+            .throwOnError()
+
+        if (updateError) throw updateError
+
+        // Log the registration fee payment (500 DA, 100% school revenue)
+        const { data, error } = await supabase
+            .from('student_payments')
+            .insert([{
+                student_id: studentId,
+                amount: 500,
+                status: 'paid',
+                source: 'registration',
+                payment_date: new Date().toISOString(),
+            }] as any)
+            .select()
+            .single()
+            .throwOnError()
+
+        if (error) throw error
+        return data
     },
 }

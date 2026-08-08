@@ -49,7 +49,7 @@ export default function RevenueTab({ revenue }: RevenueTabProps) {
           <TableHeader>
             <TableRow>
               <TableHead>Student Name</TableHead>
-              <TableHead>Course</TableHead>
+              <TableHead>Source</TableHead>
               <TableHead>Amount</TableHead>
               <TableHead>Date</TableHead>
               <TableHead>Time</TableHead>
@@ -76,7 +76,9 @@ export default function RevenueTab({ revenue }: RevenueTabProps) {
                     )}
                   </TableCell>
                   <TableCell>
-                    {item.course_id ? (
+                    {item.source === 'registration' ? (
+                      <Badge variant="outline">Registration Fee</Badge>
+                    ) : item.course_id ? (
                       <Button
                         variant="link"
                         className="p-0 h-auto font-medium text-left"

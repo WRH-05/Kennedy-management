@@ -21,6 +21,7 @@ interface BillingPeriodToolbarProps {
 export function BillingPeriodToolbar({ courseInstanceId, billingPeriods, selectedPeriodId, setSelectedPeriodId, onRefresh }: BillingPeriodToolbarProps) {
   const { toast } = useToast()
   const [showAddBillingDialog, setShowAddBillingDialog] = useState(false)
+  const [isSubmitting, setIsSubmitting] = useState(false)
   const [newBillingForm, setNewBillingForm] = useState({ startDate: "", endDate: "" })
 
   // Navigate between billing periods (ordered newest-first by start_date DESC)
@@ -38,7 +39,32 @@ export function BillingPeriodToolbar({ courseInstanceId, billingPeriods, selecte
   const handleAddBillingPeriod = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!newBillingForm.startDate || !newBillingForm.endDate) return
+    if (isSubmitting) return
 
+    // Validate: end date must be after start date
+    if (newBillingForm.endDate <= newBillingForm.startDate) {
+      toast({
+        title: "Invalid Dates",
+        description: "End date must be after start date.",
+        variant: "destructive",
+      })
+      return
+    }
+
+    // Validate: start date must be >= the most recent previous period's end date
+    if (billingPeriods.length > 0) {
+      const lastPeriod = billingPeriods[0] // newest first
+      if (newBillingForm.startDate < lastPeriod.end_date) {
+        toast({
+          title: "Overlapping Periods",
+          description: `Start date must be on or after the previous billing period's end date (${lastPeriod.end_date}).`,
+          variant: "destructive",
+        })
+        return
+      }
+    }
+
+    setIsSubmitting(true)
     try {
       const freshPeriod = await paymentService.createBillingPeriod(courseInstanceId, newBillingForm.startDate, newBillingForm.endDate)
       toast({ title: "Success", description: "New billing cycle defined." })
@@ -49,6 +75,8 @@ export function BillingPeriodToolbar({ courseInstanceId, billingPeriods, selecte
     } catch(e) {
       console.error(e)
       toast({ title: "Error", description: "Failed to create cycle.", variant: "destructive" })
+    } finally {
+      setIsSubmitting(false)
     }
   }
 
@@ -98,7 +126,7 @@ export function BillingPeriodToolbar({ courseInstanceId, billingPeriods, selecte
               </div>
               <div className="flex justify-end space-x-2 pt-2 border-t">
                 <Button type="button" variant="outline" onClick={() => setShowAddBillingDialog(false)}>Cancel</Button>
-                <Button type="submit">Create Period</Button>
+                <Button type="submit" disabled={isSubmitting}>{isSubmitting ? "Creating..." : "Create Period"}</Button>
               </div>
             </form>
           </DialogContent>

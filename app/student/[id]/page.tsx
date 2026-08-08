@@ -12,7 +12,9 @@ import { Label } from "@/components/ui/label"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { ArrowLeft, Download, User, BookOpen, AlertTriangle, CheckCircle } from "lucide-react"
 import { Student, studentService } from "@/services/studentService"
+import { studentPaymentService } from "@/services/studentPaymentService"
 import { UpdateStudentDialog } from "@/components/tabs/StudentsTab/UpdateStudentDialog"
+import { revalidateData } from "@/hooks/swr-config"
 import { toast } from "@/hooks/use-toast"
 
 function StudentDashboardContent() {
@@ -22,6 +24,22 @@ function StudentDashboardContent() {
   const [student, setStudent] = useState<Student>()
   const [loading, setLoading] = useState(true)
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false)
+  const [isPayingFee, setIsPayingFee] = useState(false)
+
+  const handlePayRegistrationFee = async () => {
+    setIsPayingFee(true)
+    try {
+      await studentPaymentService.payRegistrationFee(studentId)
+      toast({ title: "Registration Fee Paid", description: "500 DA registration fee has been recorded." })
+      revalidateData('payments')
+      await loadStudentData()
+    } catch (error) {
+      console.error("Error paying registration fee:", error)
+      toast({ title: "Error", description: "Failed to record registration fee.", variant: "destructive" })
+    } finally {
+      setIsPayingFee(false)
+    }
+  }
 
   const loadStudentData = useCallback(async () => {
     setLoading(true)
@@ -157,6 +175,29 @@ function StudentDashboardContent() {
                   </div>
                 </div>
                 <div className="pt-4 border-t">
+                  {/* Registration Fee */}
+                  {student.registration_fee_paid ? (
+                    <div className="flex items-center gap-2 mb-3">
+                      <CheckCircle className="h-4 w-4 text-green-500" />
+                      <span className="text-sm text-green-600 font-medium">Registration Fee Paid</span>
+                    </div>
+                  ) : (
+                    <div className="mb-3">
+                      <div className="flex items-center gap-2 mb-2">
+                        <AlertTriangle className="h-4 w-4 text-amber-500" />
+                        <span className="text-sm text-amber-600 font-medium">Registration Fee Unpaid (500 DA)</span>
+                      </div>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="w-full border-amber-500 text-amber-600 hover:bg-amber-50"
+                        onClick={handlePayRegistrationFee}
+                        disabled={isPayingFee}
+                      >
+                        {isPayingFee ? "Processing..." : "Pay Registration Fee (500 DA)"}
+                      </Button>
+                    </div>
+                  )}
                   <div className="flex justify-between items-center mb-2">
                     <span className="font-medium">Monthly Fees:</span>
                     <span className="text-lg font-bold">{totalMonthlyFees.toLocaleString()} DA</span>
