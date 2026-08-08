@@ -30,6 +30,20 @@ export function AddGradeLevelDialog({ ongradeLevelAdded: onGradeLevelAdded }: Ad
 
         setIsSubmitting(true)
         try {
+            // Duplicate prevention: check for existing grade level with same name (case-insensitive)
+            const existing = await gradeLevelsService.getAllGradeLevelsByName(newGradeLevel.name)
+            const duplicate = (existing.data || []).find(
+                (g) => g.name.toLowerCase() === newGradeLevel.name.toLowerCase()
+            )
+            if (duplicate) {
+                toast({
+                    title: "Duplicate",
+                    description: "A grade level with this name already exists.",
+                    variant: "destructive",
+                })
+                setIsSubmitting(false)
+                return
+            }
 
             await gradeLevelsService.addGradeLevel(newGradeLevel)
             onGradeLevelAdded()

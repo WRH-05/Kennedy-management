@@ -6,10 +6,25 @@ import { Badge } from "@/components/ui/badge"
 import { Tables } from "@/types/database.types"
 import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem } from "@/components/ui/dropdown-menu"
 import { Button } from "@/components/ui/button"
-import { MoreHorizontal } from "lucide-react"
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog"
+import { MoreHorizontal, Trash2 } from "lucide-react"
 import { UpdateCourseDialog } from "./UpdateCourseDialog"
+import { coursesService } from "@/services/coursesService"
+import { createClient } from "@/lib/supabase/client"
+import { useToast } from "@/hooks/use-toast"
 import { useState } from "react"
 import { useRouter } from "next/navigation"
+
+const supabase = createClient()
 
 interface CourseTableRowProps {
   course: Tables<"courses">,
@@ -17,10 +32,52 @@ interface CourseTableRowProps {
 }
 
 export function CourseTableRow({ course, onCourseUpdated }: CourseTableRowProps) {
-  // Move dialog state up to control it cleanly from the dropdown click
   const [isDialogOpen, setIsDialogOpen] = useState(false)
-
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false)
+  const [isDeleting, setIsDeleting] = useState(false)
   const router = useRouter()
+  const { toast } = useToast()
+
+  const handleDelete = async () => {
+    setIsDeleting(true)
+    try {
+      // Check for dependent records in course_eligibility
+      const { count, error: checkError } = await supabase
+        .from('course_eligibility')
+        .select('*', { count: 'exact', head: true })
+        .eq('course_id', course.id)
+
+      if (checkError) throw checkError
+
+      if (count && count > 0) {
+        toast({
+          title: "Cannot Delete",
+          description: "Cannot delete this course because it is assigned to active course instances.",
+          variant: "destructive",
+        })
+        setShowDeleteDialog(false)
+        setIsDeleting(false)
+        return
+      }
+
+      await coursesService.deleteCourse(course.id)
+      toast({
+        title: "Course deleted",
+        description: `${course.name} has been successfully deleted.`,
+      })
+      setShowDeleteDialog(false)
+      onCourseUpdated()
+    } catch (error) {
+      console.error("Error deleting course:", error)
+      toast({
+        title: "Error",
+        description: "Failed to delete course: " + (error as Error).message,
+        variant: "destructive",
+      })
+    } finally {
+      setIsDeleting(false)
+    }
+  }
 
   return (
     <>
@@ -33,13 +90,12 @@ export function CourseTableRow({ course, onCourseUpdated }: CourseTableRowProps)
 
         <TableCell>
           <Button
-                    variant="link"
-                    className="p-0 h-auto font-medium text-left"
-                    onClick={() => router.push(`/course/${course.id}`)}
-                  >
-                   {course.name}
-                  </Button>
-          
+            variant="link"
+            className="p-0 h-auto font-medium text-left"
+            onClick={() => router.push(`/course/${course.id}`)}
+          >
+            {course.name}
+          </Button>
         </TableCell>
         <TableCell>
           <DropdownMenu>
@@ -49,25 +105,54 @@ export function CourseTableRow({ course, onCourseUpdated }: CourseTableRowProps)
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
-              {/* Force the dropdown item to act as the dialog trigger */}
               <DropdownMenuItem onSelect={(e) => {
-                e.preventDefault() // Prevents focus-loss issues
+                e.preventDefault()
                 setIsDialogOpen(true)
               }}>
                 Update Course
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                onSelect={(e) => {
+                  e.preventDefault()
+                  setShowDeleteDialog(true)
+                }}
+                className="text-red-600"
+              >
+                <Trash2 className="mr-2 h-4 w-4" />
+                Delete
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
         </TableCell>
       </TableRow>
 
-      {/* Render the dialog outside the table row / dropdown flow completely */}
-      <UpdateCourseDialog 
-        course={course} 
-        onCourseUpdated={onCourseUpdated} 
-        open={isDialogOpen} 
+      <UpdateCourseDialog
+        course={course}
+        onCourseUpdated={onCourseUpdated}
+        open={isDialogOpen}
         onOpenChange={setIsDialogOpen}
       />
+
+      <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Course</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete &quot;{course.name}&quot;? This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={isDeleting}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleDelete}
+              disabled={isDeleting}
+              className="bg-red-600 hover:bg-red-700"
+            >
+              {isDeleting ? "Deleting..." : "Delete"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </>
   )
 }

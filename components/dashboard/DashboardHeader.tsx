@@ -46,6 +46,8 @@ export default function DashboardHeader() {
       router.push(`/student/${result.id}`)
     } else if (result.type === "teacher") {
       router.push(`/teacher/${result.id}`)
+    } else if (result.type === "course-instance") {
+      router.push(`/course-instance/${result.id}`)
     }
     setSearchQuery("")
   }
@@ -71,14 +73,14 @@ export default function DashboardHeader() {
 
             {showSearchResults && (
               <div className="absolute top-full left-0 right-0 mt-1 bg-white border rounded-md shadow-lg z-50 max-h-60 overflow-y-auto">
-                {searchResults.map((result: any, index: number) => (
+                {searchResults.map((result, index) => (
                   <div
                     key={index}
                     className="px-4 py-2 hover:bg-gray-50 cursor-pointer border-b last:border-b-0"
                     onClick={() => handleSearchResultClick(result)}
                   >
                     <div className="flex items-center justify-between">
-                      <span className="font-medium">{result.name || result.subject}</span>
+                      <span className="font-medium">{result.name}</span>
                       <Badge
                         variant={
                           result.type === "student" ? "default" : result.type === "teacher" ? "secondary" : "outline"
@@ -87,11 +89,6 @@ export default function DashboardHeader() {
                         {result.type === "student" ? "Student" : result.type === "teacher" ? "Teacher" : "Course"}
                       </Badge>
                     </div>
-                    {result.type === "course" && (
-                      <p className="text-sm text-gray-600">
-                        {result.teacher_name} - {result.school_year} - {result.schedule}
-                      </p>
-                    )}
                   </div>
                 ))}
               </div>

@@ -82,10 +82,10 @@ export default function RevenueTab({ revenue }: RevenueTabProps) {
                         className="p-0 h-auto font-medium text-left"
                         onClick={() => router.push(`/course-instance/${item.course_id}`)}
                       >
-                        {item.course || 'N/A'}
+                        {item.course_display || 'N/A'}
                       </Button>
                     ) : (
-                      item.course || 'N/A'
+                      item.course_display || 'N/A'
                     )}
                   </TableCell>
                   <TableCell>{(item.amount || 0).toLocaleString()} DA</TableCell>

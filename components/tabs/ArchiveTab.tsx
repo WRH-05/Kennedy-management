@@ -23,9 +23,11 @@ interface ArchiveRequest {
   entity_id: string
   entity_name: string
   requested_by: string
+  requested_by_name?: string
   created_at: string
   status: string
   approved_by?: string | null
+  approved_by_name?: string
   approved_date?: string | null
   reason?: string | null
   updated_at?: string | null
@@ -176,7 +178,7 @@ export default function ArchiveTab({ isManager = false }: ArchiveTabProps) {
                       </Badge>
                     </TableCell>
                     <TableCell className="font-medium">{request.entity_name}</TableCell>
-                    <TableCell>{request.requested_by || 'Unknown'}</TableCell>
+                    <TableCell>{request.requested_by_name || request.requested_by || 'Unknown'}</TableCell>
                     <TableCell>{new Date(request.created_at).toLocaleDateString()}</TableCell>
                     <TableCell>{request.reason || 'No reason provided'}</TableCell>
                     {isManager && (
@@ -242,13 +244,13 @@ export default function ArchiveTab({ isManager = false }: ArchiveTabProps) {
                       </Badge>
                     </TableCell>
                     <TableCell className="font-medium">{request.entity_name}</TableCell>
-                    <TableCell>{request.requested_by || 'Unknown'}</TableCell>
+                    <TableCell>{request.requested_by_name || request.requested_by || 'Unknown'}</TableCell>
                     <TableCell>
                       <Badge variant={request.status === 'approved' ? 'default' : 'destructive'}>
                         {request.status}
                       </Badge>
                     </TableCell>
-                    <TableCell>{request.approved_by || '-'}</TableCell>
+                    <TableCell>{request.approved_by_name || request.approved_by || '-'}</TableCell>
                     <TableCell>
                       {request.approved_date 
                         ? new Date(request.approved_date).toLocaleDateString() 

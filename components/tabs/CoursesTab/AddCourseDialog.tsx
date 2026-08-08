@@ -31,6 +31,20 @@ export function AddCourseDialog({ onCourseAdded }: AddCourseDialogProps) {
 
         setIsSubmitting(true)
         try {
+            // Duplicate prevention: check for existing course with same name (case-insensitive)
+            const existing = await coursesService.getAllCoursesByName(newCourse.name)
+            const duplicate = (existing.data || []).find(
+                (c) => c.name.toLowerCase() === newCourse.name.toLowerCase()
+            )
+            if (duplicate) {
+                toast({
+                    title: "Duplicate",
+                    description: "A course with this name already exists.",
+                    variant: "destructive",
+                })
+                setIsSubmitting(false)
+                return
+            }
 
             await coursesService.addCourse(newCourse)
             onCourseAdded()

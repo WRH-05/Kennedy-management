@@ -46,6 +46,8 @@ export function AddCourseDialog({ onCourseAdded }: AddCourseInstanceDialogProps)
     price: 500,
   })
 
+  const [displayName, setDisplayName] = useState("")
+
   const [scheduleSlots, setScheduleSlots] = useState<ScheduleSlot[]>([
     { dayOfWeek: "", startHour: "09:00", duration: 2 },
   ])
@@ -102,6 +104,7 @@ export function AddCourseDialog({ onCourseAdded }: AddCourseInstanceDialogProps)
         course_eligibility_id: newCourse.course_eligibility_id,
         price: newCourse.price,
         monthly_price: newCourse.price,
+        display_name: displayName || null,
       }
       const schedule: TablesInsert<"course_schedule">[] = scheduleSlots.map(s => {
         return {
@@ -124,6 +127,7 @@ export function AddCourseDialog({ onCourseAdded }: AddCourseInstanceDialogProps)
       })
       setScheduleSlots([{ dayOfWeek: "", startHour: "09:00", duration: 2 }])
       setTeacherSearchQuery("")
+      setDisplayName("")
       setIsOpen(false)
 
       toast({
@@ -197,7 +201,18 @@ export function AddCourseDialog({ onCourseAdded }: AddCourseInstanceDialogProps)
                   <Label htmlFor="subject">Subject & Grade</Label>
                   <Select
                     value={newCourse.course_eligibility_id}
-                    onValueChange={(val) => setNewCourse({ ...newCourse, course_eligibility_id: val })}
+                    onValueChange={(val) => {
+                      setNewCourse({ ...newCourse, course_eligibility_id: val })
+                      // Auto-fill display name from selected eligibility
+                      const selected = selectedTeacherData.teachers_course_eligibility.find(
+                        (tce) => tce.course_eligibility.id === val
+                      )
+                      if (selected) {
+                        const autoName = selected.course_eligibility.courses.name +
+                          (selected.course_eligibility.grade_levels?.name ? ' - ' + selected.course_eligibility.grade_levels.name : '')
+                        setDisplayName(autoName)
+                      }
+                    }}
                     required
                   >
                     <SelectTrigger>
@@ -211,6 +226,17 @@ export function AddCourseDialog({ onCourseAdded }: AddCourseInstanceDialogProps)
                       ))}
                     </SelectContent>
                   </Select>
+                </div>
+
+                {/* Display Name */}
+                <div className="space-y-2">
+                  <Label htmlFor="displayName">Display Name</Label>
+                  <Input
+                    id="displayName"
+                    placeholder="Course Name - Grade Level"
+                    value={displayName}
+                    onChange={(e) => setDisplayName(e.target.value)}
+                  />
                 </div>
               </>
             )}

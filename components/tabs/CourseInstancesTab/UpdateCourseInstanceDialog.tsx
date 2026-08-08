@@ -32,6 +32,7 @@ export function UpdateCourseInstanceDialog({
   const [price, setPrice] = useState(0)
   const [percentageCut, setPercentageCut] = useState(50)
   const [scheduleSlots, setScheduleSlots] = useState<ScheduleSlot[]>([])
+  const [displayName, setDisplayName] = useState("")
 
   // Fetch full course instance detail when dialog opens
   useEffect(() => {
@@ -44,6 +45,7 @@ export function UpdateCourseInstanceDialog({
           setPrice(data.price || 0)
           setPercentageCut(data.percentage_cut || 50)
           setScheduleSlots(mapSchedulesToSlots(data.course_schedule || []))
+          setDisplayName(data.display_name || "")
         })
         .catch((err) => {
           console.error("Failed to load course instance:", err)
@@ -99,6 +101,7 @@ export function UpdateCourseInstanceDialog({
           price,
           monthly_price: price,
           percentage_cut: percentageCut,
+          display_name: displayName || null,
         },
         formattedSlots
       )
@@ -146,6 +149,16 @@ export function UpdateCourseInstanceDialog({
                   required
                 />
               </div>
+            </div>
+
+            <div className="space-y-1">
+              <Label htmlFor="edit-ci-display-name">Display Name</Label>
+              <Input
+                id="edit-ci-display-name"
+                placeholder="Course Name - Grade Level"
+                value={displayName}
+                onChange={(e) => setDisplayName(e.target.value)}
+              />
             </div>
 
             <div className="pt-2 border-t space-y-2">

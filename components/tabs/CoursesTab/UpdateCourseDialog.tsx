@@ -34,6 +34,21 @@ export function UpdateCourseDialog({ course, onCourseUpdated, open, onOpenChange
 
         setIsSubmitting(true)
         try {
+            // Duplicate prevention: check for existing course with same name (case-insensitive), excluding self
+            const existing = await coursesService.getAllCoursesByName(newCourse.name || "")
+            const duplicate = (existing.data || []).find(
+                (c) => c.id !== course.id && c.name.toLowerCase() === (newCourse.name || "").toLowerCase()
+            )
+            if (duplicate) {
+                toast({
+                    title: "Duplicate",
+                    description: "A course with this name already exists.",
+                    variant: "destructive",
+                })
+                setIsSubmitting(false)
+                return
+            }
+
             await coursesService.updateCourse(course.id, newCourse)
             onCourseUpdated()
             onOpenChange(false)

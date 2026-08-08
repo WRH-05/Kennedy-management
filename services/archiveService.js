@@ -7,12 +7,15 @@ export const archiveService = {
     async getAllArchiveRequests() {
         const { data, error } = await supabase
             .from('archive_requests')
-            .select('*')
-
+            .select('*, requester:profiles!archive_requests_requested_by_fkey(full_name), approver:profiles!archive_requests_approved_by_fkey(full_name)')
             .order('created_at', { ascending: false })
 
         if (error) throw error
-        return data || []
+        return (data || []).map((req) => ({
+            ...req,
+            requested_by_name: req.requester?.full_name || 'Unknown',
+            approved_by_name: req.approver?.full_name || '-',
+        }))
 
     },
 
