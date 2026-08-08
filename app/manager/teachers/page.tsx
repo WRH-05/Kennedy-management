@@ -6,6 +6,7 @@ import { usePendingArchives } from "@/hooks/usePayments"
 import TeachersTab from "@/components/tabs/TeachersTab"
 import { Pagination, PaginationContent, PaginationItem, PaginationLink, PaginationPrevious, PaginationNext, PaginationEllipsis } from "@/components/ui/pagination"
 import { Tables } from "@/types/database.types"
+import { revalidateData } from "@/hooks/swr-config"
 
 const PAGE_SIZE = 6
 
@@ -59,7 +60,7 @@ export default function TeachersPage() {
     <div className="space-y-6">
       <TeachersTab
         teachers={teachers}
-        onTeachersUpdate={() => mutate()}
+        onTeachersUpdate={() => { mutate(); revalidateData('teachers') }}
         canAdd={true}
         showCourses={true}
         showStats={true}

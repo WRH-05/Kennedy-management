@@ -3,6 +3,7 @@ import { useMemo, useState } from "react"
 import { usePaginatedCourseInstances } from "@/hooks/useCourseInstances"
 
 import CourseInstancesTab from "@/components/tabs/CoursesInstancesTab"
+import { revalidateData } from "@/hooks/swr-config"
 import { Pagination, PaginationContent, PaginationItem, PaginationLink, PaginationPrevious, PaginationNext, PaginationEllipsis } from "@/components/ui/pagination"
 
 const PAGE_SIZE = 6
@@ -60,7 +61,7 @@ export default function CoursesPage() {
     <div className="space-y-6">
       <CourseInstancesTab
         courseInstances={courseInstances}
-        onCoursesUpdate={() => mutate()}
+        onCoursesUpdate={() => { mutate(); revalidateData('course-instances') }}
         canAdd={true}
       />
 

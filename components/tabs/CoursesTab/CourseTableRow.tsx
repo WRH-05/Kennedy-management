@@ -55,8 +55,6 @@ export function CourseTableRow({ course, onCourseUpdated }: CourseTableRowProps)
           description: "Cannot delete this course because it is assigned to active course instances.",
           variant: "destructive",
         })
-        setShowDeleteDialog(false)
-        setIsDeleting(false)
         return
       }
 
@@ -65,7 +63,6 @@ export function CourseTableRow({ course, onCourseUpdated }: CourseTableRowProps)
         title: "Course deleted",
         description: `${course.name} has been successfully deleted.`,
       })
-      setShowDeleteDialog(false)
       onCourseUpdated()
     } catch (error) {
       console.error("Error deleting course:", error)
@@ -76,6 +73,19 @@ export function CourseTableRow({ course, onCourseUpdated }: CourseTableRowProps)
       })
     } finally {
       setIsDeleting(false)
+      setShowDeleteDialog(false)
+      setTimeout(() => {
+        document.body.style.pointerEvents = ''
+      }, 100)
+    }
+  }
+
+  const handleOpenChange = (open: boolean) => {
+    setShowDeleteDialog(open)
+    if (!open) {
+      setTimeout(() => {
+        document.body.style.pointerEvents = ''
+      }, 100)
     }
   }
 
@@ -133,7 +143,7 @@ export function CourseTableRow({ course, onCourseUpdated }: CourseTableRowProps)
         onOpenChange={setIsDialogOpen}
       />
 
-      <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
+      <AlertDialog open={showDeleteDialog} onOpenChange={handleOpenChange}>
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>Delete Course</AlertDialogTitle>

@@ -52,8 +52,6 @@ export function GradeLevelTableRow({ gradeLevel: gradeLevel, onGradeLevelUpdated
           description: "Cannot delete this grade level because it has courses assigned to it.",
           variant: "destructive",
         })
-        setShowDeleteDialog(false)
-        setIsDeleting(false)
         return
       }
 
@@ -62,7 +60,6 @@ export function GradeLevelTableRow({ gradeLevel: gradeLevel, onGradeLevelUpdated
         title: "Grade level deleted",
         description: `${gradeLevel.name} has been successfully deleted.`,
       })
-      setShowDeleteDialog(false)
       onGradeLevelUpdated()
     } catch (error) {
       console.error("Error deleting grade level:", error)
@@ -73,6 +70,19 @@ export function GradeLevelTableRow({ gradeLevel: gradeLevel, onGradeLevelUpdated
       })
     } finally {
       setIsDeleting(false)
+      setShowDeleteDialog(false)
+      setTimeout(() => {
+        document.body.style.pointerEvents = ''
+      }, 100)
+    }
+  }
+
+  const handleOpenChange = (open: boolean) => {
+    setShowDeleteDialog(open)
+    if (!open) {
+      setTimeout(() => {
+        document.body.style.pointerEvents = ''
+      }, 100)
     }
   }
 
@@ -116,7 +126,7 @@ export function GradeLevelTableRow({ gradeLevel: gradeLevel, onGradeLevelUpdated
         onOpenChange={setIsDialogOpen}
       />
 
-      <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
+      <AlertDialog open={showDeleteDialog} onOpenChange={handleOpenChange}>
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>Delete Grade Level</AlertDialogTitle>

@@ -4,6 +4,7 @@ import { useState } from "react"
 import { Pagination, PaginationContent, PaginationItem, PaginationLink, PaginationPrevious, PaginationNext, PaginationEllipsis } from "@/components/ui/pagination"
 import { usePaginatedCourses } from "@/hooks/useCourses"
 import CoursesTab from "@/components/tabs/CoursesTab"
+import { revalidateData } from "@/hooks/swr-config"
 
 const PAGE_SIZE = 6
 
@@ -57,7 +58,7 @@ export default function CoursesPage() {
     <div className="space-y-6">
       <CoursesTab
         courses={courses}
-        onCoursesUpdate={() => mutate()}
+        onCoursesUpdate={() => { mutate(); revalidateData('courses') }}
         canAdd={true}
       />
 

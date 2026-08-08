@@ -5,6 +5,7 @@ import { usePaginatedStudents } from "@/hooks/useStudents"
 import { usePendingArchives } from "@/hooks/usePayments"
 import StudentsTab from "@/components/tabs/StudentsTab"
 import { Pagination, PaginationContent, PaginationItem, PaginationLink, PaginationPrevious, PaginationNext, PaginationEllipsis } from "@/components/ui/pagination"
+import { revalidateData } from "@/hooks/swr-config"
 import { Tables } from "@/types/database.types"
 
 const PAGE_SIZE = 6
@@ -65,7 +66,7 @@ export default function StudentsPage() {
     <div className="space-y-6">
       <StudentsTab
         students={studentList}
-        onStudentsUpdate={() => mutate()}
+        onStudentsUpdate={() => { mutate(); revalidateData('students') }}
         canAdd={true}
         showPaymentStatus={true}
         pendingArchiveIds={pendingArchiveMap?.student || new Set()}

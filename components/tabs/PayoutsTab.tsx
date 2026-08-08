@@ -8,6 +8,7 @@ import { Badge } from "@/components/ui/badge"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 import { DollarSign, Check, X, MoreHorizontal, ChevronLeft, ChevronRight } from "lucide-react"
 import { EnrichedStudentPayments, studentPaymentService } from "@/services/studentPaymentService"
+import { revalidateData } from "@/hooks/swr-config"
 import { teacherPayoutService } from "@/services/teacherPayoutService"
 import Link from "next/link"
 import { Tables } from "@/types/database.types"
@@ -72,8 +73,10 @@ export default function PayoutsTab({
     try {
       if (type === "student") {
         await studentPaymentService.payStudentPayment(paymentId)
+        revalidateData('payments')
       } else if (type === "teacher") {
         await teacherPayoutService.payTeacherPayout(paymentId)
+        revalidateData('teacher-payouts')
       }
     } catch (error) {
       console.error(error)
@@ -83,8 +86,10 @@ export default function PayoutsTab({
     try {
       if (type === "student") {
         await studentPaymentService.denyStudentPayment(paymentId)
+        revalidateData('payments')
       } else if (type === "teacher") {
         await teacherPayoutService.denyTeacherPayout(paymentId)
+        revalidateData('teacher-payouts')
       }
     } catch (error) {
       console.error(error)

@@ -4,6 +4,7 @@ import { useState } from "react"
 import { Pagination, PaginationContent, PaginationItem, PaginationLink, PaginationPrevious, PaginationNext, PaginationEllipsis } from "@/components/ui/pagination"
 import { usePaginatedGradeLevels } from "@/hooks/useGradeLevels"
 import GradeLevelTab from "@/components/tabs/GradeLevelsTab"
+import { revalidateData } from "@/hooks/swr-config"
 
 
 const PAGE_SIZE = 6
@@ -58,7 +59,7 @@ export default function GradeLevelsPage() {
     <div className="space-y-6">
       <GradeLevelTab
         gradeLevels={gradeLevels}
-        onGradeLevelsUpdate={() => mutate()}
+        onGradeLevelsUpdate={() => { mutate(); revalidateData('grade-levels') }}
         canAdd={true}
       />
 

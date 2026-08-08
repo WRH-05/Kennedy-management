@@ -33,7 +33,7 @@ interface ArchiveRequest {
   updated_at?: string | null
 }
 
-export default function ArchiveTab({ isManager = false }: ArchiveTabProps) {
+export default function ArchiveTab({ isManager = false, onArchiveUpdate }: ArchiveTabProps) {
   const [archiveRequests, setArchiveRequests] = useState<ArchiveRequest[]>([])
   const [loading, setLoading] = useState(true)
   const [processingIds, setProcessingIds] = useState<Set<string>>(new Set())
@@ -66,11 +66,13 @@ export default function ArchiveTab({ isManager = false }: ArchiveTabProps) {
 
     try {
       await archiveService.approveArchiveRequest(requestId)
-      
+      await loadArchiveRequests()
+      onArchiveUpdate?.()
     } catch (error) {
       console.error('Error approving archive request:', error)
       // Rollback on error
       await loadArchiveRequests()
+      onArchiveUpdate?.()
     } finally {
       setProcessingIds(prev => {
         const next = new Set(prev)
@@ -91,11 +93,13 @@ export default function ArchiveTab({ isManager = false }: ArchiveTabProps) {
 
     try {
       await archiveService.denyArchiveRequest(requestId)
-      // Notify parent to update pending archive IDs without full refetch
+      await loadArchiveRequests()
+      onArchiveUpdate?.()
     } catch (error) {
       console.error('Error denying archive request:', (error as Error)?.message ?? error)
       // Rollback on error
       await loadArchiveRequests()
+      onArchiveUpdate?.()
     } finally {
       setProcessingIds(prev => {
         const next = new Set(prev)
@@ -118,6 +122,7 @@ export default function ArchiveTab({ isManager = false }: ArchiveTabProps) {
 
       // Reload archive requests
       await loadArchiveRequests()
+      onArchiveUpdate?.()
 
     } catch (error) {
       console.error('Error unarchiving entity:', error)
