@@ -107,7 +107,7 @@ export function AddStudentDialog({ onStudentAdded }: AddStudentDialogProps) {
                         </div>
 
                         <div className="relative">
-                            <Label htmlFor="name">Full Name</Label>
+                            <Label htmlFor="studentSearch">School Level</Label>
                             <Input
                                 id="studentSearch"
                                 placeholder="Search for a level..."

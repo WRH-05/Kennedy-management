@@ -31,7 +31,6 @@ const PAYMENT_STATUSES = [
 const ENROLLMENT_STATUSES = [
   { value: "enrolled", label: "Enrolled" },
   { value: "dropped", label: "Dropped" },
-  { value: "missing", label: "Missing" },
 ]
 
 interface StudentsManagementProps {
@@ -120,7 +119,7 @@ export function StudentsManagementCard({
     try {
       // Logic assumes if switching away from enrolled, we execute the unenroll payload
       // You can update this body matching your backend service route requirements (e.g. courseInstancesService.updateStatus)
-      if (targetStatus === "dropped" || targetStatus === "missing") {
+      if (targetStatus === "dropped") {
         await courseInstancesService.unenrollStudent(courseInstance.id, student_id);
       }
 
