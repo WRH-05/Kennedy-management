@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { Checkbox } from "@/components/ui/checkbox"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Plus, Trash2 } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
@@ -31,6 +32,9 @@ export function UpdateCourseInstanceDialog({
 
   const [price, setPrice] = useState(0)
   const [percentageCut, setPercentageCut] = useState(50)
+  const [compensationType, setCompensationType] = useState<"percentage" | "fixed_salary">("percentage")
+  const [fixedSalaryAmount, setFixedSalaryAmount] = useState(0)
+  const [isIndividual, setIsIndividual] = useState(false)
   const [scheduleSlots, setScheduleSlots] = useState<ScheduleSlot[]>([])
   const [displayName, setDisplayName] = useState("")
 
@@ -44,6 +48,9 @@ export function UpdateCourseInstanceDialog({
           setCourseInstance(data)
           setPrice(data.price || 0)
           setPercentageCut(data.percentage_cut || 50)
+          setCompensationType((data as any).compensation_type || "percentage")
+          setFixedSalaryAmount((data as any).fixed_salary_amount || 0)
+          setIsIndividual((data as any).is_individual || false)
           setScheduleSlots(mapSchedulesToSlots(data.course_schedule || []))
           setDisplayName(data.display_name || "")
         })
@@ -66,7 +73,7 @@ export function UpdateCourseInstanceDialog({
     e.preventDefault()
     if (isSubmitting) return
 
-    if (scheduleSlots.some((slot) => !slot.day)) {
+    if (!isIndividual && scheduleSlots.some((slot) => !slot.day)) {
       toast({
         title: "Validation Error",
         description: "Please assign valid weekdays to all schedule slots.",
@@ -102,6 +109,10 @@ export function UpdateCourseInstanceDialog({
           monthly_price: price,
           percentage_cut: percentageCut,
           display_name: displayName || null,
+          compensation_type: compensationType,
+          fixed_salary_amount: compensationType === 'fixed_salary' ? fixedSalaryAmount : null,
+          is_individual: isIndividual,
+          max_students: isIndividual ? 2 : null,
         },
         formattedSlots
       )
@@ -139,17 +150,45 @@ export function UpdateCourseInstanceDialog({
                   required
                 />
               </div>
+            </div>
+
+            {/* Compensation Type */}
+            <div className="space-y-1">
+              <Label htmlFor="edit-ci-comp-type">Teacher Compensation</Label>
+              <Select value={compensationType} onValueChange={(v) => setCompensationType(v as "percentage" | "fixed_salary")}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="percentage">Percentage Cut</SelectItem>
+                  <SelectItem value="fixed_salary">Fixed Salary</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            {compensationType === 'percentage' ? (
               <div className="space-y-1">
-                <Label htmlFor="edit-ci-cut">Teacher Cut (%)</Label>
+                <Label htmlFor="edit-ci-cut">Percentage Cut (0-100%)</Label>
                 <Input
                   id="edit-ci-cut"
                   type="number"
+                  min="0"
+                  max="100"
                   value={percentageCut}
                   onChange={(e) => setPercentageCut(parseInt(e.target.value) || 0)}
                   required
                 />
               </div>
-            </div>
+            ) : (
+              <div className="space-y-1">
+                <Label htmlFor="edit-ci-fixed-salary">Fixed Monthly Salary (DA)</Label>
+                <Input
+                  id="edit-ci-fixed-salary"
+                  type="number"
+                  value={fixedSalaryAmount}
+                  onChange={(e) => setFixedSalaryAmount(parseInt(e.target.value) || 0)}
+                  required
+                />
+              </div>
+            )}
 
             <div className="space-y-1">
               <Label htmlFor="edit-ci-display-name">Display Name</Label>
@@ -161,9 +200,24 @@ export function UpdateCourseInstanceDialog({
               />
             </div>
 
+            {/* Individual Course Toggle */}
+            <div className="flex items-center space-x-2 pt-1">
+              <Checkbox
+                id="edit-is-individual"
+                checked={isIndividual}
+                onCheckedChange={(checked) => setIsIndividual(checked as boolean)}
+              />
+              <Label htmlFor="edit-is-individual">Individual Course / Private Lesson</Label>
+            </div>
+            {isIndividual && (
+              <p className="text-xs text-amber-600 -mt-1 ml-6">Max 2 students — schedule slots are optional</p>
+            )}
+
             <div className="pt-2 border-t space-y-2">
               <div className="flex items-center justify-between">
-                <Label className="text-sm font-semibold">Weekly Schedule Slots</Label>
+                <Label className="text-sm font-semibold">
+                  Weekly Schedule Slots {isIndividual && "(Optional)"}
+                </Label>
                 <Button
                   type="button"
                   variant="outline"

@@ -93,7 +93,16 @@ function CourseInstancesDetailContent() {
 
   const toggleTeacherPayment = () => {
     if (!courseInstances?.teacher_id || !selectedPeriodId) return
-    const earnings = Math.round((courseInstances.price * (courseInstances.student_ids?.length || 0) * (courseInstances.percentage_cut || 0)) / 100)
+
+    // Calculate earnings based on compensation type
+    const compType = (courseInstances as any).compensation_type || 'percentage'
+    const studentCount = courseInstances.student_ids?.length || 0
+    let earnings: number
+    if (compType === 'fixed_salary') {
+      earnings = (courseInstances as any).fixed_salary_amount || 0
+    } else {
+      earnings = Math.round((courseInstances.price * studentCount * (courseInstances.percentage_cut || 0)) / 100)
+    }
 
     setConfirmDialog({
       open: true,

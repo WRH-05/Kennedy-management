@@ -15,9 +15,15 @@ interface PaymentSummaryProps {
 export function PaymentSummaryCard({payout, teacherEarnings, onToggleTeacherPayment }: PaymentSummaryProps) {
   if (!payout) return null
 
-  // The button is ONLY clickable if status is 'pending', 'unpaid', or 'cancelled'
-  // It is disabled ONLY when it is already 'paid'
-  const isPayable = payout.status === 'pending' || payout.status === 'unpaid' || payout.status === 'cancelled'
+  // Button is disabled when ANY payout exists for this cycle (not just paid)
+  // Only allow creating a new payout if none exists or previous was cancelled
+  const isPayable = !payout || payout.status === 'cancelled'
+
+  const getButtonText = () => {
+    if (!payout || payout.status === 'cancelled') return "Create Payout"
+    if (payout.status === 'pending') return "Payout Requested"
+    return "Payout Processed"
+  }
 
   // Helper function to get badge styles/labels based on status
   const getStatusBadge = (status: string) => {
@@ -51,13 +57,13 @@ export function PaymentSummaryCard({payout, teacherEarnings, onToggleTeacherPaym
         {/* Action Row */}
         <div className="flex items-center justify-between pt-2">
           <Label>Teacher Payment</Label>
-          <Button 
-            disabled={!isPayable} 
-            variant={payout.status === 'paid' ? "outline" : "default"} 
-            size="sm" 
+          <Button
+            disabled={!isPayable}
+            variant={isPayable ? "default" : "outline"}
+            size="sm"
             onClick={onToggleTeacherPayment}
           >
-            {payout.status === 'paid' ? "Payout Processed" : "Create Payout"}
+            {getButtonText()}
           </Button>
         </div>
 

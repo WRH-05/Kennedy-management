@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { Checkbox } from "@/components/ui/checkbox"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 import { Plus } from "lucide-react"
 import { ScheduleSlotRow } from "./ScheduleSlotRow"
@@ -44,6 +45,9 @@ export function AddCourseDialog({ onCourseAdded }: AddCourseInstanceDialogProps)
     course_eligibility_id: "",
     percentageCut: 50,
     price: 500,
+    compensationType: "percentage" as "percentage" | "fixed_salary",
+    fixedSalaryAmount: 0,
+    isIndividual: false,
   })
 
   const [displayName, setDisplayName] = useState("")
@@ -81,7 +85,7 @@ export function AddCourseDialog({ onCourseAdded }: AddCourseInstanceDialogProps)
     e.preventDefault()
     if (isSubmitting) return
 
-    if (scheduleSlots.some((slot) => !slot.dayOfWeek)) {
+    if (!newCourse.isIndividual && scheduleSlots.some((slot) => !slot.dayOfWeek)) {
       toast({
         title: "Validation Error",
         description: "Please specify the day of the week for all time slots",
@@ -105,6 +109,10 @@ export function AddCourseDialog({ onCourseAdded }: AddCourseInstanceDialogProps)
         price: newCourse.price,
         monthly_price: newCourse.price,
         display_name: displayName || null,
+        compensation_type: newCourse.compensationType,
+        fixed_salary_amount: newCourse.compensationType === 'fixed_salary' ? newCourse.fixedSalaryAmount : null,
+        is_individual: newCourse.isIndividual,
+        max_students: newCourse.isIndividual ? 2 : null,
       }
       const schedule: TablesInsert<"course_schedule">[] = scheduleSlots.map(s => {
         return {
@@ -124,6 +132,9 @@ export function AddCourseDialog({ onCourseAdded }: AddCourseInstanceDialogProps)
         course_eligibility_id: '',
         percentageCut: 50,
         price: 500,
+        compensationType: "percentage",
+        fixedSalaryAmount: 0,
+        isIndividual: false,
       })
       setScheduleSlots([{ dayOfWeek: "", startHour: "09:00", duration: 2 }])
       setTeacherSearchQuery("")
@@ -241,23 +252,80 @@ export function AddCourseDialog({ onCourseAdded }: AddCourseInstanceDialogProps)
               </>
             )}
 
+            {/* Price */}
             <div className="space-y-2">
-              <Label htmlFor="percentageCut">Percentage Cut (40-70%)</Label>
+              <Label htmlFor="ciPrice">Price (DA)</Label>
               <Input
-                id="percentageCut"
+                id="ciPrice"
                 type="number"
-                min="40"
-                max="70"
-                value={newCourse.percentageCut}
-                onChange={(e) => setNewCourse({ ...newCourse, percentageCut: Number.parseInt(e.target.value) })}
+                value={newCourse.price}
+                onChange={(e) => setNewCourse({ ...newCourse, price: Number.parseInt(e.target.value) || 0 })}
                 required
               />
             </div>
 
+            {/* Compensation Type */}
+            <div className="space-y-2">
+              <Label htmlFor="compensationType">Teacher Compensation</Label>
+              <Select
+                value={newCourse.compensationType}
+                onValueChange={(val) => setNewCourse({ ...newCourse, compensationType: val as "percentage" | "fixed_salary" })}
+              >
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="percentage">Percentage Cut</SelectItem>
+                  <SelectItem value="fixed_salary">Fixed Salary</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
 
+            {newCourse.compensationType === 'percentage' ? (
+              <div className="space-y-2">
+                <Label htmlFor="percentageCut">Percentage Cut (0-100%)</Label>
+                <Input
+                  id="percentageCut"
+                  type="number"
+                  min="0"
+                  max="100"
+                  value={newCourse.percentageCut}
+                  onChange={(e) => setNewCourse({ ...newCourse, percentageCut: Number.parseInt(e.target.value) || 0 })}
+                  required
+                />
+              </div>
+            ) : (
+              <div className="space-y-2">
+                <Label htmlFor="fixedSalary">Fixed Monthly Salary (DA)</Label>
+                <Input
+                  id="fixedSalary"
+                  type="number"
+                  value={newCourse.fixedSalaryAmount}
+                  onChange={(e) => setNewCourse({ ...newCourse, fixedSalaryAmount: Number.parseInt(e.target.value) || 0 })}
+                  required
+                />
+              </div>
+            )}
+
+            {/* Individual Course Toggle */}
+            <div className="flex items-center space-x-2 pt-2">
+              <Checkbox
+                id="isIndividual"
+                checked={newCourse.isIndividual}
+                onCheckedChange={(checked) => setNewCourse({ ...newCourse, isIndividual: checked as boolean })}
+              />
+              <Label htmlFor="isIndividual">Individual Course / Private Lesson</Label>
+            </div>
+            {newCourse.isIndividual && (
+              <p className="text-xs text-amber-600 -mt-1 ml-6">
+                Max 2 students — schedule slots are optional
+              </p>
+            )}
+
+            {/* Schedule Slots */}
             <div className="space-y-3 md:col-span-2 border border-slate-100 p-4 rounded-lg bg-slate-50/50">
               <div className="flex justify-between items-center mb-1">
-                <Label className="text-sm font-semibold text-slate-800">Course Schedule Slots</Label>
+                <Label className="text-sm font-semibold text-slate-800">
+                  Course Schedule Slots {newCourse.isIndividual && "(Optional)"}
+                </Label>
                 <Button
                   type="button"
                   variant="outline"
