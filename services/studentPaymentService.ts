@@ -6,8 +6,8 @@ const supabase = createClient();
 export type EnrichedStudentPayments = Tables<"student_payments"> & {
     students: Tables<"students">,
     profiles?: Tables<"profiles">,
-    course_instances?: Tables<"course_instances">,
-    billing_periods?: Tables<"billing_periods">
+    course_instances?: Tables<"course_instances"> | null,
+    billing_periods?: Tables<"billing_periods"> | null
 }
 
 export const studentPaymentService = {

@@ -57,7 +57,7 @@ export function PaymentSummaryCard({payout, teacherEarnings, onToggleTeacherPaym
             size="sm" 
             onClick={onToggleTeacherPayment}
           >
-            {payout.status === 'paid' ? "Paid" : "Pay"}
+            {payout.status === 'paid' ? "Payout Processed" : "Create Payout"}
           </Button>
         </div>
 

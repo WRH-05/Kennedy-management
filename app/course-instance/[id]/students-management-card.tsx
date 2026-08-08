@@ -89,10 +89,11 @@ export function StudentsManagementCard({
 
   const onChangeStudentPaymentStatus = async (student_id: string, status: Enums<"payment_status">) => {
     try {
-      await studentPaymentService.updateRecordStudentPayment(courseInstance.id, student_id, selectedPeriodId, {
-        status,
-        amount: courseInstance.price
-      });
+      const updates: any = { status, amount: courseInstance.price }
+      if (status === 'paid') {
+        updates.payment_date = new Date().toISOString()
+      }
+      await studentPaymentService.updateRecordStudentPayment(courseInstance.id, student_id, selectedPeriodId, updates);
 
       await mutate()
       onRefresh()
@@ -302,11 +303,11 @@ export function StudentsManagementCard({
                           </DropdownMenuTrigger>
                           <DropdownMenuContent align="end">
                             <DropdownMenuItem
-                              onClick={() => onChangeStudentPaymentStatus(currentStudentId, 'pending')}
+                              onClick={() => onChangeStudentPaymentStatus(currentStudentId, 'paid')}
                               className="text-emerald-600 focus:text-emerald-600 cursor-pointer"
                             >
                               <Check className="mr-2 h-4 w-4" />
-                              Make Request
+                              Record Payment
                             </DropdownMenuItem>
                           </DropdownMenuContent>
                         </DropdownMenu>

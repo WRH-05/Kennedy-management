@@ -25,7 +25,7 @@ interface PayoutsTabProps {
   // payoutData now accepts the full response object from your service
   payoutData: PayoutData
 
-  onPageChange?: (newPage: number) => void // Callback to pass page changes up to your parent component
+  onPageChange?: (newPage?: number) => void // Callback to pass page changes up to your parent component
   isManager?: boolean
   type: "teacher" | "student"
 }
@@ -73,6 +73,8 @@ export default function PayoutsTab({
     try {
       await teacherPayoutService.payTeacherPayout(paymentId)
       revalidateData('teacher-payouts')
+      revalidateData('payments')
+      onPageChange?.()
     } catch (error) {
       console.error(error)
     }
@@ -81,6 +83,8 @@ export default function PayoutsTab({
     try {
       await teacherPayoutService.denyTeacherPayout(paymentId)
       revalidateData('teacher-payouts')
+      revalidateData('payments')
+      onPageChange?.()
     } catch (error) {
       console.error(error)
     }
