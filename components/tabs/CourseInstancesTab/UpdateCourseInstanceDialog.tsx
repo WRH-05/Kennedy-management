@@ -73,7 +73,7 @@ export function UpdateCourseInstanceDialog({
     e.preventDefault()
     if (isSubmitting) return
 
-    if (!isIndividual && scheduleSlots.some((slot) => !slot.day)) {
+    if (scheduleSlots.some((slot) => !slot.day)) {
       toast({
         title: "Validation Error",
         description: "Please assign valid weekdays to all schedule slots.",
@@ -93,7 +93,8 @@ export function UpdateCourseInstanceDialog({
         return `${String(endHours).padStart(2, "0")}:${String(endMinutes).padStart(2, "0")}`
       }
 
-      const formattedSlots = scheduleSlots.map((slot) => {
+      const validScheduleSlots = scheduleSlots.filter(s => s.day && s.day.trim() !== "")
+      const formattedSlots = validScheduleSlots.map((slot) => {
         const cleanStartTime = slot.start_time?.slice(0, 5) || "00:00"
         return {
           day: slot.day,
@@ -141,7 +142,7 @@ export function UpdateCourseInstanceDialog({
           <form onSubmit={handleSubmit} className="space-y-4 pt-2">
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-1">
-                <Label htmlFor="edit-ci-price">Price (DA)</Label>
+                <Label htmlFor="edit-ci-price">Student Tuition Price</Label>
                 <Input
                   id="edit-ci-price"
                   type="number"
@@ -166,7 +167,7 @@ export function UpdateCourseInstanceDialog({
 
             {compensationType === 'percentage' ? (
               <div className="space-y-1">
-                <Label htmlFor="edit-ci-cut">Percentage Cut (0-100%)</Label>
+                <Label htmlFor="edit-ci-cut">Revenue Share (%)</Label>
                 <Input
                   id="edit-ci-cut"
                   type="number"
@@ -179,7 +180,7 @@ export function UpdateCourseInstanceDialog({
               </div>
             ) : (
               <div className="space-y-1">
-                <Label htmlFor="edit-ci-fixed-salary">Fixed Monthly Salary (DA)</Label>
+                <Label htmlFor="edit-ci-fixed-salary">Teacher Salary</Label>
                 <Input
                   id="edit-ci-fixed-salary"
                   type="number"
@@ -210,14 +211,12 @@ export function UpdateCourseInstanceDialog({
               <Label htmlFor="edit-is-individual">Individual Course / Private Lesson</Label>
             </div>
             {isIndividual && (
-              <p className="text-xs text-amber-600 -mt-1 ml-6">Max 2 students — schedule slots are optional</p>
+              <p className="text-xs text-amber-600 -mt-1 ml-6">Max 2 students</p>
             )}
 
             <div className="pt-2 border-t space-y-2">
               <div className="flex items-center justify-between">
-                <Label className="text-sm font-semibold">
-                  Weekly Schedule Slots {isIndividual && "(Optional)"}
-                </Label>
+                <Label className="text-sm font-semibold">Weekly Schedule Slots</Label>
                 <Button
                   type="button"
                   variant="outline"

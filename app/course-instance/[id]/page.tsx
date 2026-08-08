@@ -131,7 +131,11 @@ function CourseInstancesDetailContent() {
   }
 
   const availableStudents = students.filter((student: Tables<"students">) => !courseInstances?.student_ids?.includes(student.id))
-  const teacherEarnings = Math.round((courseInstances.price * (courseInstances.student_ids?.length || 0) * (courseInstances.percentage_cut || 0)) / 100)
+  const compType = (courseInstances as any).compensation_type || 'percentage'
+  const studentCount = courseInstances.student_ids?.length || 0
+  const teacherEarnings = compType === 'fixed_salary'
+    ? ((courseInstances as any).fixed_salary_amount || 0)
+    : Math.round((courseInstances.price * studentCount * (courseInstances.percentage_cut || 0)) / 100)
   const filteredStudents = availableStudents.filter((student: Tables<"students">) => student.name?.toLowerCase().includes(studentSearchQuery.toLowerCase()))
 
   return (

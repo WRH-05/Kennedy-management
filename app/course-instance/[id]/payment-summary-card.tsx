@@ -13,20 +13,22 @@ interface PaymentSummaryProps {
 }
 
 export function PaymentSummaryCard({payout, teacherEarnings, onToggleTeacherPayment }: PaymentSummaryProps) {
-  if (!payout) return null
+  // Defensive extraction: payout could be an array, null, undefined, or a single object
+  const existingPayout = Array.isArray(payout) ? payout[0] : (payout && payout.id ? payout : null);
+  const hasPayout = Boolean(existingPayout);
 
-  // Button is disabled when ANY payout exists for this cycle (not just paid)
-  // Only allow creating a new payout if none exists or previous was cancelled
-  const isPayable = !payout || payout.status === 'cancelled'
+  // Button is enabled when no payout exists, or status is 'cancelled' or 'unpaid'
+  // 'unpaid' is the placeholder the DB creates when a billing cycle is initialized
+  const isPayable = !hasPayout || existingPayout.status === 'cancelled' || existingPayout.status === 'unpaid'
 
   const getButtonText = () => {
-    if (!payout || payout.status === 'cancelled') return "Create Payout"
-    if (payout.status === 'pending') return "Payout Requested"
+    if (!hasPayout || existingPayout.status === 'cancelled' || existingPayout.status === 'unpaid') return "Create Payout"
+    if (existingPayout.status === 'pending') return "Payout Requested"
     return "Payout Processed"
   }
 
   // Helper function to get badge styles/labels based on status
-  const getStatusBadge = (status: string) => {
+  const getStatusBadge = (status: string | undefined) => {
     switch (status) {
       case 'paid':
         return <Badge className="bg-green-500 hover:bg-green-600 text-white">Paid</Badge>
@@ -51,7 +53,7 @@ export function PaymentSummaryCard({payout, teacherEarnings, onToggleTeacherPaym
         {/* Status Display Row */}
         <div className="flex items-center justify-between">
           <Label className="text-muted-foreground">Current Status</Label>
-          {getStatusBadge(payout.status)}
+          {hasPayout ? getStatusBadge(existingPayout.status) : <Badge variant="secondary">No Payout</Badge>}
         </div>
 
         {/* Action Row */}

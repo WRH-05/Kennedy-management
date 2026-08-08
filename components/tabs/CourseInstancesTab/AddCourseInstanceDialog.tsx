@@ -85,10 +85,10 @@ export function AddCourseDialog({ onCourseAdded }: AddCourseInstanceDialogProps)
     e.preventDefault()
     if (isSubmitting) return
 
-    if (!newCourse.isIndividual && scheduleSlots.some((slot) => !slot.dayOfWeek)) {
+    if (scheduleSlots.some((slot) => !slot.dayOfWeek)) {
       toast({
         title: "Validation Error",
-        description: "Please specify the day of the week for all time slots",
+        description: "Please select a valid day for all schedule slots.",
         variant: "destructive",
       })
       return
@@ -114,7 +114,8 @@ export function AddCourseDialog({ onCourseAdded }: AddCourseInstanceDialogProps)
         is_individual: newCourse.isIndividual,
         max_students: newCourse.isIndividual ? 2 : null,
       }
-      const schedule: TablesInsert<"course_schedule">[] = scheduleSlots.map(s => {
+      const validScheduleSlots = scheduleSlots.filter(s => s.dayOfWeek && s.dayOfWeek.trim() !== "")
+      const schedule: TablesInsert<"course_schedule">[] = validScheduleSlots.map(s => {
         return {
           course_id: '',
           day: s.dayOfWeek as Database['public']['Enums']['week_day'],
@@ -254,7 +255,7 @@ export function AddCourseDialog({ onCourseAdded }: AddCourseInstanceDialogProps)
 
             {/* Price */}
             <div className="space-y-2">
-              <Label htmlFor="ciPrice">Price (DA)</Label>
+              <Label htmlFor="ciPrice">Student Tuition Price</Label>
               <Input
                 id="ciPrice"
                 type="number"
@@ -281,7 +282,7 @@ export function AddCourseDialog({ onCourseAdded }: AddCourseInstanceDialogProps)
 
             {newCourse.compensationType === 'percentage' ? (
               <div className="space-y-2">
-                <Label htmlFor="percentageCut">Percentage Cut (0-100%)</Label>
+                <Label htmlFor="percentageCut">Revenue Share (%)</Label>
                 <Input
                   id="percentageCut"
                   type="number"
@@ -294,7 +295,7 @@ export function AddCourseDialog({ onCourseAdded }: AddCourseInstanceDialogProps)
               </div>
             ) : (
               <div className="space-y-2">
-                <Label htmlFor="fixedSalary">Fixed Monthly Salary (DA)</Label>
+                <Label htmlFor="fixedSalary">Teacher Salary</Label>
                 <Input
                   id="fixedSalary"
                   type="number"
@@ -316,7 +317,7 @@ export function AddCourseDialog({ onCourseAdded }: AddCourseInstanceDialogProps)
             </div>
             {newCourse.isIndividual && (
               <p className="text-xs text-amber-600 -mt-1 ml-6">
-                Max 2 students — schedule slots are optional
+                Max 2 students
               </p>
             )}
 
@@ -324,7 +325,7 @@ export function AddCourseDialog({ onCourseAdded }: AddCourseInstanceDialogProps)
             <div className="space-y-3 md:col-span-2 border border-slate-100 p-4 rounded-lg bg-slate-50/50">
               <div className="flex justify-between items-center mb-1">
                 <Label className="text-sm font-semibold text-slate-800">
-                  Course Schedule Slots {newCourse.isIndividual && "(Optional)"}
+                  Course Schedule Slots
                 </Label>
                 <Button
                   type="button"

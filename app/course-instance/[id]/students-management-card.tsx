@@ -71,6 +71,19 @@ export function StudentsManagementCard({
     e.preventDefault()
     if (!selectedStudent) return
     try {
+      // Enrollment cap check for individual courses
+      const isIndividual = (courseInstance as any).is_individual || false
+      const maxStudents = (courseInstance as any).max_students
+      const currentCount = (courseInstance as any).student_ids?.length || 0
+      if (isIndividual && maxStudents && currentCount >= maxStudents) {
+        toast({
+          title: "Enrollment Cap Reached",
+          description: "Individual courses are capped at a maximum of 2 students.",
+          variant: "destructive",
+        })
+        return
+      }
+
       const student = students.find((s: Tables<"students">) => s.id.toString() === selectedStudent)
       if (!student) return
       await courseInstancesService.enrollStudent(courseInstance.id, student.id, selectedPeriodId)
