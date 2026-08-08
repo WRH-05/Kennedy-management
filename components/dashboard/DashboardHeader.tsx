@@ -1,20 +1,10 @@
 "use client"
 import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
-import Link from "next/link"
-import { authService } from "@/services/authService"
-import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
-import {
-  Sheet,
-  SheetContent,
-  SheetDescription,
-  SheetHeader,
-  SheetTitle,
-  SheetTrigger,
-} from "@/components/ui/sheet"
-import { Search, LogOut, Menu } from "lucide-react"
+import { SidebarTrigger } from "@/components/ui/sidebar"
+import { Search } from "lucide-react"
 import { useAuth } from "@/context/AuthContext"
 import { FoundPeople, searchAllCourseInstancesTeachersStudents } from "@/services/courseInstanceTeacherStudentSearch"
 
@@ -23,22 +13,6 @@ export default function DashboardHeader() {
   const [searchQuery, setSearchQuery] = useState("")
   const [searchResults, setSearchResult] = useState<FoundPeople[]>([])
   const { profile } = useAuth()
-
-  const handleSignOut = async () => {
-    await authService.signOut()
-    router.push('/')
-  }
-
-  const getTeacherSubjects = (teacher: any) =>
-    Array.from(
-      new Set(
-        teacher?.teachers_course_eligibility?.flatMap((eligibility: any) =>
-          eligibility.course_eligibility?.courses?.name
-            ? [eligibility.course_eligibility.courses.name]
-            : []
-        ) ?? []
-      )
-    )
 
   // Debounced Search Effect
   useEffect(() => {
@@ -80,41 +54,8 @@ export default function DashboardHeader() {
     <header className="bg-white shadow-sm border-b">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between items-center h-16">
-          {/* Side Slider Button (Sheet) */}
-          <Sheet>
-            <SheetTrigger asChild>
-              <Button variant="ghost" size="icon" title="Open Sidebar">
-                <Menu className="h-5 w-5" />
-              </Button>
-            </SheetTrigger>
-            <SheetContent side="left" className="w-75 sm:w-100">
-              <SheetHeader>
-                <SheetTitle>Quick Actions Panel</SheetTitle>
-                <SheetDescription>
-                  Access alternative utilities and global management tools here.
-                </SheetDescription>
-              </SheetHeader>
-
-              {/* Content inside the slider */}
-              <div className="py-6 flex flex-col gap-4">
-                <div className="flex flex-col gap-2 text-sm border-t pt-4">
-                  <p className="font-medium text-slate-900">Mobile Navigation</p>
-                  <Link href="/manager" className="p-2 hover:bg-slate-100 rounded-md transition-colors">Main Menu</Link>
-                  <Link href="/manager/students" className="p-2 hover:bg-slate-100 rounded-md transition-colors">Students Registry</Link>
-                  <Link href="/manager/teachers" className="p-2 hover:bg-slate-100 rounded-md transition-colors">Teachers Registry</Link>
-                  <Link href="/manager/course-instances" className="p-2 hover:bg-slate-100 rounded-md transition-colors">Active Course Instances</Link>
-                  <Link href="/manager/payouts" className="p-2 hover:bg-slate-100 rounded-md transition-colors">Payments</Link>
-                  <Link href="/manager/archive" className="p-2 hover:bg-slate-100 rounded-md transition-colors">Archives</Link>
-                  <Link href="/manager/revenue" className="p-2 hover:bg-slate-100 rounded-md transition-colors">Revenue</Link>
-                </div>
-              </div>
-            </SheetContent>
-          </Sheet>
-
-          {/* Home Button */}
-          <Link href="/manager" title="Home" className="shrink-0">
-            <img src="/home.png" alt="Home" className="h-12 w-25 rounded hover:opacity-80 transition-opacity" />
-          </Link>
+          {/* Sidebar Trigger (mobile toggle, hidden on desktop since sidebar is permanent) */}
+          <SidebarTrigger className="md:hidden" />
 
           {/* Search Bar */}
           <div className="flex-1 max-w-md mx-4 relative">
@@ -157,15 +98,11 @@ export default function DashboardHeader() {
             )}
           </div>
 
-          {/* Right Side Actions */}
-          <div className="flex items-center space-x-2 sm:space-x-4 shrink-0">
+          {/* Right Side — Welcome */}
+          <div className="flex items-center shrink-0">
             <span className="text-sm text-gray-600 hidden lg:inline">
               Welcome, {profile?.full_name || 'Manager'}
             </span>
-            <Button variant="outline" size="sm" onClick={handleSignOut} className="hidden sm:flex">
-              <LogOut className="h-4 w-4 mr-2" />
-              Sign Out
-            </Button>
           </div>
         </div>
       </div>

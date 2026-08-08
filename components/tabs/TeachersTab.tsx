@@ -58,6 +58,7 @@ export default function TeachersTab({
           teachers={teachers}
           pendingArchiveIds={pendingArchiveIds}
           onArchive={handleArchiveTeacher}
+          onTeacherUpdated={() => onTeachersUpdate([])}
         />
       </CardContent>
     </Card>

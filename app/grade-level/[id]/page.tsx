@@ -53,7 +53,7 @@ function GradeLevelProfileContent() {
 
     if (loading) {
         return (
-            <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+            <div className="flex items-center justify-center py-20">
                 <h2 className="text-xl font-semibold text-gray-900">Loading...</h2>
             </div>
         )
@@ -61,7 +61,7 @@ function GradeLevelProfileContent() {
 
     if (error || !gradeLevel) {
         return (
-            <div className="min-h-screen bg-gray-50 flex items-center justify-center text-center">
+            <div className="flex items-center justify-center py-20 text-center">
                 <div>
                     <h2 className="text-xl font-semibold text-gray-900">{error || "Grade Level not found"}</h2>
                     <Button onClick={() => router.back()} className="mt-4">Go Back</Button>
@@ -71,10 +71,10 @@ function GradeLevelProfileContent() {
     }
 
     return (
-        <div className="min-h-screen bg-gray-50">
+        <div>
             <CourseHeader />
 
-            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+            <div className="w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
                     <div className="lg:col-span-1 space-y-6">
                         <GradeLevelInfoCard gradeLevel={gradeLevel} />

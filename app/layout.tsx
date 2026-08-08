@@ -5,6 +5,7 @@ import "./globals.css"
 import { AuthProvider } from "@/context/AuthContext"
 import ErrorBoundary from "@/components/ErrorBoundary"
 import SWRProvider from "@/components/providers/SWRProvider"
+import AppShell from "@/components/layout/AppShell"
 import { Toaster } from "@/components/ui/toaster"
 
 if (process.env.NODE_ENV === 'development') {
@@ -33,7 +34,9 @@ export default function RootLayout({
         <ErrorBoundary>
           <SWRProvider>
             <AuthProvider>
-              {children}
+              <AppShell>
+                {children}
+              </AppShell>
               <Toaster />
             </AuthProvider>
           </SWRProvider>

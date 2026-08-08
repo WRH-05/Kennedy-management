@@ -1,78 +1,16 @@
 "use client"
 
 import Link from "next/link"
-import { ArrowRight, Users, Archive, ReceiptCent, GraduationCap, Layers, Briefcase, TrendingUp, CalendarDays } from "lucide-react"
+import { ArrowRight } from "lucide-react"
 import { useAuth } from "@/context/AuthContext"
-
-// 1. Define all navigation options centrally (Outside the component to prevent re-creation on every render)
-const ALL_NAVIGATION_CARDS = [
-  {
-    title: "Manage Students",
-    description: "View and manage student records",
-    href: `/manager/students`,
-    icon: <Users className="h-5 w-5 text-blue-500" />,
-    allowedRoles: ["owner", "manager", "receptionist"],
-  },
-  {
-    title: "Manage Teachers",
-    description: "View and manage teacher profiles",
-    href: `/manager/teachers`,
-    icon: <Briefcase className="h-5 w-5 text-green-500" />, // Changed from BookOpen to separate from courses
-    allowedRoles: ["owner", "manager", "receptionist"],
-  },
-  {
-    title: "Financial Logs",
-    description: "Review revenue collections",
-    href: `/manager/revenue`,
-    icon: <TrendingUp className="h-5 w-5 text-amber-500" />, // Changed to TrendingUp to represent financial growth/tracking
-    allowedRoles: ["owner", "manager"],
-  },
-  {
-    title: "Manage Course Instances",
-    description: "Edit active class schedules and instances",
-    href: `/manager/course-instances`,
-    icon: <CalendarDays className="h-5 w-5 text-red-500" />, // Changed to CalendarDays since instances are time/schedule-specific
-    allowedRoles: ["owner", "manager", "receptionist"],
-  },
-  {
-    title: "Manage Archives",
-    description: "Check past historical records",
-    href: `/manager/archive`,
-    icon: <Archive className="h-5 w-5 text-amber-800" />,
-    allowedRoles: ["owner", "manager"],
-  },
-  {
-    title: "Manage Payouts",
-    description: "Process student refunds and teacher payments",
-    href: `/manager/payouts`,
-    icon: <ReceiptCent className="h-5 w-5 text-emerald-600" />, // Changed to ReceiptCent for explicit outbound payment processing
-    allowedRoles: ["owner", "manager"],
-  },
-  {
-    title: "Manage Courses",
-    description: "Create and process new courses",
-    href: `/manager/courses`,
-    icon: <GraduationCap className="h-5 w-5 text-indigo-600" />, // Changed to GraduationCap for higher-level academic courses
-    allowedRoles: ["owner", "manager"],
-  },
-  {
-    title: "Manage Levels",
-    description: "Configure and process new grade levels",
-    href: `/manager/gradeLevels`,
-    icon: <Layers className="h-5 w-5 text-teal-600" />, // Changed to Layers to represent progressive academic tiers/levels
-    allowedRoles: ["owner", "manager"],
-  },
-]
+import { getAuthorizedNavigation } from "@/lib/navigation"
 
 export default function DashboardHubPage() {
   const { user, profile, loading } = useAuth()
   const role = profile?.role // Use DB profile role (not JWT claim which may be missing)
 
   // 2. Filter down cards to only show what the current role is authorized to view
-  const authorizedCards = ALL_NAVIGATION_CARDS.filter((card) => {
-    if (!role) return false
-    return card.allowedRoles.includes(role)
-  })
+  const authorizedCards = getAuthorizedNavigation(role)
 
   // 3. Handle loading state gracefully to avoid layout shifts or a flashing blank page
   if (loading || (!role && !user)) {

@@ -6,9 +6,10 @@ interface TeachersTableProps {
     teachers: Teacher[]
     pendingArchiveIds: Set<string>
     onArchive: (id: string, name: string) => void
+    onTeacherUpdated: () => void
 }
 
-export function TeachersTable({ teachers, pendingArchiveIds, onArchive }: TeachersTableProps) {
+export function TeachersTable({ teachers, pendingArchiveIds, onArchive, onTeacherUpdated }: TeachersTableProps) {
 
     return (
         <div className="max-h-113.75 overflow-auto scrollbar-thin">
@@ -29,6 +30,7 @@ export function TeachersTable({ teachers, pendingArchiveIds, onArchive }: Teache
                             teacher={teacher}
                             pendingArchiveIds={pendingArchiveIds}
                             onArchive={onArchive}
+                            onTeacherUpdated={onTeacherUpdated}
                         />
                     ))}
                 </TableBody>

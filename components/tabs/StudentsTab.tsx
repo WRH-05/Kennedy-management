@@ -76,6 +76,8 @@ export default function StudentsTab({
                       studentId={student.id}
                       studentName={student.name}
                       isPendingArchive={pendingArchiveIds.has(student.id)}
+                      student={student}
+                      onStudentUpdated={() => onStudentsUpdate([])}
                     />
                   </TableCell>
                 </TableRow>

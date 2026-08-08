@@ -50,6 +50,7 @@ export default function CoursesTab({
                 <CourseInstanceTableRow
                   key={course.id}
                   course={course}
+                  onCourseInstanceUpdated={() => onCoursesUpdate([])}
                 />
               ))}
             </TableBody>

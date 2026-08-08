@@ -2,29 +2,17 @@
 
 import type React from "react"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useCallback } from "react"
 import { useRouter, useParams } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
-import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Alert, AlertDescription } from "@/components/ui/alert"
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog"
 import { ArrowLeft, Download, User, BookOpen, AlertTriangle, CheckCircle } from "lucide-react"
 import { Student, studentService } from "@/services/studentService"
-import { Tables, TablesUpdate } from "@/types/database.types"
-import { gradeLevelsService } from "@/services/gradeLevelsService"
+import { UpdateStudentDialog } from "@/components/tabs/StudentsTab/UpdateStudentDialog"
 import { toast } from "@/hooks/use-toast"
 
 function StudentDashboardContent() {
@@ -32,81 +20,25 @@ function StudentDashboardContent() {
   const params = useParams()
   const studentId = params.id as string
   const [student, setStudent] = useState<Student>()
-  const [editedStudent, setEditedStudent] = useState<TablesUpdate<"students">>()
   const [loading, setLoading] = useState(true)
-  const [isEditing, setIsEditing] = useState(false)
-  const [showSaveConfirmation, setShowSaveConfirmation] = useState(false)
-  const [error, setError] = useState<string | null>(null)
-  const [gradeSearchQuery, setGradeSearchQuery] = useState("")
-  const [showGradeLevelsResults, setShowGradeLevelsResults] = useState(false)
-  const [filteredGradeLevels, setFilteredGradeLevels] = useState<Tables<"grade_levels">[]>([])
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false)
 
-  const inputSearch = (name: string) => {
-    if (name.length == 0) return
-    gradeLevelsService.getAllGradeLevelsByName(name).then((v) => {
-      setFilteredGradeLevels(v.data);
-    })
-      .catch((e) => {
-        console.error(e);
-      })
-  }
-
-  useEffect(() => {
-    const loadStudentData = async () => {
-      setLoading(true)
-      try {
-        const studentData = await studentService.getStudentById(studentId)
-        if (!studentData) router.push('/')
-        setStudent(studentData)
-        const { grade_levels, ...cleaned } = studentData
-        setEditedStudent({
-          ...cleaned
-        })
-      } catch (error) {
-        console.error(error)
-      } finally {
-        setLoading(false)
-      }
-    }
-
-    loadStudentData()
-  }, [studentId, router])
-
-  const handleEdit = () => {
-    setIsEditing(true)
-  }
-
-  const handleSave = () => {
-    setShowSaveConfirmation(true)
-  }
-
-  const confirmSave = async () => {
+  const loadStudentData = useCallback(async () => {
+    setLoading(true)
     try {
-      if (!editedStudent) return
-      setLoading(true)
-      setError(null)
-      const updatedStudent = await studentService.updateStudent(studentId, editedStudent)
-      setStudent(updatedStudent)
-      setEditedStudent(JSON.parse(JSON.stringify(updatedStudent)))
-      setIsEditing(false)
-      setShowSaveConfirmation(false)
-    } catch (err) {
-      console.error("Error updating student:", err)
-      setError("Failed to update student")
+      const studentData = await studentService.getStudentById(studentId)
+      if (!studentData) router.push('/')
+      setStudent(studentData)
+    } catch (error) {
+      console.error(error)
     } finally {
       setLoading(false)
     }
-  }
+  }, [studentId, router])
 
-  const handleCancel = () => {
-    setEditedStudent(student ? JSON.parse(JSON.stringify(student)) : null)
-    setIsEditing(false)
-  }
-
-  const handleInputChange = (field: string, value: any) => {
-    if (!editedStudent) return
-    setEditedStudent({ ...editedStudent, [field]: value })
-  }
+  useEffect(() => {
+    loadStudentData()
+  }, [loadStudentData])
 
   const downloadStudentCard = () => {
     toast({ title: "Coming Soon", description: "Student card download is coming soon." })
@@ -114,7 +46,7 @@ function StudentDashboardContent() {
 
   if (!student || loading) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+      <div className="flex items-center justify-center py-20">
         <div className="text-center">
           <h2 className="text-xl font-semibold text-gray-900">Loading...</h2>
         </div>
@@ -140,11 +72,10 @@ function StudentDashboardContent() {
     })
     .reduce((sum, p) => sum + (p.amount || 0), 0)
 
-  // Calculate alerts
   const missedPayments = payments.filter((p) => p.status != 'paid').length
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div>
       <header className="bg-white shadow-sm border-b">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-16">
@@ -157,21 +88,13 @@ function StudentDashboardContent() {
             </div>
 
             <div className="flex items-center space-x-2">
-              {!isEditing ? (
-                <Button onClick={handleEdit}>Edit Student</Button>
-              ) : (
-                <>
-                  <Button onClick={handleSave}>Save</Button>
-                  <Button variant="outline" onClick={handleCancel}>Cancel</Button>
-                </>
-              )}
+              <Button onClick={() => setIsEditDialogOpen(true)}>Edit Student</Button>
             </div>
-
           </div>
         </div>
       </header>
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <div className="w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           <div className="lg:col-span-1 space-y-6">
             <Card>
@@ -184,126 +107,38 @@ function StudentDashboardContent() {
               <CardContent className="space-y-4">
                 <div className="space-y-4">
                   <div className="space-y-2">
-                    <Label htmlFor="name">Full Name</Label>
-                    {isEditing ? (
-                      <Input
-                        id="name"
-                        value={editedStudent?.name ?? ""}
-                        onChange={(e) => handleInputChange("name", e.target.value)}
-                      />
-                    ) : (
-                      <h3 className="font-semibold text-lg">{student.name}</h3>
-                    )}
+                    <Label>Full Name</Label>
+                    <h3 className="font-semibold text-lg">{student.name}</h3>
                   </div>
 
                   <div className="space-y-2">
-                    <Label htmlFor="school_year">School Level</Label>
-                    {isEditing ? (
-                      <div className="relative">
-                        <Input
-                          id=";evelSearch"
-                          placeholder="Search for a level..."
-                          value={gradeSearchQuery}
-                          onChange={(e) => {
-                            setGradeSearchQuery(e.target.value)
-                            setShowGradeLevelsResults(e.target.value.length > 0)
-                            inputSearch(e.target.value)
-                          }}
-                          onBlur={() => setTimeout(() => setShowGradeLevelsResults(false), 150)}
-                          onFocus={() => setShowGradeLevelsResults(gradeSearchQuery.length > 0)}
-                          required
-                        />
-
-                        {showGradeLevelsResults && filteredGradeLevels.length > 0 && (
-                          <div className="absolute top-full left-0 right-0 mt-1 bg-white border rounded-md shadow-lg z-50 max-h-40 overflow-y-auto">
-                            {filteredGradeLevels.map((level) => (
-                              <div
-                                key={level.id}
-                                className="px-4 py-2 hover:bg-gray-50 cursor-pointer border-b last:border-0"
-                                // onMouseDown runs BEFORE onBlur, securing the selection
-                                onMouseDown={() => {
-                                  handleInputChange('school_level', level.id.toString())
-                                  setGradeSearchQuery(level.name)
-                                  setShowGradeLevelsResults(false)
-                                }}
-                              >
-                                <div className="font-medium text-sm text-gray-900">{level.name}</div>
-                              </div>
-                            ))}
-                          </div>
-                        )}
-                      </div>
-                    ) : (
-                      <p className="text-gray-600">{student.grade_levels.name}</p>
-                    )}
+                    <Label>School Level</Label>
+                    <p className="text-gray-600">{student.grade_levels?.name || '-'}</p>
                   </div>
 
                   <div className="space-y-2">
-                    <Label htmlFor="school">School</Label>
-                    {isEditing ? (
-                      <>
-                        <Input
-                          id="school"
-                          value={editedStudent?.school ?? ""}
-                          onChange={(e) => handleInputChange("school", e.target.value)}
-                        />
-                      </>
-                    ) : (
-                      <p className="text-gray-600">{student.school || '-'}</p>
-                    )}
+                    <Label>School</Label>
+                    <p className="text-gray-600">{student.school || '-'}</p>
                   </div>
 
                   <div className="space-y-2">
-                    <Label htmlFor="birth_date">Birth Date</Label>
-                    {isEditing ? (
-                      <Input
-                        id="birth_date"
-                        value={editedStudent?.birth_date ?? ""}
-                        onChange={(e) => handleInputChange("birth_date", e.target.value)}
-                      />
-                    ) : (
-                      <p className="text-gray-600">{student.birth_date}</p>
-                    )}
+                    <Label>Birth Date</Label>
+                    <p className="text-gray-600">{student.birth_date || '-'}</p>
                   </div>
 
                   <div className="space-y-2">
-                    <Label htmlFor="phone">Phone</Label>
-                    {isEditing ? (
-                      <Input
-                        id="phone"
-                        value={editedStudent?.phone ?? ""}
-                        onChange={(e) => handleInputChange("phone", e.target.value)}
-                      />
-                    ) : (
-                      <p className="text-gray-600">{student.phone}</p>
-                    )}
+                    <Label>Phone</Label>
+                    <p className="text-gray-600">{student.phone || '-'}</p>
                   </div>
 
                   <div className="space-y-2">
-                    <Label htmlFor="email">Email</Label>
-                    {isEditing ? (
-                      <Input
-                        id="email"
-                        type="email"
-                        value={editedStudent?.email ?? ""}
-                        onChange={(e) => handleInputChange("email", e.target.value)}
-                      />
-                    ) : (
-                      <p className="text-gray-600">{student.email}</p>
-                    )}
+                    <Label>Email</Label>
+                    <p className="text-gray-600">{student.email || '-'}</p>
                   </div>
 
                   <div className="space-y-2">
-                    <Label htmlFor="address">Address</Label>
-                    {isEditing ? (
-                      <Input
-                        id="address"
-                        value={editedStudent?.address ?? ""}
-                        onChange={(e) => handleInputChange("address", e.target.value)}
-                      />
-                    ) : (
-                      <p className="text-gray-600">{student.address}</p>
-                    )}
+                    <Label>Address</Label>
+                    <p className="text-gray-600">{student.address || '-'}</p>
                   </div>
 
                   <div className="space-y-2">
@@ -327,20 +162,6 @@ function StudentDashboardContent() {
                 </Button>
               </CardContent>
             </Card>
-            <AlertDialog open={showSaveConfirmation} onOpenChange={setShowSaveConfirmation}>
-              <AlertDialogContent>
-                <AlertDialogHeader>
-                  <AlertDialogTitle>Confirm Changes</AlertDialogTitle>
-                  <AlertDialogDescription>
-                    Are you sure you want to save the changes to this student's profile?
-                  </AlertDialogDescription>
-                </AlertDialogHeader>
-                <AlertDialogFooter>
-                  <AlertDialogCancel>Cancel</AlertDialogCancel>
-                  <AlertDialogAction onClick={confirmSave}>Save Changes</AlertDialogAction>
-                </AlertDialogFooter>
-              </AlertDialogContent>
-            </AlertDialog>
 
             {/* Status Alerts */}
             <Card>
@@ -364,7 +185,6 @@ function StudentDashboardContent() {
                 )}
               </CardContent>
             </Card>
-
           </div>
 
           {/* courseInstances */}
@@ -473,6 +293,16 @@ function StudentDashboardContent() {
           </div>
         </div>
       </div>
+
+      <UpdateStudentDialog
+        student={student}
+        open={isEditDialogOpen}
+        onOpenChange={setIsEditDialogOpen}
+        onStudentUpdated={() => {
+          setIsEditDialogOpen(false)
+          loadStudentData()
+        }}
+      />
     </div>
   )
 }
