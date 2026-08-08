@@ -122,13 +122,23 @@ function StudentDashboardContent() {
                   </div>
 
                   <div className="space-y-2">
+                    <Label>Current School Name</Label>
+                    <p className="text-gray-600">{(student as any).school_name || '-'}</p>
+                  </div>
+
+                  <div className="space-y-2">
                     <Label>Birth Date</Label>
                     <p className="text-gray-600">{student.birth_date || '-'}</p>
                   </div>
 
                   <div className="space-y-2">
-                    <Label>Phone</Label>
+                    <Label>Student Phone</Label>
                     <p className="text-gray-600">{student.phone || '-'}</p>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label>Parent Phone</Label>
+                    <p className="text-gray-600">{(student as any).parent_phone || '-'}</p>
                   </div>
 
                   <div className="space-y-2">

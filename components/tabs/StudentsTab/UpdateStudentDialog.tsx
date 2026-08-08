@@ -33,8 +33,10 @@ export function UpdateStudentDialog({
     name: "",
     school_level: "",
     school: "",
+    school_name: "",
     birth_date: "",
     phone: "",
+    parent_phone: "",
     email: "",
     address: "",
   })
@@ -47,8 +49,10 @@ export function UpdateStudentDialog({
         name: student.name || "",
         school_level: student.school_level || "",
         school: student.school || "",
+        school_name: (student as any).school_name || "",
         birth_date: student.birth_date || "",
         phone: student.phone || "",
+        parent_phone: (student as any).parent_phone || "",
         email: student.email || "",
         address: student.address || "",
       })
@@ -162,6 +166,17 @@ export function UpdateStudentDialog({
               />
             </div>
 
+            {/* Current School Name */}
+            <div className="space-y-2">
+              <Label htmlFor="edit-school-name">Current School Name</Label>
+              <Input
+                id="edit-school-name"
+                value={formData.school_name || ""}
+                onChange={(e) => setFormData({ ...formData, school_name: e.target.value })}
+                placeholder="Name of the student's current school"
+              />
+            </div>
+
             {/* Birth Date */}
             <div className="space-y-2">
               <Label htmlFor="edit-birth">Birth Date</Label>
@@ -173,13 +188,25 @@ export function UpdateStudentDialog({
               />
             </div>
 
-            {/* Phone */}
+            {/* Student Phone */}
             <div className="space-y-2">
-              <Label htmlFor="edit-phone">Phone Number</Label>
+              <Label htmlFor="edit-phone">Student Phone</Label>
               <Input
                 id="edit-phone"
                 value={formData.phone || ""}
                 onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                placeholder="Student phone number"
+              />
+            </div>
+
+            {/* Parent Phone */}
+            <div className="space-y-2">
+              <Label htmlFor="edit-parent-phone">Parent Phone Number</Label>
+              <Input
+                id="edit-parent-phone"
+                value={formData.parent_phone || ""}
+                onChange={(e) => setFormData({ ...formData, parent_phone: e.target.value })}
+                placeholder="Parent phone number"
               />
             </div>
 

@@ -39,9 +39,11 @@ export function AddStudentDialog({ onStudentAdded }: AddStudentDialogProps) {
         name: "",
         birth_date: "",
         phone: "",
+        parent_phone: "",
         email: "",
         address: "",
         school: "",
+        school_name: "",
         school_level: "",
         registration_fee_paid: false,
         archived: false,
@@ -59,12 +61,23 @@ export function AddStudentDialog({ onStudentAdded }: AddStudentDialogProps) {
 
         setIsSubmitting(true)
         try {
+            // Require at least one phone number (student or parent)
+            if (!newStudent.phone?.trim() && !newStudent.parent_phone?.trim()) {
+                toast({
+                    title: "Phone Required",
+                    description: "Please enter at least one phone number (student or parent).",
+                    variant: "destructive",
+                })
+                setIsSubmitting(false)
+                return
+            }
+
             await studentService.addStudent(newStudent)
             const updatedStudents = await studentService.getAllStudents()
             onStudentAdded(updatedStudents.data)
 
             setNewStudent({
-                name: "", birth_date: "", phone: "", email: "", address: "", school: "",
+                name: "", birth_date: "", phone: "", parent_phone: "", email: "", address: "", school: "", school_name: "",
                 school_level: "", registration_fee_paid: false,
                 archived: false, archived_date: null
             })
@@ -160,12 +173,21 @@ export function AddStudentDialog({ onStudentAdded }: AddStudentDialogProps) {
                             />
                         </div>
                         <div className="space-y-2">
-                            <Label htmlFor="phone">Phone Number</Label>
+                            <Label htmlFor="phone">Student Phone</Label>
                             <Input
                                 id="phone"
                                 value={newStudent.phone || ""}
                                 onChange={(e) => setNewStudent({ ...newStudent, phone: e.target.value })}
-                                required
+                                placeholder="Student phone number"
+                            />
+                        </div>
+                        <div className="space-y-2">
+                            <Label htmlFor="parentPhone">Parent Phone Number</Label>
+                            <Input
+                                id="parentPhone"
+                                value={newStudent.parent_phone || ""}
+                                onChange={(e) => setNewStudent({ ...newStudent, parent_phone: e.target.value })}
+                                placeholder="Parent phone number"
                             />
                         </div>
                         <div className="space-y-2">
@@ -175,6 +197,15 @@ export function AddStudentDialog({ onStudentAdded }: AddStudentDialogProps) {
                                 type="email"
                                 value={newStudent.email || ""}
                                 onChange={(e) => setNewStudent({ ...newStudent, email: e.target.value })}
+                            />
+                        </div>
+                        <div className="space-y-2 md:col-span-2">
+                            <Label htmlFor="schoolName">Current School Name</Label>
+                            <Input
+                                id="schoolName"
+                                value={newStudent.school_name || ""}
+                                onChange={(e) => setNewStudent({ ...newStudent, school_name: e.target.value })}
+                                placeholder="Name of the student's current school"
                             />
                         </div>
                     </div>

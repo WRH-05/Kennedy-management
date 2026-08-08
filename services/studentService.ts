@@ -83,9 +83,11 @@ export const studentService = {
       birth_date: updatedData.birth_date,
       email: updatedData.email,
       name: updatedData.name,
+      parent_phone: updatedData.parent_phone,
       phone: updatedData.phone,
       registration_fee_paid: updatedData.registration_fee_paid,
       school: updatedData.school,
+      school_name: updatedData.school_name,
       school_level: updatedData.school_level,
     }
     const { data } = await supabase
