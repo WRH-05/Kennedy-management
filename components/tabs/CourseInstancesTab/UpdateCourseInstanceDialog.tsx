@@ -35,6 +35,7 @@ export function UpdateCourseInstanceDialog({
   const [compensationType, setCompensationType] = useState<"percentage" | "fixed_salary">("percentage")
   const [fixedSalaryAmount, setFixedSalaryAmount] = useState(0)
   const [isIndividual, setIsIndividual] = useState(false)
+  const [maxStudents, setMaxStudents] = useState<number | null>(null)
   const [scheduleSlots, setScheduleSlots] = useState<ScheduleSlot[]>([])
   const [displayName, setDisplayName] = useState("")
 
@@ -51,6 +52,7 @@ export function UpdateCourseInstanceDialog({
           setCompensationType((data as any).compensation_type || "percentage")
           setFixedSalaryAmount((data as any).fixed_salary_amount || 0)
           setIsIndividual((data as any).is_individual || false)
+          setMaxStudents((data as any).max_students ?? null)
           setScheduleSlots(mapSchedulesToSlots(data.course_schedule || []))
           setDisplayName(data.display_name || "")
         })
@@ -113,7 +115,7 @@ export function UpdateCourseInstanceDialog({
           compensation_type: compensationType,
           fixed_salary_amount: compensationType === 'fixed_salary' ? fixedSalaryAmount : null,
           is_individual: isIndividual,
-          max_students: isIndividual ? 2 : null,
+          max_students: isIndividual ? (maxStudents ?? 2) : null,
         },
         formattedSlots
       )
@@ -211,7 +213,17 @@ export function UpdateCourseInstanceDialog({
               <Label htmlFor="edit-is-individual">Individual Course / Private Lesson</Label>
             </div>
             {isIndividual && (
-              <p className="text-xs text-amber-600 -mt-1 ml-6">Max 2 students</p>
+              <div className="space-y-1 ml-6">
+                <Label htmlFor="edit-max-students">Max Students</Label>
+                <Input
+                  id="edit-max-students"
+                  type="number"
+                  min="1"
+                  max="10"
+                  value={maxStudents ?? 2}
+                  onChange={(e) => setMaxStudents(parseInt(e.target.value) || 1)}
+                />
+              </div>
             )}
 
             <div className="pt-2 border-t space-y-2">

@@ -15,10 +15,17 @@ interface BillingPeriodToolbarProps {
   billingPeriods: Tables<"billing_periods">[]
   selectedPeriodId: string
   setSelectedPeriodId: (id: string) => void
+  cycleStatuses?: Record<string, 'red' | 'orange' | 'green'>
   onRefresh: () => void
 }
 
-export function BillingPeriodToolbar({ courseInstanceId, billingPeriods, selectedPeriodId, setSelectedPeriodId, onRefresh }: BillingPeriodToolbarProps) {
+const STATUS_COLORS: Record<string, string> = {
+  red: 'bg-red-500',
+  orange: 'bg-orange-500',
+  green: 'bg-green-500',
+}
+
+export function BillingPeriodToolbar({ courseInstanceId, billingPeriods, selectedPeriodId, setSelectedPeriodId, cycleStatuses, onRefresh }: BillingPeriodToolbarProps) {
   const { toast } = useToast()
   const [showAddBillingDialog, setShowAddBillingDialog] = useState(false)
   const [isSubmitting, setIsSubmitting] = useState(false)
@@ -89,9 +96,17 @@ export function BillingPeriodToolbar({ courseInstanceId, billingPeriods, selecte
           <Select value={selectedPeriodId} onValueChange={setSelectedPeriodId}>
             <SelectTrigger className="w-60 h-9"><SelectValue placeholder="Select Cycle" /></SelectTrigger>
             <SelectContent>
-              {billingPeriods.map((p) => (
-                <SelectItem key={p.id} value={p.id}>{p.start_date} → {p.end_date}</SelectItem>
-              ))}
+              {billingPeriods.map((p) => {
+                const status = cycleStatuses?.[p.id] || 'orange'
+                return (
+                  <SelectItem key={p.id} value={p.id}>
+                    <span className="flex items-center gap-2">
+                      <span className={`inline-block w-2 h-2 rounded-full ${STATUS_COLORS[status] || 'bg-gray-400'}`} />
+                      {p.start_date} → {p.end_date}
+                    </span>
+                  </SelectItem>
+                )
+              })}
             </SelectContent>
           </Select>
         ) : (

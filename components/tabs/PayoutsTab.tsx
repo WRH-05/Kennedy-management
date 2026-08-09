@@ -48,6 +48,19 @@ const formatDateTime = (dateStr: string | null | undefined) => {
   }
 }
 
+const getCourseDisplayName = (courseInstance: any): string => {
+  if (!courseInstance) return '—'
+  if (courseInstance.display_name) return courseInstance.display_name
+  if (courseInstance.course_eligibility) {
+    const courseName = courseInstance.course_eligibility.courses?.name || ''
+    const gradeName = courseInstance.course_eligibility.grade_levels?.name || ''
+    if (courseName && gradeName) return `${courseName} - ${gradeName}`
+    if (courseName) return courseName
+    if (gradeName) return gradeName
+  }
+  return '—'
+}
+
 export default function PayoutsTab({
   payoutData,
   onPageChange,
@@ -153,7 +166,7 @@ export default function PayoutsTab({
                     return (
                       <TableRow key={payout.id || index} className="group hover:bg-muted/50 transition-colors">
                         <TableCell className="font-medium">{renderNameCell(payout)}</TableCell>
-                        <TableCell className="font-medium"><Link href={`/course-instance/${payout.course_instances?.id}`}>{payout.course_instances?.id?.slice(0, 8) ?? "—"}</Link></TableCell>
+                        <TableCell className="font-medium"><Link href={`/course-instance/${payout.course_instances?.id}`}>{getCourseDisplayName(payout.course_instances)}</Link></TableCell>
                         <TableCell className="font-semibold text-primary">{payout.amount.toLocaleString()} DA</TableCell>
                         <TableCell>{dateTime.date}</TableCell>
                         <TableCell>{dateTime.time}</TableCell>
@@ -230,7 +243,7 @@ export default function PayoutsTab({
                     return (
                       <TableRow key={payout.id || index} className="opacity-80 hover:opacity-100 transition-opacity">
                         <TableCell className="font-medium">{renderNameCell(payout)}</TableCell>
-                        <TableCell className="font-medium"><Link href={`/course-instance/${payout.course_instances.id}`}>{payout.course_instances.subject}</Link></TableCell>
+                        <TableCell className="font-medium"><Link href={`/course-instance/${payout.course_instances.id}`}>{getCourseDisplayName(payout.course_instances)}</Link></TableCell>
                         <TableCell>{(payout.amount || 0).toLocaleString()} DA</TableCell>
                         <TableCell>{dateTime.date}</TableCell>
                         <TableCell>{dateTime.time}</TableCell>

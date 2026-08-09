@@ -149,7 +149,12 @@ export const courseInstancesService = {
                 percentage_cut: instanceData.percentage_cut,
                 course_eligibility_id: instanceData.course_eligibility_id,
                 price: instanceData.price,
-                monthly_price: instanceData.monthly_price
+                monthly_price: instanceData.monthly_price,
+                display_name: instanceData.display_name || null,
+                compensation_type: instanceData.compensation_type || 'percentage',
+                fixed_salary_amount: instanceData.fixed_salary_amount || null,
+                is_individual: instanceData.is_individual || false,
+                max_students: instanceData.max_students || null,
             },
             p_schedules: scheduleSlots
         })

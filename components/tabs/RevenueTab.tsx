@@ -77,7 +77,7 @@ export default function RevenueTab({ revenue }: RevenueTabProps) {
                   </TableCell>
                   <TableCell>
                     {item.source === 'registration' ? (
-                      <Badge variant="outline">Registration Fee</Badge>
+                      'Registration Fee'
                     ) : item.course_id ? (
                       <Button
                         variant="link"

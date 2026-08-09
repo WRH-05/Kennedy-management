@@ -6,7 +6,13 @@ const supabase = createClient();
 export type EnrichedTeacherPayout = Tables<"teacher_payouts"> & {
     teachers?: Tables<"teachers">,
     profiles?: Tables<"profiles">,
-    course_instances?: Tables<"course_instances">,
+    course_instances?: Tables<"course_instances"> & {
+        course_eligibility?: {
+            id?: string
+            courses?: { name: string } | null
+            grade_levels?: { name: string } | null
+        } | null
+    },
     billing_periods?: Tables<"billing_periods">
 }
 
@@ -25,6 +31,8 @@ export const teacherPayoutService = {
             .select(`
                     *,
                     teachers (*),
+                    course_instances(*, course_eligibility(courses(name), grade_levels(name))),
+                    billing_periods (*),
                     profiles!teacher_payouts_recorded_by_fkey (*)
                 `, { count: pageSize > 0 ? 'exact' : 'estimated' })
 
@@ -50,7 +58,7 @@ export const teacherPayoutService = {
     async getAllTeacherPayouts(courseId: string): Promise<EnrichedTeacherPayout[]> {
         let query = supabase
             .from('teacher_payouts')
-            .select(`*, profiles!teacher_payouts_recorded_by_fkey (*)`)
+            .select(`*, course_instances(*, course_eligibility(courses(name), grade_levels(name))), profiles!teacher_payouts_recorded_by_fkey (*)`)
             .eq('course_id', courseId)
 
         query.order('created_at', { ascending: false });
@@ -103,7 +111,7 @@ export const teacherPayoutService = {
 
         let query = supabase
             .from('teacher_payouts')
-            .select('*, teachers (*), course_instances (*), billing_periods (*), profiles!teacher_payouts_recorded_by_fkey(*)', { count: pageSize > 0 ? 'exact' : 'estimated' })
+            .select('*, teachers (*), course_instances(*, course_eligibility(courses(name), grade_levels(name))), billing_periods (*), profiles!teacher_payouts_recorded_by_fkey(*)', { count: pageSize > 0 ? 'exact' : 'estimated' })
 
         query = query.order('created_at', { ascending: false });
 

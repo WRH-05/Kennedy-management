@@ -167,6 +167,16 @@ export const studentPaymentService = {
         }))
     },
 
+    async getPaymentsByCourseId(courseId: string): Promise<Tables<"student_payments">[]> {
+        const { data } = await supabase
+            .from('student_payments')
+            .select('*')
+            .eq('course_id', courseId)
+            .throwOnError()
+
+        return data || []
+    },
+
     async payRegistrationFee(studentId: string) {
         // Mark registration fee as paid on the student record
         const { error: updateError } = await supabase

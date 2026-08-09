@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect, useCallback, useMemo } from "react"
-import { useRouter, useParams } from "next/navigation"
+import { useRouter, useParams, useSearchParams } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { ArrowLeft } from "lucide-react"
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog"
@@ -16,11 +16,13 @@ import { BillingPeriodToolbar } from "./billing-period-toolbar"
 import { StudentsManagementCard } from "./students-management-card"
 import { useStudents } from "@/hooks/useStudents"
 import { teacherPayoutService } from "@/services/teacherPayoutService"
+import { studentPaymentService } from "@/services/studentPaymentService"
 import { Tables } from "@/types/database.types"
 
 function CourseInstancesDetailContent() {
   const router = useRouter()
   const params = useParams()
+  const searchParams = useSearchParams()
   const CourseInstancesId = params.id as string
   const { toast } = useToast()
 
@@ -28,6 +30,7 @@ function CourseInstancesDetailContent() {
   const [simpleCourseInstances, setSimpleCourseInstances] = useState<CourseInstanceDetail | null> (null)
   const [payouts, setPayouts] = useState<Tables<"teacher_payouts">[]>([])
   const [payout, setPayout] = useState<Tables<"teacher_payouts"> | null>(null)
+  const [studentPayments, setStudentPayments] = useState<Tables<"student_payments">[]>([])
   const [billingPeriods, setBillingPeriods] = useState<Tables<"billing_periods">[]>([])
   const [selectedPeriodId, setSelectedPeriodId] = useState<string>("")
   const [studentSearchQuery, setStudentSearchQuery] = useState("")
@@ -44,23 +47,62 @@ function CourseInstancesDetailContent() {
     [allStudents]
   )
 
+  // Sync selectedPeriodId with URL query param
+  const handleCycleChange = useCallback((cycleId: string) => {
+    setSelectedPeriodId(cycleId)
+    router.push(`/course-instance/${CourseInstancesId}?cycle=${cycleId}`, { scroll: false })
+  }, [CourseInstancesId, router])
+
+  // Compute status dots for each billing cycle
+  const cycleStatuses = useMemo(() => {
+    const statuses: Record<string, 'red' | 'orange' | 'green'> = {}
+    const totalEnrolled = courseInstances?.student_ids?.length || 0
+    const newestCycleId = billingPeriods[0]?.id
+
+    billingPeriods.forEach((bp) => {
+      const paidCount = studentPayments.filter(
+        (p) => p.billing_period_id === bp.id && p.status === 'paid'
+      ).length
+      const payoutRecord = payouts.find((p) => p.billing_period_id === bp.id)
+      const allStudentsPaid = totalEnrolled > 0 && paidCount >= totalEnrolled
+      const payoutStatus = payoutRecord?.status as string | undefined
+      const teacherPaid = payoutRecord && (payoutStatus === 'approved' || payoutStatus === 'paid')
+
+      if (allStudentsPaid && teacherPaid) {
+        statuses[bp.id] = 'green'
+      } else if (bp.id === newestCycleId) {
+        statuses[bp.id] = 'orange'
+      } else if (allStudentsPaid && (!payoutRecord || payoutRecord.status === 'pending')) {
+        statuses[bp.id] = 'orange'
+      } else {
+        statuses[bp.id] = 'red'
+      }
+    })
+
+    return statuses
+  }, [billingPeriods, studentPayments, payouts, courseInstances])
+
   // 1. Core initialization data (Only runs once on mount or if ID changes)
   const loadInitialData = useCallback(async () => {
     try {
       setLoading(true)
-      const [rawCourseData, billingData, teacherPayoutsData] = await Promise.all([
+      const [rawCourseData, billingData, teacherPayoutsData, studentPaymentsData] = await Promise.all([
         courseInstancesService.getCourseInstanceById(CourseInstancesId),
         paymentService.getBillingPeriods(CourseInstancesId),
-        teacherPayoutService.getAllTeacherPayouts(CourseInstancesId)
+        teacherPayoutService.getAllTeacherPayouts(CourseInstancesId),
+        studentPaymentService.getPaymentsByCourseId(CourseInstancesId),
       ])
       setSimpleCourseInstances(rawCourseData);
       setPayouts(teacherPayoutsData)
+      setStudentPayments(studentPaymentsData)
       setBillingPeriods(billingData || [])
 
-      // Secure default period ID selection securely
+      // Secure default period ID selection from URL param or newest cycle
+      const cycleParam = searchParams.get('cycle')
       let initialPeriodId = selectedPeriodId
-      if (billingData?.length > 0 && !selectedPeriodId) {
-        initialPeriodId = billingData[0].id
+      if (billingData?.length > 0 && !initialPeriodId) {
+        const validCycle = cycleParam ? billingData.find(bp => bp.id === cycleParam) : null
+        initialPeriodId = validCycle ? validCycle.id : billingData[0].id
         setSelectedPeriodId(initialPeriodId)
       }
 
@@ -157,11 +199,11 @@ function CourseInstancesDetailContent() {
           </div>
 
           <div className="lg:col-span-2 space-y-6">
-            <BillingPeriodToolbar courseInstanceId={courseInstances.id} billingPeriods={billingPeriods} selectedPeriodId={selectedPeriodId} setSelectedPeriodId={setSelectedPeriodId} onRefresh={loadInitialData} />
+            <BillingPeriodToolbar courseInstanceId={courseInstances.id} billingPeriods={billingPeriods} selectedPeriodId={selectedPeriodId} setSelectedPeriodId={handleCycleChange} cycleStatuses={cycleStatuses} onRefresh={loadInitialData} />
             <StudentsManagementCard
               courseInstance={courseInstances} filteredStudents={filteredStudents}
               studentSearchQuery={studentSearchQuery} selectedPeriodId={selectedPeriodId}
-              billingPeriods={billingPeriods} setSelectedPeriodId={setSelectedPeriodId}
+              billingPeriods={billingPeriods} setSelectedPeriodId={handleCycleChange}
               setStudentSearchQuery={setStudentSearchQuery}
               onRefresh={loadInitialData}
             />
