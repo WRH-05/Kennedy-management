@@ -94,7 +94,7 @@ export function BillingPeriodToolbar({ courseInstanceId, billingPeriods, selecte
         <span className="font-semibold text-sm">Billing Cycle:</span>
         {billingPeriods.length > 0 ? (
           <Select value={selectedPeriodId} onValueChange={setSelectedPeriodId}>
-            <SelectTrigger className="w-60 h-9"><SelectValue placeholder="Select Cycle" /></SelectTrigger>
+            <SelectTrigger className="min-w-[250px] h-9"><SelectValue placeholder="Select Cycle" /></SelectTrigger>
             <SelectContent>
               {billingPeriods.map((p) => {
                 const status = cycleStatuses?.[p.id] || 'orange'

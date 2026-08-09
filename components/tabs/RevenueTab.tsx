@@ -96,7 +96,7 @@ export default function RevenueTab({ revenue }: RevenueTabProps) {
                   <TableCell>{item.recorded_by_name || '-'}</TableCell>
                   <TableCell>
                     <Badge variant={item.paid ? "default" : "destructive"}>
-                      {item.paid ? "Paid" : "Pending"}
+                      {item.paid ? "Paid" : "Unpaid"}
                     </Badge>
                   </TableCell>
                 </TableRow>

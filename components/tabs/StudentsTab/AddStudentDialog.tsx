@@ -10,7 +10,9 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Plus } from "lucide-react"
 import { Tables, TablesInsert, TablesUpdate } from "@/types/database.types"
 import { studentService } from "@/services/studentService"
+import { studentPaymentService } from "@/services/studentPaymentService"
 import { useToast } from "@/hooks/use-toast"
+import { revalidateData } from "@/hooks/swr-config"
 import { gradeLevelsService } from "@/services/gradeLevelsService"
 
 interface AddStudentDialogProps {
@@ -72,7 +74,18 @@ export function AddStudentDialog({ onStudentAdded }: AddStudentDialogProps) {
                 return
             }
 
-            await studentService.addStudent(newStudent)
+            const createdStudent = await studentService.addStudent(newStudent)
+
+            // If registration fee paid on creation, log it to revenue
+            if (newStudent.registration_fee_paid) {
+              try {
+                await studentPaymentService.payRegistrationFee(createdStudent.id)
+                revalidateData('payments')
+              } catch (feeError) {
+                console.error("Failed to record registration fee payment:", feeError)
+              }
+            }
+
             const updatedStudents = await studentService.getAllStudents()
             onStudentAdded(updatedStudents.data)
 

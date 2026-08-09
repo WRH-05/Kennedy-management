@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect, useCallback, useMemo } from "react"
+import { useState, useEffect, useCallback, useMemo, useRef } from "react"
 import { useRouter, useParams, useSearchParams } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { ArrowLeft } from "lucide-react"
@@ -50,7 +50,7 @@ function CourseInstancesDetailContent() {
   // Sync selectedPeriodId with URL query param
   const handleCycleChange = useCallback((cycleId: string) => {
     setSelectedPeriodId(cycleId)
-    router.push(`/course-instance/${CourseInstancesId}?cycle=${cycleId}`, { scroll: false })
+    router.replace(`/course-instance/${CourseInstancesId}?cycle=${cycleId}`, { scroll: false })
   }, [CourseInstancesId, router])
 
   // Compute status dots for each billing cycle
@@ -82,6 +82,25 @@ function CourseInstancesDetailContent() {
     return statuses
   }, [billingPeriods, studentPayments, payouts, courseInstances])
 
+  // Initialize selectedPeriodId once from URL param or default to newest cycle
+  const initialCycleSet = useRef(false)
+
+  // Reset the gate when navigating to a different course instance
+  useEffect(() => {
+    initialCycleSet.current = false
+    setSelectedPeriodId("")
+  }, [CourseInstancesId])
+
+  useEffect(() => {
+    if (billingPeriods.length > 0 && !initialCycleSet.current) {
+      const cycleParam = searchParams.get('cycle')
+      const validCycle = cycleParam ? billingPeriods.find(bp => bp.id === cycleParam) : null
+      const targetId = validCycle ? validCycle.id : billingPeriods[0].id
+      setSelectedPeriodId(targetId)
+      initialCycleSet.current = true
+    }
+  }, [billingPeriods, searchParams])
+
   // 1. Core initialization data (Only runs once on mount or if ID changes)
   const loadInitialData = useCallback(async () => {
     try {
@@ -96,15 +115,6 @@ function CourseInstancesDetailContent() {
       setPayouts(teacherPayoutsData)
       setStudentPayments(studentPaymentsData)
       setBillingPeriods(billingData || [])
-
-      // Secure default period ID selection from URL param or newest cycle
-      const cycleParam = searchParams.get('cycle')
-      let initialPeriodId = selectedPeriodId
-      if (billingData?.length > 0 && !initialPeriodId) {
-        const validCycle = cycleParam ? billingData.find(bp => bp.id === cycleParam) : null
-        initialPeriodId = validCycle ? validCycle.id : billingData[0].id
-        setSelectedPeriodId(initialPeriodId)
-      }
 
       // Safe alignment with our array-based batch enrichment service
       const [enrichedCourse] = await courseInstancesService.enrichCoursesWithStudentsBatch([rawCourseData])

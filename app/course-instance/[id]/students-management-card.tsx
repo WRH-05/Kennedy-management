@@ -22,8 +22,7 @@ import { EnrichedCourseEnrollements } from "@/services/courseEnrollmentService"
 
 const PAYMENT_STATUSES = [
   { value: "paid", label: "Paid" },
-  { value: "pending", label: "Request Payment" },
-  { value: "unpaid", label: "Waiting for payement" },
+  { value: "unpaid", label: "Unpaid" },
   { value: "cancelled", label: "Cancelled" },
 ]
 
@@ -119,10 +118,9 @@ export function StudentsManagementCard({
     switch (status) {
       case 'paid':
         return <Badge className="bg-green-500 hover:bg-green-600 text-white">Paid</Badge>
-      case 'pending':
-        return <Badge variant="outline" className="text-amber-500 border-amber-500">Pending</Badge>
       case 'cancelled':
         return <Badge variant="destructive">Cancelled</Badge>
+      case 'pending':
       case 'unpaid':
       default:
         return <Badge variant="secondary">Unpaid</Badge>
@@ -306,25 +304,28 @@ export function StudentsManagementCard({
                       </Select>
                     </TableCell>
 
-                    <TableCell className="group"> {/* <-- Add 'group' here */}
+                    <TableCell className="group">
                       <div className="flex items-center justify-between">
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <Button variant="ghost" className="h-8 w-8 p-0 opacity-0 group-hover:opacity-100 transition-opacity">
-                              <MoreHorizontal className="h-4 w-4" />
-                            </Button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end">
-                            <DropdownMenuItem
-                              onClick={() => onChangeStudentPaymentStatus(currentStudentId, 'paid')}
-                              className="text-emerald-600 focus:text-emerald-600 cursor-pointer"
-                            >
-                              <Check className="mr-2 h-4 w-4" />
-                              Record Payment
-                            </DropdownMenuItem>
-                          </DropdownMenuContent>
-                        </DropdownMenu>
-
+                        {isPaid ? (
+                          <span className="text-xs text-emerald-600 font-medium">Paid</span>
+                        ) : (
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <Button variant="ghost" className="h-8 w-8 p-0 opacity-0 group-hover:opacity-100 transition-opacity">
+                                <MoreHorizontal className="h-4 w-4" />
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end">
+                              <DropdownMenuItem
+                                onClick={() => onChangeStudentPaymentStatus(currentStudentId, 'paid')}
+                                className="text-emerald-600 focus:text-emerald-600 cursor-pointer"
+                              >
+                                <Check className="mr-2 h-4 w-4" />
+                                Record Payment
+                              </DropdownMenuItem>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
+                        )}
                       </div>
                     </TableCell>
                   </TableRow>
