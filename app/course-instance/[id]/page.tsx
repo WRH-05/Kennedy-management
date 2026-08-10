@@ -162,7 +162,7 @@ function CourseInstancesDetailContent() {
       description: `Create a payout request for the teacher? Amount: ${earnings} DA.`,
       action: async () => {
         try {
-          await teacherPayoutService.recordTeacherPayout(earnings, selectedPeriodId)
+          await teacherPayoutService.recordTeacherPayout(earnings, selectedPeriodId, courseInstances.id)
           toast({ title: "Payout request created" })
           setCourseInstances(null)
           loadInitialData()

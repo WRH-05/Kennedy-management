@@ -166,7 +166,7 @@ export const teacherPayoutService = {
         return data
     },
 
-    async recordTeacherPayout(amount: number, billingPeriodId: string) {
+    async recordTeacherPayout(amount: number, billingPeriodId: string, courseId: string) {
 
         const { data } = await supabase
             .from('teacher_payouts')
@@ -175,6 +175,7 @@ export const teacherPayoutService = {
                 status: 'pending',
             })
             .eq('billing_period_id', billingPeriodId)
+            .eq('course_id', courseId)
             .select()
             .single()
             .throwOnError()

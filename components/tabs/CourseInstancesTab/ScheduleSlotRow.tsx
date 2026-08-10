@@ -5,6 +5,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Trash2 } from "lucide-react"
+import { calculateEndTime } from "@/lib/schedule"
 
 interface ScheduleSlot {
   dayOfWeek: string
@@ -29,16 +30,6 @@ export function ScheduleSlotRow({
   onUpdate,
   onRemove,
 }: ScheduleSlotRowProps) {
-  
-  const calculateEndHour = (startHour: string, duration: number) => {
-    if (!startHour) return "--:--"
-    const [hours, minutes] = startHour.split(":").map(Number)
-    const startMinutes = hours * 60 + minutes
-    const endMinutes = startMinutes + duration * 60
-    const endHours = Math.floor(endMinutes / 60)
-    const endMins = endMinutes % 60
-    return `${endHours.toString().padStart(2, "0")}:${endMins.toString().padStart(2, "0")}`
-  }
 
   return (
     <div className="grid grid-cols-1 sm:grid-cols-12 gap-3 items-end bg-white p-3 border rounded-md relative shadow-sm group/slot">
@@ -90,7 +81,7 @@ export function ScheduleSlotRow({
       <div className="sm:col-span-2 space-y-1.5">
         <Label className="text-xs text-muted-foreground">End Hour</Label>
         <div className="h-9 px-2 flex items-center bg-slate-50 rounded border text-xs font-medium text-slate-600">
-          {calculateEndHour(slot.startHour, slot.duration)}
+          {calculateEndTime(slot.startHour, slot.duration)}
         </div>
       </div>
 

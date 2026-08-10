@@ -120,6 +120,35 @@ export const archiveService = {
                 .eq('id', request.entity_id)
 
         } else if (request.entity_type === 'course') {
+            // Guardrails: check for active enrollments, pending payments, and pending payouts
+            const { data: activeEnrollments } = await supabase
+                .from('course_enrollments')
+                .select('id')
+                .eq('course_id', request.entity_id)
+                .eq('status', 'enrolled')
+
+            const { data: openPayments } = await supabase
+                .from('student_payments')
+                .select('id')
+                .eq('course_id', request.entity_id)
+                .eq('status', 'pending')
+
+            const { data: pendingPayouts } = await supabase
+                .from('teacher_payouts')
+                .select('id')
+                .eq('course_id', request.entity_id)
+                .eq('status', 'pending')
+
+            if ((activeEnrollments?.length || 0) > 0) {
+                throw new Error('Cannot archive: there are active enrollments. Drop all students first.')
+            }
+            if ((openPayments?.length || 0) > 0) {
+                throw new Error('Cannot archive: there are pending student payments.')
+            }
+            if ((pendingPayouts?.length || 0) > 0) {
+                throw new Error('Cannot archive: there are pending teacher payouts.')
+            }
+
             await supabase
                 .from('course_instances')
                 .update({ archived: true, archived_date: new Date().toISOString() })

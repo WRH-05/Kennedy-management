@@ -36,3 +36,18 @@ export type ScheduleSlot = {
   start_time: string
   duration: number
 }
+
+export function calculateEndTime(startTime: string, durationHours: number): string {
+  if (!startTime) return "00:00"
+  const [hours, minutes] = startTime.split(":").map(Number)
+  const totalMinutes = hours * 60 + minutes + Math.round(durationHours * 60)
+  const endHours = Math.floor(totalMinutes / 60) % 24
+  const endMinutes = totalMinutes % 60
+  return `${String(endHours).padStart(2, "0")}:${String(endMinutes).padStart(2, "0")}`
+}
+
+export const VALID_WEEK_DAYS = ["monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday"] as const
+
+export function isValidWeekDay(day: string): boolean {
+  return VALID_WEEK_DAYS.includes(day as any)
+}

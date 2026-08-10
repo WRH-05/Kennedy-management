@@ -238,7 +238,7 @@ export default function PayoutsTab({
                   {processedPayouts.map((payout: any, index: number) => {
                     const dateTime = formatDateTime(payout.created_at || payout.payment_date)
                     const isApproved = payout.status === 'approved' || payout.status === 'paid'
-                    const isDenied = payout.status === 'denied'
+                    const isDenied = payout.status === 'cancelled'
 
                     return (
                       <TableRow key={payout.id || index} className="opacity-80 hover:opacity-100 transition-opacity">
@@ -253,7 +253,7 @@ export default function PayoutsTab({
                             variant={isApproved ? "default" : isDenied ? "destructive" : "secondary"}
                             className={isApproved ? "bg-emerald-100 text-emerald-800 hover:bg-emerald-100" : ""}
                           >
-                            {isApproved ? "Paid" : isDenied ? "Denied" : payout.status}
+                            {isApproved ? "Paid" : isDenied ? "Cancelled" : payout.status}
                           </Badge>
                         </TableCell>
                       </TableRow>

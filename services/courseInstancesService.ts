@@ -107,17 +107,6 @@ export const courseInstancesService = {
         return await this.enrichCoursesWithStudentsBatch(instances);
     },
 
-    async getCourseInstanceEnrollments(courseId: string): Promise<Tables<"course_enrollments">[]> {
-        const { data } = await supabase
-            .from('course_enrollments')
-            .select('*, teachers(*), course_eligibility(id, courses(*), grade_levels(*))')
-            .eq('course_id', courseId)
-            .order('enrolled_at', { ascending: false })
-            .throwOnError();
-
-        return data || [];
-    },
-
     async enrollStudent(courseId: string, studentId: string, firstBillingId: string) {
         const { data } = await supabase
             .rpc('enroll_student_with_billing', {
@@ -130,13 +119,25 @@ export const courseInstancesService = {
         return data;
     },
 
-    async unenrollStudent(courseId: string, studentId: string): Promise<boolean> {
+    async unenrollStudent(courseId: string, studentId: string, billingPeriodId?: string): Promise<boolean> {
         await supabase
             .from('course_enrollments')
             .update({ status: 'dropped' })
             .eq('course_id', courseId)
             .eq('student_id', studentId)
             .throwOnError();
+
+        // Cancel outstanding payments for this student in the active billing period
+        if (billingPeriodId) {
+            await supabase
+                .from('student_payments')
+                .update({ status: 'cancelled' })
+                .eq('course_id', courseId)
+                .eq('student_id', studentId)
+                .eq('billing_period_id', billingPeriodId)
+                .neq('status', 'paid')
+                .throwOnError();
+        }
 
         return true;
     },
@@ -175,21 +176,6 @@ export const courseInstancesService = {
         return data;
     },
 
-    async archiveCourse(id: string): Promise<Tables<"course_instances">> {
-        const { data } = await supabase
-            .from('course_instances')
-            .update({
-                archived: true,
-                archived_date: new Date().toISOString()
-            })
-            .eq('id', id)
-            .select()
-            .single()
-            .throwOnError();
-
-        return data;
-    },
-
     async unarchiveCourse(id: string): Promise<Tables<"course_instances">> {
         const { data } = await supabase
             .from('course_instances')
@@ -215,7 +201,8 @@ export const courseInstancesService = {
         const { data: allEnrollments } = await supabase
             .from('course_enrollments')
             .select('course_id, student_id')
-            .in('course_id', courseIds);
+            .in('course_id', courseIds)
+            .eq('status', 'enrolled');
 
         // Map course IDs to an array of student IDs for ultra-fast matching
         const enrollmentMap: Record<string, string[]> = {};

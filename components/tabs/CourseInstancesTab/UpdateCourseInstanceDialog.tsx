@@ -10,7 +10,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Plus, Trash2 } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
 import { CourseInstanceDetail, courseInstancesService } from "@/services/courseInstancesService"
-import { mapSchedulesToSlots, type ScheduleSlot } from "@/lib/schedule"
+import { mapSchedulesToSlots, type ScheduleSlot, calculateEndTime, isValidWeekDay } from "@/lib/schedule"
 
 interface UpdateCourseInstanceDialogProps {
   courseInstanceId: string
@@ -75,7 +75,7 @@ export function UpdateCourseInstanceDialog({
     e.preventDefault()
     if (isSubmitting) return
 
-    if (scheduleSlots.some((slot) => !slot.day)) {
+    if (scheduleSlots.some((slot) => !slot.day || !isValidWeekDay(slot.day))) {
       toast({
         title: "Validation Error",
         description: "Please assign valid weekdays to all schedule slots.",
@@ -86,15 +86,6 @@ export function UpdateCourseInstanceDialog({
 
     setIsSubmitting(true)
     try {
-      const calculateEndTime = (startTimeStr: string | undefined, durationHours: number) => {
-        if (!startTimeStr) return "00:00"
-        const [hours, minutes] = startTimeStr.split(":").map(Number)
-        const totalMinutes = hours * 60 + minutes + Math.round(durationHours * 60)
-        const endHours = Math.floor(totalMinutes / 60) % 24
-        const endMinutes = totalMinutes % 60
-        return `${String(endHours).padStart(2, "0")}:${String(endMinutes).padStart(2, "0")}`
-      }
-
       const validScheduleSlots = scheduleSlots.filter(s => s.day && s.day.trim() !== "")
       const formattedSlots = validScheduleSlots.map((slot) => {
         const cleanStartTime = slot.start_time?.slice(0, 5) || "00:00"

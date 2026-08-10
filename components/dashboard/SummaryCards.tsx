@@ -53,7 +53,7 @@ export default function SummaryCards() {
             :
             (<div className="text-2xl font-bold">{totalRevenue.toLocaleString()} DA</div>)
           }
-          <p className="text-xs text-muted-foreground">This month</p>
+          <p className="text-xs text-muted-foreground">All time</p>
         </CardContent>
       </Card>
 
@@ -85,7 +85,7 @@ export default function SummaryCards() {
             (<div className="text-2xl font-bold">{netProfit.toLocaleString()} DA</div>)
           }
 
-          <p className="text-xs text-muted-foreground">This month</p>
+          <p className="text-xs text-muted-foreground">All time</p>
         </CardContent>
       </Card>
 

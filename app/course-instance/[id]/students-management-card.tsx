@@ -19,6 +19,7 @@ import { toast } from "@/hooks/use-toast"
 import { Badge } from "@/components/ui/badge"
 import { Enums, Tables } from "@/types/database.types"
 import { EnrichedCourseEnrollements } from "@/services/courseEnrollmentService"
+import { revalidateData } from "@/hooks/swr-config"
 
 const PAYMENT_STATUSES = [
   { value: "paid", label: "Paid" },
@@ -89,6 +90,8 @@ export function StudentsManagementCard({
       toast({ title: "Success", description: "New student added." })
 
       await Promise.all([mutate(), mutateEnrolled()])
+      revalidateData('students')
+      revalidateData('course-instances')
       onRefresh()
 
       setSelectedStudent("")
@@ -132,10 +135,12 @@ export function StudentsManagementCard({
       // Logic assumes if switching away from enrolled, we execute the unenroll payload
       // You can update this body matching your backend service route requirements (e.g. courseInstancesService.updateStatus)
       if (targetStatus === "dropped") {
-        await courseInstancesService.unenrollStudent(courseInstance.id, student_id);
+        await courseInstancesService.unenrollStudent(courseInstance.id, student_id, selectedPeriodId);
       }
 
       await Promise.all([mutate(), mutateEnrolled()])
+      revalidateData('students')
+      revalidateData('course-instances')
       onRefresh()
     } catch (error) {
       console.error(error)

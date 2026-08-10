@@ -13,6 +13,7 @@ import { courseInstancesService } from "@/services/courseInstancesService"
 import { useToast } from "@/hooks/use-toast"
 import { Database, TablesInsert } from "@/types/database.types"
 import { Teacher, teacherService } from "@/services/teacherService"
+import { calculateEndTime, isValidWeekDay } from "@/lib/schedule"
 
 interface ScheduleSlot {
   dayOfWeek: string
@@ -22,16 +23,6 @@ interface ScheduleSlot {
 
 interface AddCourseInstanceDialogProps {
   onCourseAdded: (updatedCourses: any[]) => void
-}
-
-const calculateEndHour = (startHour: string, duration: number) => {
-  if (!startHour) return "--:--"
-  const [hours, minutes] = startHour.split(":").map(Number)
-  const startMinutes = hours * 60 + minutes
-  const endMinutes = startMinutes + duration * 60
-  const endHours = Math.floor(endMinutes / 60)
-  const endMins = endMinutes % 60
-  return `${endHours.toString().padStart(2, "0")}:${endMins.toString().padStart(2, "0")}`
 }
 
 const DAYS_OF_WEEK = ["monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday"]
@@ -85,7 +76,7 @@ export function AddCourseDialog({ onCourseAdded }: AddCourseInstanceDialogProps)
     e.preventDefault()
     if (isSubmitting) return
 
-    if (scheduleSlots.some((slot) => !slot.dayOfWeek)) {
+    if (scheduleSlots.some((slot) => !slot.dayOfWeek || !isValidWeekDay(slot.dayOfWeek))) {
       toast({
         title: "Validation Error",
         description: "Please select a valid day for all schedule slots.",
@@ -120,7 +111,7 @@ export function AddCourseDialog({ onCourseAdded }: AddCourseInstanceDialogProps)
           course_id: '',
           day: s.dayOfWeek as Database['public']['Enums']['week_day'],
           start_time: s.startHour,
-          end_time: calculateEndHour(s.startHour, s.duration)
+          end_time: calculateEndTime(s.startHour, s.duration)
         }
       })
       await courseInstancesService.addCourseInstance(coursePayload, schedule)

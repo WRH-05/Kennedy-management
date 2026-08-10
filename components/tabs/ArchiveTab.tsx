@@ -11,6 +11,7 @@ import { studentService } from "@/services/studentService"
 import { teacherService } from "@/services/teacherService"
 import { courseInstancesService } from "@/services/courseInstancesService"
 import { archiveService } from "@/services/archiveService"
+import { toast } from "@/hooks/use-toast"
 
 interface ArchiveTabProps {
   isManager?: boolean
@@ -70,6 +71,7 @@ export default function ArchiveTab({ isManager = false, onArchiveUpdate }: Archi
       onArchiveUpdate?.()
     } catch (error) {
       console.error('Error approving archive request:', error)
+      toast({ title: "Error", description: (error as Error)?.message || "Failed to approve archive request.", variant: "destructive" })
       // Rollback on error
       await loadArchiveRequests()
       onArchiveUpdate?.()
@@ -84,8 +86,8 @@ export default function ArchiveTab({ isManager = false, onArchiveUpdate }: Archi
 
   const handleDenyArchive = async (requestId: string) => {
     // Optimistic update - immediately update UI
-    setArchiveRequests(prev => prev.map(req => 
-      req.id === requestId 
+    setArchiveRequests(prev => prev.map(req =>
+      req.id === requestId
         ? { ...req, status: 'denied' as const, approved_date: new Date().toISOString() }
         : req
     ))
@@ -97,6 +99,7 @@ export default function ArchiveTab({ isManager = false, onArchiveUpdate }: Archi
       onArchiveUpdate?.()
     } catch (error) {
       console.error('Error denying archive request:', (error as Error)?.message ?? error)
+      toast({ title: "Error", description: (error as Error)?.message || "Failed to deny archive request.", variant: "destructive" })
       // Rollback on error
       await loadArchiveRequests()
       onArchiveUpdate?.()
@@ -126,6 +129,7 @@ export default function ArchiveTab({ isManager = false, onArchiveUpdate }: Archi
 
     } catch (error) {
       console.error('Error unarchiving entity:', error)
+      toast({ title: "Error", description: (error as Error)?.message || "Failed to unarchive.", variant: "destructive" })
     }
   }
 
