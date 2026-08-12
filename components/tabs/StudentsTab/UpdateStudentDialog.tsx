@@ -4,7 +4,9 @@ import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
+import { Badge } from "@/components/ui/badge"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
+import { X } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
 import { Tables, TablesUpdate } from "@/types/database.types"
 import { studentService } from "@/services/studentService"
@@ -28,10 +30,11 @@ export function UpdateStudentDialog({
   const [gradeSearchQuery, setGradeSearchQuery] = useState("")
   const [showGradeLevelsResults, setShowGradeLevelsResults] = useState(false)
   const [filteredGradeLevels, setFilteredGradeLevels] = useState<Tables<"grade_levels">[]>([])
+  const [academicLevel, setAcademicLevel] = useState<{ id: string; name: string } | null>(null)
+  const [extracurricularLevels, setExtracurricularLevels] = useState<{ id: string; name: string }[]>([])
 
   const [formData, setFormData] = useState<TablesUpdate<"students">>({
     name: "",
-    school_level: "",
     school: "",
     school_name: "",
     birth_date: "",
@@ -44,19 +47,39 @@ export function UpdateStudentDialog({
   // Sync form state when dialog opens with new student data
   useEffect(() => {
     if (open && student) {
-      const gradeLevelName = (student as any).grade_levels?.name || ""
       setFormData({
         name: student.name || "",
-        school_level: student.school_level || "",
         school: student.school || "",
-        school_name: (student as any).school_name || "",
+        school_name: student.school_name || "",
         birth_date: student.birth_date || "",
         phone: student.phone || "",
-        parent_phone: (student as any).parent_phone || "",
+        parent_phone: student.parent_phone || "",
         email: student.email || "",
         address: student.address || "",
       })
-      setGradeSearchQuery(gradeLevelName)
+      setAcademicLevel(
+        student.school_level
+          ? { id: student.school_level, name: student.grade_levels?.name || "" }
+          : null
+      )
+      const extraIds = student.extracurricular_grade_level_ids || []
+      if (extraIds.length > 0) {
+        gradeLevelsService
+          .getAllGradeLevels()
+          .then((res) => {
+            const all = res.data || []
+            setExtracurricularLevels(
+              extraIds.map((id) => {
+                const gl = all.find((g) => g.id === id)
+                return { id, name: gl?.name || "Unknown" }
+              })
+            )
+          })
+          .catch((e) => console.error(e))
+      } else {
+        setExtracurricularLevels([])
+      }
+      setGradeSearchQuery("")
       setFilteredGradeLevels([])
       setShowGradeLevelsResults(false)
     }
@@ -74,13 +97,37 @@ export function UpdateStudentDialog({
       })
   }
 
+  const handleAddLevel = (level: Tables<"grade_levels">) => {
+    if (level.type === 'academic') {
+      setAcademicLevel({ id: level.id, name: level.name })
+    } else {
+      setExtracurricularLevels((prev) =>
+        prev.some((l) => l.id === level.id) ? prev : [...prev, { id: level.id, name: level.name }]
+      )
+    }
+  }
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     if (isSubmitting) return
 
     setIsSubmitting(true)
     try {
-      await studentService.updateStudent(student.id, formData)
+      if (!academicLevel) {
+        toast({
+          title: "Grade Level Required",
+          description: "Please select an academic grade level.",
+          variant: "destructive",
+        })
+        setIsSubmitting(false)
+        return
+      }
+
+      await studentService.updateStudent(student.id, {
+        ...formData,
+        school_level: academicLevel.id,
+        extracurricular_grade_level_ids: extracurricularLevels.map((l) => l.id),
+      })
       toast({
         title: "Student updated",
         description: `${formData.name} has been successfully updated.`,
@@ -118,13 +165,42 @@ export function UpdateStudentDialog({
               />
             </div>
 
-            {/* School Level (autocomplete) */}
+            {/* Grade Levels (badge multi-select) */}
             <div className="space-y-2">
-              <Label htmlFor="edit-level">School Level</Label>
+              <Label htmlFor="edit-level">Grade Levels</Label>
+              <div className="flex flex-wrap gap-2 min-h-8 p-2 border rounded-md bg-gray-50/50">
+                {!academicLevel && extracurricularLevels.length === 0 && (
+                  <span className="text-xs text-gray-400 self-center">No grade levels selected.</span>
+                )}
+                {academicLevel && (
+                  <Badge variant="secondary" className="flex items-center gap-1 pr-1.5">
+                    {academicLevel.name}
+                    <button
+                      type="button"
+                      onClick={() => setAcademicLevel(null)}
+                      className="rounded-full outline-none hover:bg-gray-200 p-0.5 text-gray-500 hover:text-gray-900 transition-colors"
+                    >
+                      <X className="h-3 w-3" />
+                    </button>
+                  </Badge>
+                )}
+                {extracurricularLevels.map((level) => (
+                  <Badge key={level.id} variant="outline" className="flex items-center gap-1 pr-1.5">
+                    {level.name}
+                    <button
+                      type="button"
+                      onClick={() => setExtracurricularLevels((prev) => prev.filter((l) => l.id !== level.id))}
+                      className="rounded-full outline-none hover:bg-gray-200 p-0.5 text-gray-500 hover:text-gray-900 transition-colors"
+                    >
+                      <X className="h-3 w-3" />
+                    </button>
+                  </Badge>
+                ))}
+              </div>
               <div className="relative">
                 <Input
                   id="edit-level"
-                  placeholder="Search for a level..."
+                  placeholder="Search to add a level..."
                   autoComplete="off"
                   value={gradeSearchQuery}
                   onChange={(e) => {
@@ -134,7 +210,6 @@ export function UpdateStudentDialog({
                   }}
                   onBlur={() => setTimeout(() => setShowGradeLevelsResults(false), 150)}
                   onFocus={() => setShowGradeLevelsResults(gradeSearchQuery.length > 0)}
-                  required
                 />
                 {showGradeLevelsResults && filteredGradeLevels.length > 0 && (
                   <div className="absolute top-full left-0 right-0 mt-1 bg-white border rounded-md shadow-lg z-50 max-h-40 overflow-y-auto">
@@ -143,12 +218,17 @@ export function UpdateStudentDialog({
                         key={level.id}
                         className="px-4 py-2 hover:bg-gray-50 cursor-pointer border-b last:border-0"
                         onMouseDown={() => {
-                          setFormData({ ...formData, school_level: level.id.toString() })
-                          setGradeSearchQuery(level.name)
+                          handleAddLevel(level)
+                          setGradeSearchQuery("")
                           setShowGradeLevelsResults(false)
                         }}
                       >
-                        <div className="font-medium text-sm text-gray-900">{level.name}</div>
+                        <div className="font-medium text-sm text-gray-900">
+                          {level.name}
+                          <span className="text-gray-400 text-xs ml-1">
+                            {level.type === 'academic' ? 'Academic' : 'Extracurricular'}
+                          </span>
+                        </div>
                       </div>
                     ))}
                   </div>

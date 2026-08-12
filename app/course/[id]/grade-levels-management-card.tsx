@@ -22,10 +22,11 @@ interface GradeLevelManagementCardProps {
     pageSize: number
   },
   courseId: string,
+  courseType: string,
   onRefresh: () => Promise<void>
 }
 
-export function GradeLevelManagementCard({ gradeLevels, courseId, onRefresh }: GradeLevelManagementCardProps) {
+export function GradeLevelManagementCard({ gradeLevels, courseId, courseType, onRefresh }: GradeLevelManagementCardProps) {
 
   const [showAddCourseDialog, setShowAddCourseDialog] = useState(false)
   const [showGradeLevelsResults, setShowGradeLevelsResults] = useState(false)
@@ -37,7 +38,7 @@ export function GradeLevelManagementCard({ gradeLevels, courseId, onRefresh }: G
   const inputSearch = (name: string) => {
     if (name.length == 0) return
     gradeLevelsService.getAllGradeLevelsByName(name).then((v) => {
-      setFilteredGradeLevels(v.data);
+      setFilteredGradeLevels((v.data || []).filter((gl) => gl.type === courseType));
     })
       .catch((e) => {
         console.error(e);

@@ -6,8 +6,9 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Checkbox } from "@/components/ui/checkbox"
+import { Badge } from "@/components/ui/badge"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
-import { Plus } from "lucide-react"
+import { Plus, X } from "lucide-react"
 import { Tables, TablesInsert, TablesUpdate } from "@/types/database.types"
 import { studentService } from "@/services/studentService"
 import { studentPaymentService } from "@/services/studentPaymentService"
@@ -29,6 +30,8 @@ export function AddStudentDialog({ onStudentAdded }: AddStudentDialogProps) {
     const [gradeSearchQuery, setGradeSearchQuery] = useState("")
     const [showGradeLevelsResults, setShowGradeLevelsResults] = useState(false)
     const [filteredGradeLevels, setFilteredGradeLevels] = useState<Tables<"grade_levels">[]>([])
+    const [academicLevel, setAcademicLevel] = useState<{ id: string; name: string } | null>(null)
+    const [extracurricularLevels, setExtracurricularLevels] = useState<{ id: string; name: string }[]>([])
 
     const inputSearch = (name: string) => {
         if (name.length == 0) return
@@ -55,10 +58,15 @@ export function AddStudentDialog({ onStudentAdded }: AddStudentDialogProps) {
         archived_date: null
     })
 
-    const handleSchoolLevelChange = (level: string) => {
-        setNewStudent({ ...newStudent, school_level: level })
+    const handleAddLevel = (level: Tables<"grade_levels">) => {
+        if (level.type === 'academic') {
+            setAcademicLevel({ id: level.id, name: level.name })
+        } else {
+            setExtracurricularLevels((prev) =>
+                prev.some((l) => l.id === level.id) ? prev : [...prev, { id: level.id, name: level.name }]
+            )
+        }
     }
-
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault()
@@ -77,7 +85,24 @@ export function AddStudentDialog({ onStudentAdded }: AddStudentDialogProps) {
                 return
             }
 
-            const createdStudent = await studentService.addStudent(newStudent)
+            // Require at least one academic grade level
+            if (!academicLevel) {
+                toast({
+                    title: "Grade Level Required",
+                    description: "Please select an academic grade level.",
+                    variant: "destructive",
+                })
+                setIsSubmitting(false)
+                return
+            }
+
+            const payload: TablesInsert<"students"> = {
+                ...newStudent,
+                school_level: academicLevel.id,
+                extracurricular_grade_level_ids: extracurricularLevels.map((l) => l.id),
+            }
+
+            const createdStudent = await studentService.addStudent(payload)
 
             // If registration fee paid on creation, log it to revenue
             if (newStudent.registration_fee_paid) {
@@ -97,6 +122,9 @@ export function AddStudentDialog({ onStudentAdded }: AddStudentDialogProps) {
                 school_level: "", registration_fee_paid: false,
                 archived: false, archived_date: null
             })
+            setAcademicLevel(null)
+            setExtracurricularLevels([])
+            setGradeSearchQuery("")
             setOpen(false)
             toast({ title: "Student added", description: `${newStudent.name} has been successfully added.` })
         } catch (error) {
@@ -135,38 +163,73 @@ export function AddStudentDialog({ onStudentAdded }: AddStudentDialogProps) {
                             />
                         </div>
 
-                        <div className="relative">
-                            <Label htmlFor="studentSearch">School Level</Label>
-                            <Input
-                                id="studentSearch"
-                                placeholder="Search for a level..."
-                                value={gradeSearchQuery}
-                                onChange={(e) => {
-                                    setGradeSearchQuery(e.target.value)
-                                    setShowGradeLevelsResults(e.target.value.length > 0)
-                                    inputSearch(e.target.value)
-                                }}
-                                onBlur={() => setTimeout(() => setShowGradeLevelsResults(false), 150)}
-                                onFocus={() => setShowGradeLevelsResults(gradeSearchQuery.length > 0)}
-                                required
-                            />
-                            {showGradeLevelsResults && filteredGradeLevels.length > 0 && (
-                                <div className="absolute top-full left-0 right-0 mt-1 bg-white border rounded-md shadow-lg z-50 max-h-40 overflow-y-auto">
-                                    {filteredGradeLevels.map((level) => (
-                                        <div
-                                            key={level.id}
-                                            className="px-4 py-2 hover:bg-gray-50 cursor-pointer border-b last:border-0"
-                                            onMouseDown={() => {
-                                                handleSchoolLevelChange(level.id.toString())
-                                                setGradeSearchQuery(level.name)
-                                                setShowGradeLevelsResults(false)
-                                            }}
+                        <div className="space-y-2">
+                            <Label htmlFor="studentSearch">Grade Levels</Label>
+                            <div className="flex flex-wrap gap-2 min-h-8 p-2 border rounded-md bg-gray-50/50">
+                                {!academicLevel && extracurricularLevels.length === 0 && (
+                                    <span className="text-xs text-gray-400 self-center">No grade levels selected.</span>
+                                )}
+                                {academicLevel && (
+                                    <Badge variant="secondary" className="flex items-center gap-1 pr-1.5">
+                                        {academicLevel.name}
+                                        <button
+                                            type="button"
+                                            onClick={() => setAcademicLevel(null)}
+                                            className="rounded-full outline-none hover:bg-gray-200 p-0.5 text-gray-500 hover:text-gray-900 transition-colors"
                                         >
-                                            <div className="font-medium text-sm text-gray-900">{level.name}</div>
-                                        </div>
-                                    ))}
-                                </div>
-                            )}
+                                            <X className="h-3 w-3" />
+                                        </button>
+                                    </Badge>
+                                )}
+                                {extracurricularLevels.map((level) => (
+                                    <Badge key={level.id} variant="outline" className="flex items-center gap-1 pr-1.5">
+                                        {level.name}
+                                        <button
+                                            type="button"
+                                            onClick={() => setExtracurricularLevels((prev) => prev.filter((l) => l.id !== level.id))}
+                                            className="rounded-full outline-none hover:bg-gray-200 p-0.5 text-gray-500 hover:text-gray-900 transition-colors"
+                                        >
+                                            <X className="h-3 w-3" />
+                                        </button>
+                                    </Badge>
+                                ))}
+                            </div>
+                            <div className="relative">
+                                <Input
+                                    id="studentSearch"
+                                    placeholder="Search to add a level..."
+                                    value={gradeSearchQuery}
+                                    onChange={(e) => {
+                                        setGradeSearchQuery(e.target.value)
+                                        setShowGradeLevelsResults(e.target.value.length > 0)
+                                        inputSearch(e.target.value)
+                                    }}
+                                    onBlur={() => setTimeout(() => setShowGradeLevelsResults(false), 150)}
+                                    onFocus={() => setShowGradeLevelsResults(gradeSearchQuery.length > 0)}
+                                />
+                                {showGradeLevelsResults && filteredGradeLevels.length > 0 && (
+                                    <div className="absolute top-full left-0 right-0 mt-1 bg-white border rounded-md shadow-lg z-50 max-h-40 overflow-y-auto">
+                                        {filteredGradeLevels.map((level) => (
+                                            <div
+                                                key={level.id}
+                                                className="px-4 py-2 hover:bg-gray-50 cursor-pointer border-b last:border-0"
+                                                onMouseDown={() => {
+                                                    handleAddLevel(level)
+                                                    setGradeSearchQuery("")
+                                                    setShowGradeLevelsResults(false)
+                                                }}
+                                            >
+                                                <div className="font-medium text-sm text-gray-900">
+                                                    {level.name}
+                                                    <span className="text-gray-400 text-xs ml-1">
+                                                        {level.type === 'academic' ? 'Academic' : 'Extracurricular'}
+                                                    </span>
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </div>
+                                )}
+                            </div>
                         </div>
 
                         <div className="space-y-2">

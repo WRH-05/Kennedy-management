@@ -6,10 +6,12 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Checkbox } from "@/components/ui/checkbox"
+import { Badge } from "@/components/ui/badge"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Plus, Trash2 } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
 import { CourseInstanceDetail, courseInstancesService } from "@/services/courseInstancesService"
+import { coursesEligiblityService } from "@/services/courseEligibilityService"
 import { mapSchedulesToSlots, type ScheduleSlot, calculateEndTime, isValidWeekDay } from "@/lib/schedule"
 
 interface UpdateCourseInstanceDialogProps {
@@ -38,6 +40,8 @@ export function UpdateCourseInstanceDialog({
   const [maxStudents, setMaxStudents] = useState<number | null>(null)
   const [scheduleSlots, setScheduleSlots] = useState<ScheduleSlot[]>([])
   const [displayName, setDisplayName] = useState("")
+  const [availableGradeLevels, setAvailableGradeLevels] = useState<{ id: string; name: string }[]>([])
+  const [selectedGradeLevelIds, setSelectedGradeLevelIds] = useState<string[]>([])
 
   // Fetch full course instance detail when dialog opens
   useEffect(() => {
@@ -55,6 +59,23 @@ export function UpdateCourseInstanceDialog({
           setMaxStudents((data as any).max_students ?? null)
           setScheduleSlots(mapSchedulesToSlots(data.course_schedule || []))
           setDisplayName(data.display_name || "")
+          const ce = data.course_eligibility as any
+          const courseId = ce?.courses?.id
+          const anchorId = ce?.grade_levels?.id
+          if (courseId) {
+            coursesEligiblityService
+              .getAllGradeLevelsByCourseId(courseId)
+              .then((res) => {
+                setAvailableGradeLevels(
+                  (res.data || []).map((ceRow) => ({ id: ceRow.grade_levels.id, name: ceRow.grade_levels.name }))
+                )
+                const existing = (data.grade_level_ids && data.grade_level_ids.length > 0)
+                  ? data.grade_level_ids
+                  : (anchorId ? [anchorId] : [])
+                setSelectedGradeLevelIds(existing)
+              })
+              .catch((e) => console.error(e))
+          }
         })
         .catch((err) => {
           console.error("Failed to load course instance:", err)
@@ -107,6 +128,7 @@ export function UpdateCourseInstanceDialog({
           fixed_salary_amount: compensationType === 'fixed_salary' ? fixedSalaryAmount : null,
           is_individual: isIndividual,
           max_students: isIndividual ? (maxStudents ?? 2) : null,
+          grade_level_ids: selectedGradeLevelIds,
         },
         formattedSlots
       )
@@ -193,6 +215,31 @@ export function UpdateCourseInstanceDialog({
                 onChange={(e) => setDisplayName(e.target.value)}
               />
             </div>
+
+            {availableGradeLevels.length > 0 && (
+              <div className="space-y-1">
+                <Label>Grade Levels</Label>
+                <div className="flex flex-wrap gap-2 min-h-8 p-2 border rounded-md bg-gray-50/50">
+                  {availableGradeLevels.map((level) => {
+                    const isSelected = selectedGradeLevelIds.includes(level.id)
+                    return (
+                      <Badge
+                        key={level.id}
+                        variant={isSelected ? "secondary" : "outline"}
+                        className="cursor-pointer select-none"
+                        onClick={() =>
+                          setSelectedGradeLevelIds((prev) =>
+                            isSelected ? prev.filter((id) => id !== level.id) : [...prev, level.id]
+                          )
+                        }
+                      >
+                        {level.name}
+                      </Badge>
+                    )
+                  })}
+                </div>
+              </div>
+            )}
 
             {/* Individual Course Toggle */}
             <div className="flex items-center space-x-2 pt-1">

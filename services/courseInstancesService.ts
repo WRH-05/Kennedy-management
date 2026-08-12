@@ -153,6 +153,7 @@ export const courseInstancesService = {
                 fixed_salary_amount: instanceData.fixed_salary_amount || null,
                 is_individual: instanceData.is_individual || false,
                 max_students: instanceData.max_students || null,
+                grade_level_ids: instanceData.grade_level_ids || [],
             },
             p_schedules: scheduleSlots
         })

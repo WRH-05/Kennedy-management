@@ -9,6 +9,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { useToast } from "@/hooks/use-toast"
 import { Tables, TablesUpdate } from "@/types/database.types"
 import { gradeLevelsService } from "@/services/gradeLevelsService"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 
 interface UpdateGradeLevelDialogProps {
     GradeLevel: Tables<"grade_levels">
@@ -84,6 +85,21 @@ export function UpdateGradeLevelDialog({ GradeLevel: gradeLevel, onGradeLevelUpd
                                 onChange={(e) => setNewGradeLevel({ ...newGradeLevel, name: e.target.value })}
                                 required
                             />
+                        </div>
+                        <div className="space-y-2">
+                            <Label htmlFor="type">Type</Label>
+                            <Select
+                                value={newGradeLevel.type || "academic"}
+                                onValueChange={(val) => setNewGradeLevel({ ...newGradeLevel, type: val })}
+                            >
+                                <SelectTrigger id="type">
+                                    <SelectValue placeholder="Select type" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="academic">Academic</SelectItem>
+                                    <SelectItem value="extracurricular">Extracurricular</SelectItem>
+                                </SelectContent>
+                            </Select>
                         </div>
                     </div>
 
