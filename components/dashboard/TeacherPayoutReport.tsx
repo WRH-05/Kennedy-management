@@ -1,6 +1,7 @@
 "use client"
 
 import { useMemo } from "react"
+import { createPortal } from "react-dom"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
 import { Printer } from "lucide-react"
@@ -53,6 +54,17 @@ export function TeacherPayoutReport({
   const compLabel = compType === 'fixed_salary'
     ? `Fixed Salary: ${((courseInstance as any).fixed_salary_amount || 0).toLocaleString()} DA`
     : `Revenue Share: ${(courseInstance as any).percentage_cut || 0}%`
+
+  const handlePrint = () => {
+    const originalTitle = document.title
+    const teacherNameSafe = (courseInstance.teachers?.name || 'Enseignant').replace(/[^a-zA-Z0-9]/g, '_')
+    const period = activePeriod ? `${activePeriod.start_date}_${activePeriod.end_date}` : 'Period'
+    document.title = `Rapport_Paiement_${teacherNameSafe}_${period}`
+    window.print()
+    setTimeout(() => {
+      document.title = originalTitle
+    }, 1000)
+  }
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -183,65 +195,77 @@ export function TeacherPayoutReport({
 
         {/* Single print action in footer */}
         <DialogFooter className="no-print">
-          <Button variant="default" onClick={() => window.print()}>
+          <Button variant="default" onClick={handlePrint}>
             <Printer className="h-4 w-4 mr-2" /> Print Report
           </Button>
         </DialogFooter>
       </DialogContent>
 
       {/* Dedicated A4 printable document — hidden on screen, visible only when printing */}
-      {open && (
-        <div id="printable-payout-report" className="hidden print:block">
-          {/* Letterhead */}
-          <div style={{ borderBottom: '3px solid #1e293b', paddingBottom: '12px', marginBottom: '20px', display: 'flex', gap: '16px', alignItems: 'center' }}>
-            <img
-              src={schoolSettings?.logo_url || "/home.png"}
-              alt="School Logo"
-              style={{ height: '64px', width: 'auto', objectFit: 'contain' }}
-              onError={(e) => { (e.target as HTMLImageElement).src = '/home.png' }}
-            />
-            <div>
-              <h1 style={{ fontSize: '22px', fontWeight: 700, margin: 0 }}>{schoolSettings?.school_name || "Kennedy Management System"}</h1>
-              {schoolSettings?.address && <p style={{ margin: '2px 0', fontSize: '13px' }}>{schoolSettings.address}</p>}
-              {schoolSettings?.phone && <p style={{ margin: '2px 0', fontSize: '13px' }}>Tel: {schoolSettings.phone}</p>}
-              <p style={{ margin: '2px 0', fontSize: '13px', fontWeight: 600 }}>Teacher Payout Report</p>
-              <p style={{ margin: '2px 0', fontSize: '13px' }}>Date: {reportDate}</p>
+      {open && createPortal(
+        <div id="printable-payout-report" className="hidden print:block p-10">
+          {/* Letterhead — two-column header with accent line */}
+          <div className="flex items-start justify-between border-b-2 border-slate-900 pb-4 mb-6">
+            <div className="flex items-center gap-4">
+              <img
+                src={schoolSettings?.logo_url || "/home.png"}
+                alt="School Logo"
+                className="h-16 w-auto object-contain"
+                onError={(e) => { (e.target as HTMLImageElement).src = '/home.png' }}
+              />
+              <div>
+                <h1 className="text-xl font-bold uppercase leading-tight">{schoolSettings?.school_name || "Kennedy Management System"}</h1>
+                {schoolSettings?.address && <p className="text-sm text-slate-600">{schoolSettings.address}</p>}
+                {schoolSettings?.phone && <p className="text-sm text-slate-600">Tel: {schoolSettings.phone}</p>}
+              </div>
+            </div>
+            <div className="text-right">
+              <h2 className="text-base font-bold uppercase tracking-wide">Teacher Payout Report</h2>
+              <p className="text-sm text-slate-600">Date: {reportDate}</p>
             </div>
           </div>
 
-          {/* Course info */}
-          <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '14px', marginBottom: '20px' }}>
-            <tbody>
-              <tr><td style={{ fontWeight: 600, padding: '4px 0', width: '180px' }}>Subject / Course:</td><td>{courseTitle}{gradeLevel ? ` — ${gradeLevel}` : ""}</td></tr>
-              {displayName && (<tr><td style={{ fontWeight: 600, padding: '4px 0' }}>Display Name:</td><td>{displayName}</td></tr>)}
-              <tr><td style={{ fontWeight: 600, padding: '4px 0' }}>Teacher:</td><td>{teacherName}</td></tr>
-              <tr><td style={{ fontWeight: 600, padding: '4px 0' }}>Billing Period:</td><td>{activePeriod ? `${activePeriod.start_date} → ${activePeriod.end_date}` : "N/A"}</td></tr>
-              <tr><td style={{ fontWeight: 600, padding: '4px 0' }}>Compensation Model:</td><td>{compLabel}</td></tr>
-            </tbody>
-          </table>
+          {/* Course details box */}
+          <div className="bg-slate-50 border border-slate-200 p-4 rounded-md mb-6">
+            <div className="grid grid-cols-2 gap-x-4 gap-y-2 text-sm">
+              <div><span className="font-semibold">Course Name:</span> {courseTitle}{gradeLevel ? ` — ${gradeLevel}` : ""}</div>
+              {displayName && <div><span className="font-semibold">Display Name:</span> {displayName}</div>}
+              <div><span className="font-semibold">Teacher:</span> {teacherName}</div>
+              <div><span className="font-semibold">Billing Period:</span> {activePeriod ? `${activePeriod.start_date} → ${activePeriod.end_date}` : "N/A"}</div>
+              <div><span className="font-semibold">Compensation Model:</span> {compLabel}</div>
+            </div>
+          </div>
 
-          {/* Enrolled students */}
-          <h2 style={{ fontSize: '16px', fontWeight: 700, margin: '0 0 8px' }}>Enrolled Students</h2>
-          <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '13px', marginBottom: '20px' }}>
+          {/* Enrolled students table */}
+          <h2 className="text-base font-bold mb-2">Enrolled Students</h2>
+          <table className="w-full border-collapse text-sm mb-6">
             <thead>
-              <tr style={{ borderBottom: '2px solid #1e293b' }}>
-                <th style={{ textAlign: 'left', padding: '6px 8px' }}>#</th>
-                <th style={{ textAlign: 'left', padding: '6px 8px' }}>Student Name</th>
-                <th style={{ textAlign: 'left', padding: '6px 8px' }}>Parent Phone</th>
-                <th style={{ textAlign: 'left', padding: '6px 8px' }}>Payment Status</th>
+              <tr className="bg-slate-100 border-b border-slate-300">
+                <th className="text-left p-2 font-semibold">#</th>
+                <th className="text-left p-2 font-semibold">Student Name</th>
+                <th className="text-left p-2 font-semibold">Parent Phone</th>
+                <th className="text-left p-2 font-semibold">Payment Status</th>
               </tr>
             </thead>
             <tbody>
               {enrolledStudents.length === 0 ? (
-                <tr><td colSpan={4} style={{ padding: '12px 8px', textAlign: 'center' }}>No students enrolled for this period.</td></tr>
+                <tr>
+                  <td colSpan={4} className="p-3 text-center text-slate-500">No students enrolled for this period.</td>
+                </tr>
               ) : (
                 enrolledStudents.map((p, idx) => (
-                  <tr key={idx} style={{ borderBottom: '1px solid #e2e8f0' }}>
-                    <td style={{ padding: '6px 8px' }}>{idx + 1}</td>
-                    <td style={{ padding: '6px 8px' }}>{p.students?.name || "Unknown"}</td>
-                    <td style={{ padding: '6px 8px' }}>{p.students?.parent_phone || p.students?.phone || "N/A"}</td>
-                    <td style={{ padding: '6px 8px' }}>
-                      {p.status === 'paid' ? 'Paid' : p.status === 'cancelled' ? 'Cancelled' : p.status === 'pending' ? 'Pending' : 'Unpaid'}
+                  <tr key={idx} className="border-b border-slate-200">
+                    <td className="p-2">{idx + 1}</td>
+                    <td className="p-2">{p.students?.name || "Unknown"}</td>
+                    <td className="p-2">{p.students?.parent_phone || p.students?.phone || "N/A"}</td>
+                    <td className="p-2">
+                      {p.status === 'paid' ? (
+                        <span className="text-green-600 font-medium">Paid</span>
+                      ) : p.status === 'cancelled' ? (
+                        <span className="text-red-500">Cancelled</span>
+                      ) : (
+                        <span className="text-amber-500">{p.status === 'pending' ? 'Pending' : 'Unpaid'}</span>
+                      )}
                     </td>
                   </tr>
                 ))
@@ -249,22 +273,36 @@ export function TeacherPayoutReport({
             </tbody>
           </table>
 
-          {/* Financial summary */}
-          <h2 style={{ fontSize: '16px', fontWeight: 700, margin: '0 0 8px' }}>Financial Summary</h2>
-          <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '14px', marginBottom: '24px' }}>
-            <tbody>
-              <tr style={{ borderBottom: '1px solid #e2e8f0' }}><td style={{ padding: '6px 0' }}>Total Enrolled Students</td><td style={{ padding: '6px 0', textAlign: 'right', fontWeight: 600 }}>{totalEnrolled}</td></tr>
-              <tr style={{ borderBottom: '1px solid #e2e8f0' }}><td style={{ padding: '6px 0' }}>Total Paid Students</td><td style={{ padding: '6px 0', textAlign: 'right', fontWeight: 600 }}>{totalPaid}</td></tr>
-              <tr style={{ borderBottom: '1px solid #e2e8f0' }}><td style={{ padding: '6px 0' }}>Net Amount (Teacher Payout)</td><td style={{ padding: '6px 0', textAlign: 'right', fontWeight: 700 }}>{teacherEarnings.toLocaleString()} DA</td></tr>
-            </tbody>
-          </table>
+          {/* Financial summary — counts left, net payout callout right */}
+          <h2 className="text-base font-bold mb-2">Financial Summary</h2>
+          <div className="flex items-start justify-between gap-6 mb-6">
+            <div className="flex-1 text-sm">
+              <div className="flex justify-between py-2 border-b border-slate-200">
+                <span>Total Enrolled Students</span>
+                <span className="font-semibold">{totalEnrolled}</span>
+              </div>
+              <div className="flex justify-between py-2 border-b border-slate-200">
+                <span>Total Paid Students</span>
+                <span className="font-semibold">{totalPaid}</span>
+              </div>
+            </div>
+            <div className="bg-slate-100 border border-slate-300 p-4 rounded-md text-right">
+              <p className="text-xs uppercase font-semibold text-slate-500 mb-1">Net Amount (Teacher Payout)</p>
+              <p className="text-2xl font-bold text-slate-900">{teacherEarnings.toLocaleString()} DA</p>
+            </div>
+          </div>
 
           {/* Signature block */}
-          <div style={{ display: 'flex', justifyContent: 'space-between', gap: '48px', marginTop: '48px', fontSize: '14px' }}>
-            <div style={{ textAlign: 'center', flex: 1 }}><div style={{ borderTop: '1px solid #1e293b', paddingTop: '8px' }}>Teacher Signature</div></div>
-            <div style={{ textAlign: 'center', flex: 1 }}><div style={{ borderTop: '1px solid #1e293b', paddingTop: '8px' }}>Director Stamp / Signature</div></div>
+          <div className="flex justify-between gap-12 mt-16 pt-6 border-t border-slate-200">
+            <div className="flex-1 text-center text-sm">
+              <div className="border-t border-slate-900 pt-2">Teacher Signature</div>
+            </div>
+            <div className="flex-1 text-center text-sm">
+              <div className="border-t border-slate-900 pt-2">Director Stamp / Signature</div>
+            </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </Dialog>
   )

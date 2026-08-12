@@ -14,12 +14,14 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
   }
 
   return (
-    <SidebarProvider defaultOpen={true}>
-      <AppSidebar />
-      <SidebarInset className="bg-gray-50 w-full">
-        <DashboardHeader />
-        {children}
-      </SidebarInset>
-    </SidebarProvider>
+    <div id="app-root">
+      <SidebarProvider defaultOpen={true}>
+        <AppSidebar />
+        <SidebarInset className="bg-gray-50 w-full">
+          <DashboardHeader />
+          {children}
+        </SidebarInset>
+      </SidebarProvider>
+    </div>
   )
 }

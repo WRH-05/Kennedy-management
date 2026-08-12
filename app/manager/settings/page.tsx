@@ -15,7 +15,7 @@ export default function SettingsPage() {
   const { toast } = useToast()
   const { profile } = useAuth()
   const { settings, isLoading, mutate } = useSchoolSettings()
-  const isOwner = profile?.role === 'owner'
+  const canEdit = profile?.role === 'owner' || profile?.role === 'manager'
 
   const [schoolName, setSchoolName] = useState("")
   const [address, setAddress] = useState("")
@@ -38,7 +38,7 @@ export default function SettingsPage() {
 
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (!isOwner) return
+    if (!canEdit) return
 
     setIsSaving(true)
     try {
@@ -61,7 +61,7 @@ export default function SettingsPage() {
 
   const handleLogoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
-    if (!file || !isOwner) return
+    if (!file || !canEdit) return
 
     setIsUploading(true)
     try {
@@ -105,7 +105,7 @@ export default function SettingsPage() {
                   className="h-16 w-auto object-contain rounded border"
                   onError={(e) => { (e.target as HTMLImageElement).src = '/home.png' }}
                 />
-                {isOwner && (
+                {canEdit && (
                   <div>
                     <Button
                       type="button"
@@ -136,7 +136,7 @@ export default function SettingsPage() {
                 id="schoolName"
                 value={schoolName}
                 onChange={(e) => setSchoolName(e.target.value)}
-                disabled={!isOwner}
+                disabled={!canEdit}
                 placeholder="Kennedy Management System"
               />
             </div>
@@ -148,7 +148,7 @@ export default function SettingsPage() {
                 id="address"
                 value={address}
                 onChange={(e) => setAddress(e.target.value)}
-                disabled={!isOwner}
+                disabled={!canEdit}
                 placeholder="School address"
               />
             </div>
@@ -160,7 +160,7 @@ export default function SettingsPage() {
                 id="phone"
                 value={phone}
                 onChange={(e) => setPhone(e.target.value)}
-                disabled={!isOwner}
+                disabled={!canEdit}
                 placeholder="Phone number"
               />
             </div>
@@ -174,11 +174,11 @@ export default function SettingsPage() {
                 min="0"
                 value={registrationFee}
                 onChange={(e) => setRegistrationFee(Number.parseInt(e.target.value) || 0)}
-                disabled={!isOwner}
+                disabled={!canEdit}
               />
             </div>
 
-            {isOwner && (
+            {canEdit && (
               <div className="flex justify-end">
                 <Button type="submit" disabled={isSaving}>
                   {isSaving ? "Saving..." : "Save Settings"}
@@ -186,8 +186,8 @@ export default function SettingsPage() {
               </div>
             )}
 
-            {!isOwner && (
-              <p className="text-sm text-muted-foreground">Only the school owner can modify settings.</p>
+            {!canEdit && (
+              <p className="text-sm text-muted-foreground">Only the school owner or manager can modify settings.</p>
             )}
           </form>
         </CardContent>
