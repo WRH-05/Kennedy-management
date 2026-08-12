@@ -313,6 +313,10 @@ export function StudentsManagementCard({
                       <div className="flex items-center justify-between">
                         {isPaid ? (
                           <span className="text-xs text-emerald-600 font-medium">Paid</span>
+                        ) : isFinalizedEnrollment ? (
+                          <span className="text-xs text-rose-600 font-medium">Dropped</span>
+                        ) : p.status === 'cancelled' ? (
+                          <span className="text-xs text-muted-foreground">Cancelled</span>
                         ) : (
                           <DropdownMenu>
                             <DropdownMenuTrigger asChild>

@@ -187,12 +187,20 @@ export const studentPaymentService = {
 
         if (updateError) throw updateError
 
-        // Log the registration fee payment (500 DA, 100% school revenue)
+        // Read dynamic registration fee from school settings, default to 500 DA
+        const { data: settings } = await (supabase as any)
+            .from('school_settings')
+            .select('default_registration_fee')
+            .limit(1)
+            .single()
+        const fee = settings?.default_registration_fee || 500
+
+        // Log the registration fee payment
         const { data, error } = await supabase
             .from('student_payments')
             .insert([{
                 student_id: studentId,
-                amount: 500,
+                amount: fee,
                 status: 'paid',
                 source: 'registration',
                 payment_date: new Date().toISOString(),

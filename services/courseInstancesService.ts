@@ -127,17 +127,14 @@ export const courseInstancesService = {
             .eq('student_id', studentId)
             .throwOnError();
 
-        // Cancel outstanding payments for this student in the active billing period
-        if (billingPeriodId) {
-            await supabase
-                .from('student_payments')
-                .update({ status: 'cancelled' })
-                .eq('course_id', courseId)
-                .eq('student_id', studentId)
-                .eq('billing_period_id', billingPeriodId)
-                .neq('status', 'paid')
-                .throwOnError();
-        }
+        // Cancel ALL outstanding (non-paid) payments across ALL billing periods for this student
+        await supabase
+            .from('student_payments')
+            .update({ status: 'cancelled' })
+            .eq('course_id', courseId)
+            .eq('student_id', studentId)
+            .neq('status', 'paid')
+            .throwOnError();
 
         return true;
     },

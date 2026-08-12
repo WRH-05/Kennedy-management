@@ -88,3 +88,46 @@
 .scrollbar-thin::-webkit-scrollbar-thumb:hover {
   background-color: hsl(214.3 31.8% 70%);
 }
+
+/* Print styles — isolate the dedicated A4 printable document */
+@media print {
+  @page {
+    size: A4 portrait;
+    margin: 12mm;
+  }
+
+  body {
+    background: #fff !important;
+    color: #000 !important;
+    margin: 0 !important;
+    padding: 0 !important;
+  }
+
+  /*
+   * Hide the app shell, Radix dialog overlay/content, toasts, and any other
+   * direct child of <body> EXCEPT the printable report.
+   *
+   * Radix `Dialog` portals its overlay + content directly into <body> via
+   * `createPortal` with NO `data-radix-portal` wrapper (Portal renders
+   * `Primitive.div` with `asChild`, which resolves to `Slot`), so a selector
+   * like `[data-radix-portal]` never matches. Hiding every direct child except
+   * the report is the only reliable way to suppress the dialog during print.
+   */
+  body > *:not(#printable-payout-report) {
+    display: none !important;
+  }
+
+  #printable-payout-report {
+    display: block !important;
+    position: static !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    margin: 0 !important;
+    background: #fff !important;
+    color: #000 !important;
+    box-shadow: none !important;
+    border: none !important;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+}
