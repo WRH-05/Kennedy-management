@@ -42,13 +42,23 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         .from("profiles")
         .select("*")
         .eq("id", userId)
-        .single()
+        .maybeSingle()
 
-      if (error) throw error
+      // Real DB/network/permission error — log and preserve existing profile state
+      if (error) {
+        console.warn("Profile lookup failed inside AuthContext:", error)
+        return
+      }
+
+      if (!data) {
+        console.warn("No profile row found for user", userId)
+      }
+
+      // data is the profile object, or null when no row exists
       setProfile(data)
     } catch (e) {
-      console.error("Error fetching global profile inside AuthContext:", e)
-      setProfile(null)
+      console.warn("Unexpected profile fetch error inside AuthContext:", e)
+      // Don't setProfile(null) — preserve whatever was loaded
     }
   }
 

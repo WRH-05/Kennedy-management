@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback, useMemo, useRef } from "react"
 import { useRouter, useParams, useSearchParams } from "next/navigation"
 import { Button } from "@/components/ui/button"
-import { ArrowLeft } from "lucide-react"
+import { ArrowLeft, Printer } from "lucide-react"
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog"
 
 import { CourseInstanceDetail, courseInstancesService, CourseInstanceWithEnrichment } from "@/services/courseInstancesService"
@@ -18,6 +18,8 @@ import { useStudents } from "@/hooks/useStudents"
 import { teacherPayoutService } from "@/services/teacherPayoutService"
 import { studentPaymentService } from "@/services/studentPaymentService"
 import { Tables } from "@/types/database.types"
+import { TeacherPayoutReport } from "@/components/dashboard/TeacherPayoutReport"
+import { useSchoolSettings } from "@/hooks/useSchoolSettings"
 
 function CourseInstancesDetailContent() {
   const router = useRouter()
@@ -35,6 +37,8 @@ function CourseInstancesDetailContent() {
   const [selectedPeriodId, setSelectedPeriodId] = useState<string>("")
   const [studentSearchQuery, setStudentSearchQuery] = useState("")
   const [loading, setLoading] = useState(true)
+  const [showReport, setShowReport] = useState(false)
+  const { settings } = useSchoolSettings()
 
   const [confirmDialog, setConfirmDialog] = useState({
     open: false, title: "", description: "", action: () => { },
@@ -198,6 +202,9 @@ function CourseInstancesDetailContent() {
             <ArrowLeft className="h-4 w-4 mr-2" /> Back
           </Button>
           <h1 className="text-xl font-semibold text-gray-900">Course Details</h1>
+          <Button variant="outline" size="sm" onClick={() => setShowReport(true)} className="ml-auto">
+            <Printer className="h-4 w-4 mr-2" /> Print Teacher Report
+          </Button>
         </div>
       </header>
 
@@ -233,6 +240,19 @@ function CourseInstancesDetailContent() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {courseInstances && simpleCourseInstances && (
+        <TeacherPayoutReport
+          open={showReport}
+          onOpenChange={setShowReport}
+          courseInstance={simpleCourseInstances}
+          courseInstanceEnriched={courseInstances}
+          selectedPeriodId={selectedPeriodId}
+          billingPeriods={billingPeriods}
+          teacherEarnings={teacherEarnings}
+          schoolSettings={settings}
+        />
+      )}
     </div>
   )
 }

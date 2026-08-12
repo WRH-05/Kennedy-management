@@ -14,6 +14,7 @@ import { studentPaymentService } from "@/services/studentPaymentService"
 import { useToast } from "@/hooks/use-toast"
 import { revalidateData } from "@/hooks/swr-config"
 import { gradeLevelsService } from "@/services/gradeLevelsService"
+import { useSchoolSettings } from "@/hooks/useSchoolSettings"
 
 interface AddStudentDialogProps {
     onStudentAdded: (updatedStudents: TablesUpdate<"students">[]) => void
@@ -21,6 +22,8 @@ interface AddStudentDialogProps {
 
 export function AddStudentDialog({ onStudentAdded }: AddStudentDialogProps) {
     const { toast } = useToast()
+    const { settings } = useSchoolSettings()
+    const registrationFee = settings?.default_registration_fee || 500
     const [open, setOpen] = useState(false)
     const [isSubmitting, setIsSubmitting] = useState(false)
     const [gradeSearchQuery, setGradeSearchQuery] = useState("")
@@ -228,7 +231,7 @@ export function AddStudentDialog({ onStudentAdded }: AddStudentDialogProps) {
                             checked={newStudent.registration_fee_paid}
                             onCheckedChange={(checked) => setNewStudent({ ...newStudent, registration_fee_paid: checked as boolean })}
                         />
-                        <Label htmlFor="registrationFee">Registration Fee Paid</Label>
+                        <Label htmlFor="registrationFee">Registration Fee Paid ({registrationFee} DA)</Label>
                     </div>
                     <div className="flex justify-end space-x-2">
                         <Button type="button" variant="outline" onClick={() => setOpen(false)}>Cancel</Button>

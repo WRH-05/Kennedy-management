@@ -16,6 +16,7 @@ import { studentPaymentService } from "@/services/studentPaymentService"
 import { UpdateStudentDialog } from "@/components/tabs/StudentsTab/UpdateStudentDialog"
 import { revalidateData } from "@/hooks/swr-config"
 import { toast } from "@/hooks/use-toast"
+import { useSchoolSettings } from "@/hooks/useSchoolSettings"
 
 function StudentDashboardContent() {
   const router = useRouter()
@@ -25,12 +26,14 @@ function StudentDashboardContent() {
   const [loading, setLoading] = useState(true)
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false)
   const [isPayingFee, setIsPayingFee] = useState(false)
+  const { settings } = useSchoolSettings()
+  const registrationFee = settings?.default_registration_fee || 500
 
   const handlePayRegistrationFee = async () => {
     setIsPayingFee(true)
     try {
       await studentPaymentService.payRegistrationFee(studentId)
-      toast({ title: "Registration Fee Paid", description: "500 DA registration fee has been recorded." })
+      toast({ title: "Registration Fee Paid", description: `${registrationFee} DA registration fee has been recorded.` })
       revalidateData('payments')
       await loadStudentData()
     } catch (error) {
@@ -185,7 +188,7 @@ function StudentDashboardContent() {
                     <div className="mb-3">
                       <div className="flex items-center gap-2 mb-2">
                         <AlertTriangle className="h-4 w-4 text-amber-500" />
-                        <span className="text-sm text-amber-600 font-medium">Registration Fee Unpaid (500 DA)</span>
+                        <span className="text-sm text-amber-600 font-medium">Registration Fee Unpaid ({registrationFee} DA)</span>
                       </div>
                       <Button
                         size="sm"
@@ -194,7 +197,7 @@ function StudentDashboardContent() {
                         onClick={handlePayRegistrationFee}
                         disabled={isPayingFee}
                       >
-                        {isPayingFee ? "Processing..." : "Pay Registration Fee (500 DA)"}
+                        {isPayingFee ? "Processing..." : `Pay Registration Fee (${registrationFee} DA)`}
                       </Button>
                     </div>
                   )}

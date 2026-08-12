@@ -23,6 +23,7 @@ export type RevalidateKey =
   | 'student-payments'
   | 'teacher-payments'
   | 'pending-archives'
+  | 'school-settings'
   | 'all'
 
 export function revalidateData(key: RevalidateKey) {
