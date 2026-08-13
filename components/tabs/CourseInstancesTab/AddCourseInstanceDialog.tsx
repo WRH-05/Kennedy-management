@@ -6,8 +6,9 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Checkbox } from "@/components/ui/checkbox"
+import { Badge } from "@/components/ui/badge"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
-import { Plus } from "lucide-react"
+import { Plus, X } from "lucide-react"
 import { ScheduleSlotRow } from "./ScheduleSlotRow"
 import { courseInstancesService } from "@/services/courseInstancesService"
 import { useToast } from "@/hooks/use-toast"
@@ -33,7 +34,6 @@ export function AddCourseDialog({ onCourseAdded }: AddCourseInstanceDialogProps)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [newCourse, setNewCourse] = useState({
     teacherId: "",
-    course_eligibility_id: "",
     percentageCut: 50,
     price: 500,
     compensationType: "percentage" as "percentage" | "fixed_salary",
@@ -52,9 +52,17 @@ export function AddCourseDialog({ onCourseAdded }: AddCourseInstanceDialogProps)
   const [filteredTeachers, setFilteredTeachers] = useState<Teacher[]>([])
   const [selectedTeacherData, setSelectedTeacherData] = useState<Teacher>()
 
-  useEffect(() => {
-    if (teacherSearchQuery.trim()) {
-      teacherService.searchAllTeachers(teacherSearchQuery)
+  const [availableCourses, setAvailableCourses] = useState<{ id: string; name: string }[]>([])
+  const [selectedCourseId, setSelectedCourseId] = useState("")
+  const [eligibleGradeLevels, setEligibleGradeLevels] = useState<{ gradeLevelId: string; gradeLevelName: string; eligibilityId: string }[]>([])
+  const [selectedGradeLevelIds, setSelectedGradeLevelIds] = useState<string[]>([])
+  const [gradeSearchQuery, setGradeSearchQuery] = useState("")
+  const [showGradeResults, setShowGradeResults] = useState(false)
+
+  const handleTeacherSearch = (query: string) => {
+    setTeacherSearchQuery(query)
+    if (query.trim()) {
+      teacherService.searchAllTeachers(query)
         .then((response) => {
           setFilteredTeachers(response.data);
         })
@@ -66,11 +74,78 @@ export function AddCourseDialog({ onCourseAdded }: AddCourseInstanceDialogProps)
       setFilteredTeachers([])
       setShowTeacherResults(false)
     }
-  }, [teacherSearchQuery])
+  }
+
+  // Automatically generate the display name from the selected course + grade levels.
+  useEffect(() => {
+    if (!selectedCourseId) return
+    const courseName = availableCourses.find((c) => c.id === selectedCourseId)?.name || ""
+    const gradeNames = selectedGradeLevelIds
+      .map((id) => eligibleGradeLevels.find((g) => g.gradeLevelId === id)?.gradeLevelName)
+      .filter(Boolean)
+    setDisplayName(gradeNames.length ? `${courseName} - ${gradeNames.join(", ")}` : courseName)
+  }, [selectedCourseId, selectedGradeLevelIds, availableCourses, eligibleGradeLevels])
 
   const handleUpdateSlot = (index: number, fields: Partial<ScheduleSlot>) => {
     setScheduleSlots(scheduleSlots.map((slot, i) => (i === index ? { ...slot, ...fields } : slot)))
   }
+
+  const handleTeacherSelect = (teacher: Teacher) => {
+    setNewCourse({ ...newCourse, teacherId: teacher.id.toString() })
+    setSelectedTeacherData(teacher)
+    setTeacherSearchQuery(teacher.name)
+    setShowTeacherResults(false)
+
+    // Build distinct course templates from the teacher's eligible combos
+    const courseMap = new Map<string, { id: string; name: string }>()
+    teacher.teachers_course_eligibility?.forEach((tce) => {
+      const c = tce.course_eligibility.courses
+      if (c && !courseMap.has(c.id)) {
+        courseMap.set(c.id, { id: c.id, name: c.name })
+      }
+    })
+    setAvailableCourses(Array.from(courseMap.values()))
+    setSelectedCourseId("")
+    setEligibleGradeLevels([])
+    setSelectedGradeLevelIds([])
+    setGradeSearchQuery("")
+    setShowGradeResults(false)
+    setDisplayName("")
+  }
+
+  const handleCourseChange = (courseId: string) => {
+    setSelectedCourseId(courseId)
+    const options = (selectedTeacherData?.teachers_course_eligibility || [])
+      .filter((tce) => tce.course_eligibility.courses?.id === courseId)
+      .map((tce) => ({
+        gradeLevelId: tce.course_eligibility.grade_levels?.id || "",
+        gradeLevelName: tce.course_eligibility.grade_levels?.name || "No grade",
+        eligibilityId: tce.course_eligibility.id,
+      }))
+    setEligibleGradeLevels(options)
+    setSelectedGradeLevelIds([])
+    setGradeSearchQuery("")
+    setShowGradeResults(false)
+  }
+
+  const handleAddGradeLevel = (gradeLevelId: string) => {
+    setSelectedGradeLevelIds((prev) =>
+      prev.includes(gradeLevelId) ? prev : [...prev, gradeLevelId]
+    )
+    setGradeSearchQuery("")
+    setShowGradeResults(false)
+  }
+
+  const handleRemoveGradeLevel = (gradeLevelId: string) => {
+    setSelectedGradeLevelIds((prev) => prev.filter((id) => id !== gradeLevelId))
+  }
+
+  const filteredEligibleGradeLevels = eligibleGradeLevels.filter(
+    (g) =>
+      !selectedGradeLevelIds.includes(g.gradeLevelId) &&
+      (gradeSearchQuery.trim() === "" ||
+        g.gradeLevelName.toLowerCase().includes(gradeSearchQuery.toLowerCase()))
+  )
 
   const handleAddCourse = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -85,18 +160,25 @@ export function AddCourseDialog({ onCourseAdded }: AddCourseInstanceDialogProps)
       return
     }
 
+    if (!selectedTeacherData || selectedGradeLevelIds.length === 0) {
+      toast({
+        title: "Validation Error",
+        description: "Please select a teacher and at least one eligible class/grade.",
+        variant: "destructive",
+      })
+      return
+    }
+
     setIsSubmitting(true)
     try {
-      if (!selectedTeacherData) {
-        toast({ title: "Error", description: "Selected teacher not found", variant: "destructive" })
-        setIsSubmitting(false)
-        return
-      }
+      const anchorEligibilityId = eligibleGradeLevels.find(
+        (g) => g.gradeLevelId === selectedGradeLevelIds[0]
+      )?.eligibilityId || ""
 
       const coursePayload = {
         teacher_id: selectedTeacherData.id,
         percentage_cut: newCourse.percentageCut,
-        course_eligibility_id: newCourse.course_eligibility_id,
+        course_eligibility_id: anchorEligibilityId,
         price: newCourse.price,
         monthly_price: newCourse.price,
         display_name: displayName || null,
@@ -104,6 +186,7 @@ export function AddCourseDialog({ onCourseAdded }: AddCourseInstanceDialogProps)
         fixed_salary_amount: newCourse.compensationType === 'fixed_salary' ? newCourse.fixedSalaryAmount : null,
         is_individual: newCourse.isIndividual,
         max_students: newCourse.isIndividual ? 2 : null,
+        grade_level_ids: selectedGradeLevelIds,
       }
       const validScheduleSlots = scheduleSlots.filter(s => s.dayOfWeek && s.dayOfWeek.trim() !== "")
       const schedule: TablesInsert<"course_schedule">[] = validScheduleSlots.map(s => {
@@ -121,7 +204,6 @@ export function AddCourseDialog({ onCourseAdded }: AddCourseInstanceDialogProps)
       // Reset
       setNewCourse({
         teacherId: "",
-        course_eligibility_id: '',
         percentageCut: 50,
         price: 500,
         compensationType: "percentage",
@@ -131,6 +213,13 @@ export function AddCourseDialog({ onCourseAdded }: AddCourseInstanceDialogProps)
       setScheduleSlots([{ dayOfWeek: "", startHour: "09:00", duration: 2 }])
       setTeacherSearchQuery("")
       setDisplayName("")
+      setSelectedTeacherData(undefined)
+      setAvailableCourses([])
+      setSelectedCourseId("")
+      setEligibleGradeLevels([])
+      setSelectedGradeLevelIds([])
+      setGradeSearchQuery("")
+      setShowGradeResults(false)
       setIsOpen(false)
 
       toast({
@@ -147,6 +236,7 @@ export function AddCourseDialog({ onCourseAdded }: AddCourseInstanceDialogProps)
       setIsSubmitting(false)
     }
   }
+
   return (
     <Dialog open={isOpen} onOpenChange={setIsOpen}>
       <DialogTrigger asChild>
@@ -156,7 +246,7 @@ export function AddCourseDialog({ onCourseAdded }: AddCourseInstanceDialogProps)
       </DialogTrigger>
       <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>Add New Course</DialogTitle>
+          <DialogTitle>Add New Class Instance</DialogTitle>
         </DialogHeader>
         <form onSubmit={handleAddCourse} className="space-y-4">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -170,7 +260,9 @@ export function AddCourseDialog({ onCourseAdded }: AddCourseInstanceDialogProps)
                   placeholder="Search for a teacher..."
                   autoComplete="off"
                   value={teacherSearchQuery}
-                  onChange={(e) => setTeacherSearchQuery(e.target.value)}
+                  onChange={(e) => handleTeacherSearch(e.target.value)}
+                  onBlur={() => setTimeout(() => setShowTeacherResults(false), 150)}
+                  onFocus={() => setShowTeacherResults(teacherSearchQuery.length > 0 && !selectedTeacherData)}
                   required
                 />
                 {showTeacherResults && filteredTeachers.length > 0 && (
@@ -179,15 +271,7 @@ export function AddCourseDialog({ onCourseAdded }: AddCourseInstanceDialogProps)
                       <div
                         key={teacher.id}
                         className="px-4 py-2 hover:bg-gray-50 cursor-pointer border-b last:border-b-0"
-                        onClick={() => {
-                          setNewCourse({
-                            ...newCourse,
-                            teacherId: teacher.id.toString(),
-                          })
-                          setSelectedTeacherData(teacher)
-                          setTeacherSearchQuery(teacher.name)
-                          setShowTeacherResults(false)
-                        }}
+                        onMouseDown={() => handleTeacherSelect(teacher)}
                       >
                         <div className="font-medium">{teacher.name}</div>
                       </div>
@@ -197,52 +281,91 @@ export function AddCourseDialog({ onCourseAdded }: AddCourseInstanceDialogProps)
               </div>
             </div>
 
-            {selectedTeacherData && (
-              <>
-                {/* Subject Selector */}
-                <div className="space-y-2">
-                  <Label htmlFor="subject">Subject & Grade</Label>
-                  <Select
-                    value={newCourse.course_eligibility_id}
-                    onValueChange={(val) => {
-                      setNewCourse({ ...newCourse, course_eligibility_id: val })
-                      // Auto-fill display name from selected eligibility
-                      const selected = selectedTeacherData.teachers_course_eligibility.find(
-                        (tce) => tce.course_eligibility.id === val
-                      )
-                      if (selected) {
-                        const autoName = selected.course_eligibility.courses.name +
-                          (selected.course_eligibility.grade_levels?.name ? ' - ' + selected.course_eligibility.grade_levels.name : '')
-                        setDisplayName(autoName)
-                      }
-                    }}
-                    required
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select subject" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {selectedTeacherData.teachers_course_eligibility.map((tce) => (
-                        <SelectItem key={tce.course_eligibility.id} value={tce.course_eligibility.id}>
-                          {tce.course_eligibility.courses.name + ' ' + tce.course_eligibility.grade_levels?.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
+            {/* Course Template */}
+            <div className="space-y-2">
+              <Label htmlFor="courseTemplate">Course</Label>
+              <Select
+                value={selectedCourseId}
+                onValueChange={handleCourseChange}
+                disabled={!selectedTeacherData}
+              >
+                <SelectTrigger id="courseTemplate">
+                  <SelectValue placeholder="Select course" />
+                </SelectTrigger>
+                <SelectContent>
+                  {availableCourses.map((course) => (
+                    <SelectItem key={course.id} value={course.id}>
+                      {course.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
 
-                {/* Display Name */}
-                <div className="space-y-2">
-                  <Label htmlFor="displayName">Display Name</Label>
-                  <Input
-                    id="displayName"
-                    placeholder="Course Name - Grade Level"
-                    value={displayName}
-                    onChange={(e) => setDisplayName(e.target.value)}
-                  />
-                </div>
-              </>
-            )}
+            {/* Display Name */}
+            <div className="space-y-2">
+              <Label htmlFor="displayName">Display Name</Label>
+              <Input
+                id="displayName"
+                placeholder="Course Name - Grade Level"
+                value={displayName}
+                onChange={(e) => setDisplayName(e.target.value)}
+              />
+            </div>
+
+            {/* Eligible Classes & Grades (search-and-select badges) */}
+            <div className="space-y-2 md:col-span-2">
+              <Label>Eligible Classes & Grades</Label>
+              <div className="flex flex-wrap gap-2 min-h-8 p-2 border rounded-md bg-gray-50/50">
+                {selectedGradeLevelIds.length === 0 ? (
+                  <span className="text-xs text-gray-400 self-center">No grade levels selected.</span>
+                ) : (
+                  selectedGradeLevelIds.map((id) => {
+                    const level = eligibleGradeLevels.find((g) => g.gradeLevelId === id)
+                    return (
+                      <Badge key={id} variant="secondary" className="flex items-center gap-1 pr-1.5">
+                        {level?.gradeLevelName || "Unknown"}
+                        <button
+                          type="button"
+                          onClick={() => handleRemoveGradeLevel(id)}
+                          className="rounded-full outline-none hover:bg-gray-200 p-0.5 text-gray-500 hover:text-gray-900 transition-colors"
+                        >
+                          <X className="h-3 w-3" />
+                        </button>
+                      </Badge>
+                    )
+                  })
+                )}
+              </div>
+              <div className="relative">
+                <Input
+                  id="gradeLevelSearch"
+                  placeholder="Search to add a grade level..."
+                  autoComplete="off"
+                  value={gradeSearchQuery}
+                  disabled={eligibleGradeLevels.length === 0}
+                  onChange={(e) => {
+                    setGradeSearchQuery(e.target.value)
+                    setShowGradeResults(e.target.value.length > 0)
+                  }}
+                  onBlur={() => setTimeout(() => setShowGradeResults(false), 150)}
+                  onFocus={() => setShowGradeResults(gradeSearchQuery.length > 0)}
+                />
+                {showGradeResults && filteredEligibleGradeLevels.length > 0 && (
+                  <div className="absolute top-full left-0 right-0 mt-1 bg-white border rounded-md shadow-lg z-50 max-h-40 overflow-y-auto">
+                    {filteredEligibleGradeLevels.map((level) => (
+                      <div
+                        key={level.gradeLevelId}
+                        className="px-4 py-2 hover:bg-gray-50 cursor-pointer border-b last:border-0"
+                        onMouseDown={() => handleAddGradeLevel(level.gradeLevelId)}
+                      >
+                        <div className="font-medium text-sm text-gray-900">{level.gradeLevelName}</div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
 
             {/* Price */}
             <div className="space-y-2">
@@ -348,7 +471,7 @@ export function AddCourseDialog({ onCourseAdded }: AddCourseInstanceDialogProps)
               Cancel
             </Button>
             <Button type="submit" disabled={isSubmitting}>
-              {isSubmitting ? "Adding..." : "Add Course"}
+              {isSubmitting ? "Adding..." : "Add Class Instance"}
             </Button>
           </div>
         </form>

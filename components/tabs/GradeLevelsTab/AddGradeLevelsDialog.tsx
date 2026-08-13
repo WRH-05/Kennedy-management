@@ -9,6 +9,7 @@ import { Plus } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
 import { TablesInsert } from "@/types/database.types"
 import { gradeLevelsService } from "@/services/gradeLevelsService"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 
 
 
@@ -21,6 +22,7 @@ export function AddGradeLevelDialog({ ongradeLevelAdded: onGradeLevelAdded }: Ad
     const [isSubmitting, setIsSubmitting] = useState(false)
     const [newGradeLevel, setNewGradeLevel] = useState<TablesInsert<"grade_levels">>({
         name: "",
+        type: "academic",
     })
 
 
@@ -51,6 +53,7 @@ export function AddGradeLevelDialog({ ongradeLevelAdded: onGradeLevelAdded }: Ad
             // Reset
             setNewGradeLevel({
                 name: "",
+                type: "academic",
             });
             setIsOpen(false)
 
@@ -91,6 +94,21 @@ export function AddGradeLevelDialog({ ongradeLevelAdded: onGradeLevelAdded }: Ad
                                 onChange={(e) => setNewGradeLevel({ ...newGradeLevel, name: e.target.value })}
                                 required
                             />
+                        </div>
+                        <div className="space-y-2">
+                            <Label htmlFor="type">Type</Label>
+                            <Select
+                                value={newGradeLevel.type || "academic"}
+                                onValueChange={(val) => setNewGradeLevel({ ...newGradeLevel, type: val })}
+                            >
+                                <SelectTrigger id="type">
+                                    <SelectValue placeholder="Select type" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="academic">Academic</SelectItem>
+                                    <SelectItem value="extracurricular">Extracurricular</SelectItem>
+                                </SelectContent>
+                            </Select>
                         </div>
                     </div>
 

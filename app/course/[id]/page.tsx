@@ -86,7 +86,7 @@ function TeacherProfileContent() {
                     </div>
 
                     <div className="lg:col-span-2 space-y-6">
-                        <GradeLevelManagementCard gradeLevels={gradeLevels} courseId={courseId} onRefresh={loadData} />
+                        <GradeLevelManagementCard gradeLevels={gradeLevels} courseId={courseId} courseType={course.type} onRefresh={loadData} />
                     </div>
                 </div>
             </div>

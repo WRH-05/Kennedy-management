@@ -192,7 +192,16 @@ function CourseInstancesDetailContent() {
   const teacherEarnings = compType === 'fixed_salary'
     ? ((courseInstances as any).fixed_salary_amount || 0)
     : Math.round((courseInstances.price * studentCount * (courseInstances.percentage_cut || 0)) / 100)
-  const filteredStudents = availableStudents.filter((student: Tables<"students">) => student.name?.toLowerCase().includes(studentSearchQuery.toLowerCase()))
+  const instanceGradeIds = (courseInstances?.grade_level_ids && courseInstances.grade_level_ids.length > 0)
+    ? courseInstances.grade_level_ids
+    : ((courseInstances?.course_eligibility as any)?.grade_levels?.id ? [(courseInstances?.course_eligibility as any).grade_levels.id] : [])
+
+  const filteredStudents = availableStudents.filter((student: Tables<"students">) => {
+    const nameMatch = student.name?.toLowerCase().includes(studentSearchQuery.toLowerCase())
+    const studentGradeIds = [student.school_level, ...(student.extracurricular_grade_level_ids || [])]
+    const gradeMatch = instanceGradeIds.length === 0 || instanceGradeIds.some((id) => studentGradeIds.includes(id))
+    return nameMatch && gradeMatch
+  })
 
   return (
     <div>

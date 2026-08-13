@@ -72,7 +72,7 @@ export function AddTeacherDialog({ onTeacherAdded }: AddTeacherDialogProps) {
 
         setIsSubmitting(true)
         try {
-            const teacherPayload: any = {
+            const teacherPayload = {
                 name: newTeacher.name,
                 address: newTeacher.address,
                 phone: newTeacher.phone,
@@ -80,12 +80,13 @@ export function AddTeacherDialog({ onTeacherAdded }: AddTeacherDialogProps) {
                 school: newTeacher.school,
             }
 
-            // If eligibilities were selected, pass them as grade_level_ids
-            if (selectedEligibilities.length > 0) {
-                teacherPayload.grade_level_ids = selectedEligibilities.map((e) => e.id)
+            const createdTeacher = await teacherService.addTeacher(teacherPayload)
+
+            // Persist selected eligibilities via the junction table
+            for (const eligibility of selectedEligibilities) {
+                await teacherService.addCourseEligibility(createdTeacher.id, eligibility.id)
             }
 
-            await teacherService.addTeacher(teacherPayload)
             const updatedTeachers = (await teacherService.getAllTeachers()).data
             onTeacherAdded(updatedTeachers)
 

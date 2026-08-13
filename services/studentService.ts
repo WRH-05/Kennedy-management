@@ -89,6 +89,7 @@ export const studentService = {
       school: updatedData.school,
       school_name: updatedData.school_name,
       school_level: updatedData.school_level,
+      extracurricular_grade_level_ids: updatedData.extracurricular_grade_level_ids,
     }
     const { data } = await supabase
       .from('students')
