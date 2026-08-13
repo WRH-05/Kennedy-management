@@ -246,7 +246,7 @@ export function AddCourseDialog({ onCourseAdded }: AddCourseInstanceDialogProps)
       </DialogTrigger>
       <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>Add New Course</DialogTitle>
+          <DialogTitle>Add New Class Instance</DialogTitle>
         </DialogHeader>
         <form onSubmit={handleAddCourse} className="space-y-4">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -471,7 +471,7 @@ export function AddCourseDialog({ onCourseAdded }: AddCourseInstanceDialogProps)
               Cancel
             </Button>
             <Button type="submit" disabled={isSubmitting}>
-              {isSubmitting ? "Adding..." : "Add Course"}
+              {isSubmitting ? "Adding..." : "Add Class Instance"}
             </Button>
           </div>
         </form>
