@@ -64,13 +64,14 @@ export const coursesService = {
             };
         },
 
-    async getCourseById(id: string): Promise<Tables<"courses">> {
+    async getCourseById(id: string): Promise<Tables<"courses"> | null> {
+        if (!id || typeof id !== 'string') return null;
 
         const { data } = await supabase
             .from('courses')
             .select('*')
             .eq('id', id)
-            .single()
+            .maybeSingle()
             .throwOnError()
 
         return data

@@ -11,7 +11,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Plus, Trash2 } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
 import { CourseInstanceDetail, courseInstancesService } from "@/services/courseInstancesService"
-import { coursesEligiblityService } from "@/services/courseEligibilityService"
+import { teacherService } from "@/services/teacherService"
 import { mapSchedulesToSlots, type ScheduleSlot, calculateEndTime, isValidWeekDay } from "@/lib/schedule"
 
 interface UpdateCourseInstanceDialogProps {
@@ -62,20 +62,22 @@ export function UpdateCourseInstanceDialog({
           const ce = data.course_eligibility as any
           const courseId = ce?.courses?.id
           const anchorId = ce?.grade_levels?.id
-          if (courseId) {
-            coursesEligiblityService
-              .getAllGradeLevelsByCourseId(courseId)
-              .then((res) => {
-                setAvailableGradeLevels(
-                  (res.data || []).map((ceRow) => ({ id: ceRow.grade_levels.id, name: ceRow.grade_levels.name }))
-                )
-                const existing = (data.grade_level_ids && data.grade_level_ids.length > 0)
-                  ? data.grade_level_ids
-                  : (anchorId ? [anchorId] : [])
-                setSelectedGradeLevelIds(existing)
-              })
-              .catch((e) => console.error(e))
-          }
+          teacherService
+            .getTeacherById(data.teacher_id)
+            .then((teacher) => {
+              const options = (teacher?.teachers_course_eligibility || [])
+                .filter((tce) => tce.course_eligibility.courses?.id === courseId)
+                .map((tce) => ({
+                  id: tce.course_eligibility.grade_levels?.id || "",
+                  name: tce.course_eligibility.grade_levels?.name || "No grade",
+                }))
+              setAvailableGradeLevels(options)
+              const existing = (data.grade_level_ids && data.grade_level_ids.length > 0)
+                ? data.grade_level_ids
+                : (anchorId ? [anchorId] : [])
+              setSelectedGradeLevelIds(existing)
+            })
+            .catch((e) => console.error(e))
         })
         .catch((err) => {
           console.error("Failed to load course instance:", err)

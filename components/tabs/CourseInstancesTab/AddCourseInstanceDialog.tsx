@@ -11,7 +11,6 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Plus } from "lucide-react"
 import { ScheduleSlotRow } from "./ScheduleSlotRow"
 import { courseInstancesService } from "@/services/courseInstancesService"
-import { coursesEligiblityService } from "@/services/courseEligibilityService"
 import { useToast } from "@/hooks/use-toast"
 import { Database, TablesInsert } from "@/types/database.types"
 import { Teacher, teacherService } from "@/services/teacherService"
@@ -35,7 +34,6 @@ export function AddCourseDialog({ onCourseAdded }: AddCourseInstanceDialogProps)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [newCourse, setNewCourse] = useState({
     teacherId: "",
-    course_eligibility_id: "",
     percentageCut: 50,
     price: 500,
     compensationType: "percentage" as "percentage" | "fixed_salary",
@@ -53,8 +51,11 @@ export function AddCourseDialog({ onCourseAdded }: AddCourseInstanceDialogProps)
   const [showTeacherResults, setShowTeacherResults] = useState(false)
   const [filteredTeachers, setFilteredTeachers] = useState<Teacher[]>([])
   const [selectedTeacherData, setSelectedTeacherData] = useState<Teacher>()
-  const [availableGradeLevels, setAvailableGradeLevels] = useState<{ id: string; name: string }[]>([])
-  const [selectedGradeLevelIds, setSelectedGradeLevelIds] = useState<string[]>([])
+
+  const [availableCourses, setAvailableCourses] = useState<{ id: string; name: string }[]>([])
+  const [selectedCourseId, setSelectedCourseId] = useState("")
+  const [courseOptions, setCourseOptions] = useState<{ eligibilityId: string; gradeLevelId: string; gradeName: string }[]>([])
+  const [selectedEligibilityIds, setSelectedEligibilityIds] = useState<string[]>([])
 
   useEffect(() => {
     if (teacherSearchQuery.trim()) {
@@ -76,6 +77,53 @@ export function AddCourseDialog({ onCourseAdded }: AddCourseInstanceDialogProps)
     setScheduleSlots(scheduleSlots.map((slot, i) => (i === index ? { ...slot, ...fields } : slot)))
   }
 
+  const handleTeacherSelect = (teacher: Teacher) => {
+    setNewCourse({ ...newCourse, teacherId: teacher.id.toString() })
+    setSelectedTeacherData(teacher)
+    setTeacherSearchQuery(teacher.name)
+    setShowTeacherResults(false)
+
+    // Build distinct course templates from the teacher's eligible combos
+    const courseMap = new Map<string, { id: string; name: string }>()
+    teacher.teachers_course_eligibility?.forEach((tce) => {
+      const c = tce.course_eligibility.courses
+      if (c && !courseMap.has(c.id)) {
+        courseMap.set(c.id, { id: c.id, name: c.name })
+      }
+    })
+    setAvailableCourses(Array.from(courseMap.values()))
+    setSelectedCourseId("")
+    setCourseOptions([])
+    setSelectedEligibilityIds([])
+    setDisplayName("")
+  }
+
+  const handleCourseChange = (courseId: string) => {
+    setSelectedCourseId(courseId)
+    const courseName = selectedTeacherData?.teachers_course_eligibility.find(
+      (tce) => tce.course_eligibility.courses?.id === courseId
+    )?.course_eligibility.courses?.name || ""
+
+    const options = (selectedTeacherData?.teachers_course_eligibility || [])
+      .filter((tce) => tce.course_eligibility.courses?.id === courseId)
+      .map((tce) => ({
+        eligibilityId: tce.course_eligibility.id,
+        gradeLevelId: tce.course_eligibility.grade_levels?.id || "",
+        gradeName: tce.course_eligibility.grade_levels?.name || "No grade",
+      }))
+    setCourseOptions(options)
+
+    const first = options[0]
+    setSelectedEligibilityIds(first ? [first.eligibilityId] : [])
+    setDisplayName(first && first.gradeName !== "No grade" ? `${courseName} - ${first.gradeName}` : courseName)
+  }
+
+  const toggleEligibility = (eligibilityId: string) => {
+    setSelectedEligibilityIds((prev) =>
+      prev.includes(eligibilityId) ? prev.filter((id) => id !== eligibilityId) : [...prev, eligibilityId]
+    )
+  }
+
   const handleAddCourse = async (e: React.FormEvent) => {
     e.preventDefault()
     if (isSubmitting) return
@@ -89,6 +137,15 @@ export function AddCourseDialog({ onCourseAdded }: AddCourseInstanceDialogProps)
       return
     }
 
+    if (selectedEligibilityIds.length === 0) {
+      toast({
+        title: "Validation Error",
+        description: "Please select at least one eligible class/grade.",
+        variant: "destructive",
+      })
+      return
+    }
+
     setIsSubmitting(true)
     try {
       if (!selectedTeacherData) {
@@ -97,10 +154,16 @@ export function AddCourseDialog({ onCourseAdded }: AddCourseInstanceDialogProps)
         return
       }
 
+      const anchorEligibilityId = selectedEligibilityIds[0]
+      const gradeLevelIds = courseOptions
+        .filter((o) => selectedEligibilityIds.includes(o.eligibilityId))
+        .map((o) => o.gradeLevelId)
+        .filter(Boolean)
+
       const coursePayload = {
         teacher_id: selectedTeacherData.id,
         percentage_cut: newCourse.percentageCut,
-        course_eligibility_id: newCourse.course_eligibility_id,
+        course_eligibility_id: anchorEligibilityId,
         price: newCourse.price,
         monthly_price: newCourse.price,
         display_name: displayName || null,
@@ -108,7 +171,7 @@ export function AddCourseDialog({ onCourseAdded }: AddCourseInstanceDialogProps)
         fixed_salary_amount: newCourse.compensationType === 'fixed_salary' ? newCourse.fixedSalaryAmount : null,
         is_individual: newCourse.isIndividual,
         max_students: newCourse.isIndividual ? 2 : null,
-        grade_level_ids: selectedGradeLevelIds,
+        grade_level_ids: gradeLevelIds,
       }
       const validScheduleSlots = scheduleSlots.filter(s => s.dayOfWeek && s.dayOfWeek.trim() !== "")
       const schedule: TablesInsert<"course_schedule">[] = validScheduleSlots.map(s => {
@@ -126,7 +189,6 @@ export function AddCourseDialog({ onCourseAdded }: AddCourseInstanceDialogProps)
       // Reset
       setNewCourse({
         teacherId: "",
-        course_eligibility_id: '',
         percentageCut: 50,
         price: 500,
         compensationType: "percentage",
@@ -136,8 +198,11 @@ export function AddCourseDialog({ onCourseAdded }: AddCourseInstanceDialogProps)
       setScheduleSlots([{ dayOfWeek: "", startHour: "09:00", duration: 2 }])
       setTeacherSearchQuery("")
       setDisplayName("")
-      setAvailableGradeLevels([])
-      setSelectedGradeLevelIds([])
+      setSelectedTeacherData(undefined)
+      setAvailableCourses([])
+      setSelectedCourseId("")
+      setCourseOptions([])
+      setSelectedEligibilityIds([])
       setIsOpen(false)
 
       toast({
@@ -154,6 +219,7 @@ export function AddCourseDialog({ onCourseAdded }: AddCourseInstanceDialogProps)
       setIsSubmitting(false)
     }
   }
+
   return (
     <Dialog open={isOpen} onOpenChange={setIsOpen}>
       <DialogTrigger asChild>
@@ -186,15 +252,7 @@ export function AddCourseDialog({ onCourseAdded }: AddCourseInstanceDialogProps)
                       <div
                         key={teacher.id}
                         className="px-4 py-2 hover:bg-gray-50 cursor-pointer border-b last:border-b-0"
-                        onClick={() => {
-                          setNewCourse({
-                            ...newCourse,
-                            teacherId: teacher.id.toString(),
-                          })
-                          setSelectedTeacherData(teacher)
-                          setTeacherSearchQuery(teacher.name)
-                          setShowTeacherResults(false)
-                        }}
+                        onClick={() => handleTeacherSelect(teacher)}
                       >
                         <div className="font-medium">{teacher.name}</div>
                       </div>
@@ -206,68 +264,41 @@ export function AddCourseDialog({ onCourseAdded }: AddCourseInstanceDialogProps)
 
             {selectedTeacherData && (
               <>
-                {/* Subject Selector */}
+                {/* Course Template */}
                 <div className="space-y-2">
-                  <Label htmlFor="subject">Subject & Grade</Label>
+                  <Label htmlFor="courseTemplate">Course</Label>
                   <Select
-                    value={newCourse.course_eligibility_id}
-                    onValueChange={(val) => {
-                      setNewCourse({ ...newCourse, course_eligibility_id: val })
-                      // Auto-fill display name from selected eligibility
-                      const selected = selectedTeacherData.teachers_course_eligibility.find(
-                        (tce) => tce.course_eligibility.id === val
-                      )
-                      if (selected) {
-                        const autoName = selected.course_eligibility.courses.name +
-                          (selected.course_eligibility.grade_levels?.name ? ' - ' + selected.course_eligibility.grade_levels.name : '')
-                        setDisplayName(autoName)
-                        // Load this course's grade levels for multi-grade selection
-                        coursesEligiblityService.getAllGradeLevelsByCourseId(selected.course_eligibility.courses.id)
-                          .then((res) => {
-                            const levels = (res.data || []).map((ce) => ({
-                              id: ce.grade_levels.id,
-                              name: ce.grade_levels.name,
-                            }))
-                            setAvailableGradeLevels(levels)
-                            const anchorId = selected.course_eligibility.grade_levels?.id
-                            setSelectedGradeLevelIds(anchorId ? [anchorId] : [])
-                          })
-                          .catch((e) => console.error(e))
-                      }
-                    }}
-                    required
+                    value={selectedCourseId}
+                    onValueChange={handleCourseChange}
                   >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select subject" />
+                    <SelectTrigger id="courseTemplate">
+                      <SelectValue placeholder="Select course" />
                     </SelectTrigger>
                     <SelectContent>
-                      {selectedTeacherData.teachers_course_eligibility.map((tce) => (
-                        <SelectItem key={tce.course_eligibility.id} value={tce.course_eligibility.id}>
-                          {tce.course_eligibility.courses.name + ' ' + tce.course_eligibility.grade_levels?.name}
+                      {availableCourses.map((course) => (
+                        <SelectItem key={course.id} value={course.id}>
+                          {course.name}
                         </SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
                 </div>
 
-                {availableGradeLevels.length > 0 && (
+                {/* Eligible Classes & Grades (multi-select) */}
+                {courseOptions.length > 0 && (
                   <div className="space-y-2 md:col-span-2">
-                    <Label>Grade Levels</Label>
+                    <Label>Eligible Classes & Grades</Label>
                     <div className="flex flex-wrap gap-2 min-h-8 p-2 border rounded-md bg-gray-50/50">
-                      {availableGradeLevels.map((level) => {
-                        const isSelected = selectedGradeLevelIds.includes(level.id)
+                      {courseOptions.map((option) => {
+                        const isSelected = selectedEligibilityIds.includes(option.eligibilityId)
                         return (
                           <Badge
-                            key={level.id}
+                            key={option.eligibilityId}
                             variant={isSelected ? "secondary" : "outline"}
                             className="cursor-pointer select-none"
-                            onClick={() =>
-                              setSelectedGradeLevelIds((prev) =>
-                                isSelected ? prev.filter((id) => id !== level.id) : [...prev, level.id]
-                              )
-                            }
+                            onClick={() => toggleEligibility(option.eligibilityId)}
                           >
-                            {level.name}
+                            {option.gradeName}
                           </Badge>
                         )
                       })}

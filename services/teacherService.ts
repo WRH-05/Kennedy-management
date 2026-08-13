@@ -111,7 +111,13 @@ export const teacherService = {
     async addTeacher(teacherData: TablesInsert<"teachers">): Promise<Tables<"teachers">> {
         const { data } = await supabase
             .from('teachers')
-            .insert([{ ...teacherData }])
+            .insert([{
+                name: teacherData.name,
+                address: teacherData.address,
+                phone: teacherData.phone,
+                email: teacherData.email,
+                school: teacherData.school,
+            }])
             .select()
             .single()
             .throwOnError()

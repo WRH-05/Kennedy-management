@@ -153,6 +153,7 @@ export function AddStudentDialog({ onStudentAdded }: AddStudentDialogProps) {
                 </DialogHeader>
                 <form onSubmit={handleSubmit} className="space-y-4">
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        {/* Left: Full Name | Right: Grade Levels */}
                         <div className="space-y-2">
                             <Label htmlFor="name">Full Name</Label>
                             <Input
@@ -232,13 +233,14 @@ export function AddStudentDialog({ onStudentAdded }: AddStudentDialogProps) {
                             </div>
                         </div>
 
+                        {/* Left: Student Phone | Right: Birth Date */}
                         <div className="space-y-2">
-                            <Label htmlFor="address">Address</Label>
+                            <Label htmlFor="phone">Student Phone</Label>
                             <Input
-                                id="address"
-                                value={newStudent.address || ""}
-                                onChange={(e) => setNewStudent({ ...newStudent, address: e.target.value })}
-                                required
+                                id="phone"
+                                value={newStudent.phone || ""}
+                                onChange={(e) => setNewStudent({ ...newStudent, phone: e.target.value })}
+                                placeholder="Student phone number"
                             />
                         </div>
                         <div className="space-y-2">
@@ -251,13 +253,15 @@ export function AddStudentDialog({ onStudentAdded }: AddStudentDialogProps) {
                                 required
                             />
                         </div>
+
+                        {/* Left: Current School Name | Right: Parent Phone */}
                         <div className="space-y-2">
-                            <Label htmlFor="phone">Student Phone</Label>
+                            <Label htmlFor="schoolName">Current School Name</Label>
                             <Input
-                                id="phone"
-                                value={newStudent.phone || ""}
-                                onChange={(e) => setNewStudent({ ...newStudent, phone: e.target.value })}
-                                placeholder="Student phone number"
+                                id="schoolName"
+                                value={newStudent.school_name || ""}
+                                onChange={(e) => setNewStudent({ ...newStudent, school_name: e.target.value })}
+                                placeholder="Name of the student's current school"
                             />
                         </div>
                         <div className="space-y-2">
@@ -269,6 +273,8 @@ export function AddStudentDialog({ onStudentAdded }: AddStudentDialogProps) {
                                 placeholder="Parent phone number"
                             />
                         </div>
+
+                        {/* Left: Email | Right: Address */}
                         <div className="space-y-2">
                             <Label htmlFor="email">Email (Optional)</Label>
                             <Input
@@ -278,13 +284,13 @@ export function AddStudentDialog({ onStudentAdded }: AddStudentDialogProps) {
                                 onChange={(e) => setNewStudent({ ...newStudent, email: e.target.value })}
                             />
                         </div>
-                        <div className="space-y-2 md:col-span-2">
-                            <Label htmlFor="schoolName">Current School Name</Label>
+                        <div className="space-y-2">
+                            <Label htmlFor="address">Address</Label>
                             <Input
-                                id="schoolName"
-                                value={newStudent.school_name || ""}
-                                onChange={(e) => setNewStudent({ ...newStudent, school_name: e.target.value })}
-                                placeholder="Name of the student's current school"
+                                id="address"
+                                value={newStudent.address || ""}
+                                onChange={(e) => setNewStudent({ ...newStudent, address: e.target.value })}
+                                required
                             />
                         </div>
                     </div>

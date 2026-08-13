@@ -35,7 +35,6 @@ export function UpdateStudentDialog({
 
   const [formData, setFormData] = useState<TablesUpdate<"students">>({
     name: "",
-    school: "",
     school_name: "",
     birth_date: "",
     phone: "",
@@ -49,7 +48,6 @@ export function UpdateStudentDialog({
     if (open && student) {
       setFormData({
         name: student.name || "",
-        school: student.school || "",
         school_name: student.school_name || "",
         birth_date: student.birth_date || "",
         phone: student.phone || "",
@@ -154,7 +152,7 @@ export function UpdateStudentDialog({
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {/* Full Name */}
+            {/* Left: Full Name | Right: Grade Levels */}
             <div className="space-y-2">
               <Label htmlFor="edit-name">Full Name</Label>
               <Input
@@ -165,7 +163,6 @@ export function UpdateStudentDialog({
               />
             </div>
 
-            {/* Grade Levels (badge multi-select) */}
             <div className="space-y-2">
               <Label htmlFor="edit-level">Grade Levels</Label>
               <div className="flex flex-wrap gap-2 min-h-8 p-2 border rounded-md bg-gray-50/50">
@@ -236,28 +233,16 @@ export function UpdateStudentDialog({
               </div>
             </div>
 
-            {/* School */}
+            {/* Left: Student Phone | Right: Birth Date */}
             <div className="space-y-2">
-              <Label htmlFor="edit-school">School</Label>
+              <Label htmlFor="edit-phone">Student Phone</Label>
               <Input
-                id="edit-school"
-                value={formData.school || ""}
-                onChange={(e) => setFormData({ ...formData, school: e.target.value })}
+                id="edit-phone"
+                value={formData.phone || ""}
+                onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                placeholder="Student phone number"
               />
             </div>
-
-            {/* Current School Name */}
-            <div className="space-y-2">
-              <Label htmlFor="edit-school-name">Current School Name</Label>
-              <Input
-                id="edit-school-name"
-                value={formData.school_name || ""}
-                onChange={(e) => setFormData({ ...formData, school_name: e.target.value })}
-                placeholder="Name of the student's current school"
-              />
-            </div>
-
-            {/* Birth Date */}
             <div className="space-y-2">
               <Label htmlFor="edit-birth">Birth Date</Label>
               <Input
@@ -268,18 +253,16 @@ export function UpdateStudentDialog({
               />
             </div>
 
-            {/* Student Phone */}
+            {/* Left: Current School Name | Right: Parent Phone */}
             <div className="space-y-2">
-              <Label htmlFor="edit-phone">Student Phone</Label>
+              <Label htmlFor="edit-school-name">Current School Name</Label>
               <Input
-                id="edit-phone"
-                value={formData.phone || ""}
-                onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                placeholder="Student phone number"
+                id="edit-school-name"
+                value={formData.school_name || ""}
+                onChange={(e) => setFormData({ ...formData, school_name: e.target.value })}
+                placeholder="Name of the student's current school"
               />
             </div>
-
-            {/* Parent Phone */}
             <div className="space-y-2">
               <Label htmlFor="edit-parent-phone">Parent Phone Number</Label>
               <Input
@@ -290,7 +273,7 @@ export function UpdateStudentDialog({
               />
             </div>
 
-            {/* Email */}
+            {/* Left: Email | Right: Address */}
             <div className="space-y-2">
               <Label htmlFor="edit-email">Email (Optional)</Label>
               <Input
@@ -300,8 +283,6 @@ export function UpdateStudentDialog({
                 onChange={(e) => setFormData({ ...formData, email: e.target.value })}
               />
             </div>
-
-            {/* Address */}
             <div className="space-y-2">
               <Label htmlFor="edit-address">Address</Label>
               <Input
