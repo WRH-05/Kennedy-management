@@ -8,6 +8,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { MoreHorizontal, Pencil } from "lucide-react"
 import { CourseInstance } from "@/services/courseInstancesService"
 import { UpdateCourseInstanceDialog } from "./UpdateCourseInstanceDialog"
+import { getCourseDisplayName } from "@/lib/course-display"
 
 interface CourseInstanceTableRowProps {
   course: CourseInstance
@@ -27,7 +28,7 @@ export function CourseInstanceTableRow({ course, onCourseInstanceUpdated }: Cour
             className="p-0 h-auto font-medium text-left"
             onClick={() => router.push(`/course-instance/${course.id}`)}
           >
-            {course.course_eligibility.courses.name} - {course.course_eligibility.grade_levels?.name}
+            {getCourseDisplayName(course)}
           </Button>
         </TableCell>
 

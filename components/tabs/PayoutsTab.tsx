@@ -13,6 +13,7 @@ import { teacherPayoutService } from "@/services/teacherPayoutService"
 import Link from "next/link"
 import { Tables } from "@/types/database.types"
 import { EnrichedTeacherPayout } from "@/services/teacherPayoutService"
+import { getCourseDisplayName } from "@/lib/course-display"
 
 interface PaginatedResponse<T> {
   data: T[];
@@ -46,19 +47,6 @@ const formatDateTime = (dateStr: string | null | undefined) => {
   } catch {
     return { date: 'N/A', time: 'N/A' }
   }
-}
-
-const getCourseDisplayName = (courseInstance: any): string => {
-  if (!courseInstance) return '—'
-  if (courseInstance.display_name) return courseInstance.display_name
-  if (courseInstance.course_eligibility) {
-    const courseName = courseInstance.course_eligibility.courses?.name || ''
-    const gradeName = courseInstance.course_eligibility.grade_levels?.name || ''
-    if (courseName && gradeName) return `${courseName} - ${gradeName}`
-    if (courseName) return courseName
-    if (gradeName) return gradeName
-  }
-  return '—'
 }
 
 export default function PayoutsTab({

@@ -17,6 +17,7 @@ import { UpdateStudentDialog } from "@/components/tabs/StudentsTab/UpdateStudent
 import { revalidateData } from "@/hooks/swr-config"
 import { toast } from "@/hooks/use-toast"
 import { useSchoolSettings } from "@/hooks/useSchoolSettings"
+import { getCourseDisplayName } from "@/lib/course-display"
 
 function StudentDashboardContent() {
   const router = useRouter()
@@ -277,7 +278,7 @@ function StudentDashboardContent() {
                                   className="p-0 h-auto font-medium text-left"
                                   onClick={() => router.push(`/course-instance/${course.id}`)}
                                 >
-                                  {course.course_eligibility.courses.name} - {course.course_eligibility.grade_levels?.name}
+                                  {getCourseDisplayName(course)}
                                 </Button>
                               </TableCell>
                               <TableCell>
@@ -320,7 +321,7 @@ function StudentDashboardContent() {
                           {completedCourses.map((course) => (
                             <TableRow key={course.id} className="opacity-60">
                               <TableCell className="font-medium">
-                                {course.course_eligibility.courses.name} - {course.course_eligibility.grade_levels?.name}
+                                {getCourseDisplayName(course)}
                               </TableCell>
                               <TableCell>
                                 <Button

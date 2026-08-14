@@ -1,6 +1,6 @@
 "use client"
-import { useState, useEffect } from "react"
-import { useRouter } from "next/navigation"
+import { useState, useEffect, useRef } from "react"
+import { useRouter, usePathname } from "next/navigation"
 import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
 import { SidebarTrigger } from "@/components/ui/sidebar"
@@ -12,6 +12,9 @@ export default function DashboardHeader() {
   const router = useRouter()
   const [searchQuery, setSearchQuery] = useState("")
   const [searchResults, setSearchResult] = useState<FoundPeople[]>([])
+  const [isSearchOpen, setIsSearchOpen] = useState(false)
+  const searchContainerRef = useRef<HTMLDivElement>(null)
+  const pathname = usePathname()
   const { profile } = useAuth()
 
   // Debounced Search Effect
@@ -39,7 +42,25 @@ export default function DashboardHeader() {
     return () => clearTimeout(delayDebounceFn)
   }, [searchQuery])
 
-  const showSearchResults = searchQuery.trim().length > 0 && searchResults.length > 0
+  // Hide the dropdown when the user clicks anywhere outside the search container
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (searchContainerRef.current && !searchContainerRef.current.contains(event.target as Node)) {
+        setIsSearchOpen(false)
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside)
+    return () => document.removeEventListener("mousedown", handleClickOutside)
+  }, [])
+
+  // Clear the query and hide results whenever the route changes
+  useEffect(() => {
+    setSearchQuery("")
+    setSearchResult([])
+    setIsSearchOpen(false)
+  }, [pathname])
+
+  const showSearchResults = isSearchOpen && searchQuery.trim().length > 0 && searchResults.length > 0
 
   const handleSearchResultClick = (result: FoundPeople) => {
     if (result.type === "student") {
@@ -50,6 +71,7 @@ export default function DashboardHeader() {
       router.push(`/course-instance/${result.id}`)
     }
     setSearchQuery("")
+    setIsSearchOpen(false)
   }
 
   return (
@@ -60,7 +82,7 @@ export default function DashboardHeader() {
           <SidebarTrigger className="md:hidden" />
 
           {/* Search Bar */}
-          <div className="flex-1 max-w-md mx-4 relative">
+          <div className="flex-1 max-w-md mx-4 relative" ref={searchContainerRef}>
             <div className="relative">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
               <Input
@@ -68,6 +90,7 @@ export default function DashboardHeader() {
                 className="pl-10"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
+                onFocus={() => setIsSearchOpen(true)}
               />
             </div>
 
@@ -79,8 +102,13 @@ export default function DashboardHeader() {
                     className="px-4 py-2 hover:bg-gray-50 cursor-pointer border-b last:border-b-0"
                     onClick={() => handleSearchResultClick(result)}
                   >
-                    <div className="flex items-center justify-between">
-                      <span className="font-medium">{result.name}</span>
+                    <div className="flex items-center justify-between gap-2">
+                      <div className="min-w-0">
+                        <div className="font-medium">{result.name}</div>
+                        {result.type === "course-instance" && result.subtitle && (
+                          <div className="text-xs text-muted-foreground">{result.subtitle}</div>
+                        )}
+                      </div>
                       <Badge
                         variant={
                           result.type === "student" ? "default" : result.type === "teacher" ? "secondary" : "outline"

@@ -23,6 +23,7 @@ import { createClient } from "@/lib/supabase/client"
 import { useToast } from "@/hooks/use-toast"
 import { useState } from "react"
 import { useRouter } from "next/navigation"
+import { formatCourseType } from "@/lib/course-display"
 
 const supabase = createClient()
 
@@ -93,12 +94,6 @@ export function CourseTableRow({ course, onCourseUpdated }: CourseTableRowProps)
     <>
       <TableRow className="group">
         <TableCell>
-          <Badge variant={course.type === "academic" ? "default" : "secondary"}>
-            {course.type}
-          </Badge>
-        </TableCell>
-
-        <TableCell>
           <Button
             variant="link"
             className="p-0 h-auto font-medium text-left"
@@ -106,6 +101,12 @@ export function CourseTableRow({ course, onCourseUpdated }: CourseTableRowProps)
           >
             {course.name}
           </Button>
+        </TableCell>
+
+        <TableCell>
+          <Badge variant={course.type === "academic" ? "default" : "secondary"}>
+            {formatCourseType(course.type)}
+          </Badge>
         </TableCell>
         <TableCell>
           <DropdownMenu>
@@ -119,7 +120,7 @@ export function CourseTableRow({ course, onCourseUpdated }: CourseTableRowProps)
                 e.preventDefault()
                 setIsDialogOpen(true)
               }}>
-                Update Course
+                Edit Course
               </DropdownMenuItem>
               <DropdownMenuItem
                 onSelect={(e) => {

@@ -5,6 +5,7 @@ import { TableCell, TableRow } from "@/components/ui/table"
 import { Tables } from "@/types/database.types"
 import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem } from "@/components/ui/dropdown-menu"
 import { Button } from "@/components/ui/button"
+import { Badge } from "@/components/ui/badge"
 import {
   AlertDialog,
   AlertDialogAction,
@@ -21,6 +22,8 @@ import { gradeLevelsService } from "@/services/gradeLevelsService"
 import { createClient } from "@/lib/supabase/client"
 import { useToast } from "@/hooks/use-toast"
 import { useState } from "react"
+import { useRouter } from "next/navigation"
+import { formatCourseType } from "@/lib/course-display"
 
 const supabase = createClient()
 
@@ -34,6 +37,7 @@ export function GradeLevelTableRow({ gradeLevel: gradeLevel, onGradeLevelUpdated
   const [showDeleteDialog, setShowDeleteDialog] = useState(false)
   const [isDeleting, setIsDeleting] = useState(false)
   const { toast } = useToast()
+  const router = useRouter()
 
   const handleDelete = async () => {
     setIsDeleting(true)
@@ -89,7 +93,20 @@ export function GradeLevelTableRow({ gradeLevel: gradeLevel, onGradeLevelUpdated
   return (
     <>
       <TableRow className="group">
-        <TableCell>{gradeLevel.name}</TableCell>
+        <TableCell>
+          <Button
+            variant="link"
+            className="p-0 h-auto font-medium text-left"
+            onClick={() => router.push(`/grade-level/${gradeLevel.id}`)}
+          >
+            {gradeLevel.name}
+          </Button>
+        </TableCell>
+        <TableCell>
+          <Badge variant={gradeLevel.type === "academic" ? "default" : "secondary"}>
+            {formatCourseType(gradeLevel.type)}
+          </Badge>
+        </TableCell>
         <TableCell>
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
@@ -102,7 +119,7 @@ export function GradeLevelTableRow({ gradeLevel: gradeLevel, onGradeLevelUpdated
                 e.preventDefault()
                 setIsDialogOpen(true)
               }}>
-                Update Grade Level
+                Edit Grade Level
               </DropdownMenuItem>
               <DropdownMenuItem
                 onSelect={(e) => {
