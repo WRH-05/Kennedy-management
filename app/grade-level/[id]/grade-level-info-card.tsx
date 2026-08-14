@@ -1,7 +1,6 @@
 "use client"
 
 import { Card, CardContent } from "@/components/ui/card"
-import { Badge } from "@/components/ui/badge"
 import { GraduationCap } from "lucide-react"
 import { Tables } from "@/types/database.types"
 import { formatCourseType } from "@/lib/course-display"
@@ -21,9 +20,7 @@ export function GradeLevelInfoCard({ gradeLevel }: GradeLevelInfoCardProps) {
                         <p className="text-lg font-semibold">{gradeLevel.name}</p>
                     </div>
                 </div>
-                <Badge variant={gradeLevel.type === "academic" ? "default" : "secondary"}>
-                    {formatCourseType(gradeLevel.type)}
-                </Badge>
+                <span className="text-sm text-muted-foreground">{formatCourseType(gradeLevel.type)}</span>
             </CardContent>
         </Card>
     )

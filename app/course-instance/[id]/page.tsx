@@ -148,7 +148,15 @@ function CourseInstancesDetailContent() {
   useEffect(() => { loadPeriodData() }, [loadPeriodData])
 
   const toggleTeacherPayment = () => {
-    if (!courseInstances?.teacher_id || !selectedPeriodId) return
+    if (!selectedPeriodId) {
+      toast({
+        title: "Billing cycle required",
+        description: "Please select or create a billing cycle before recording a teacher payout.",
+        variant: "destructive",
+      })
+      return
+    }
+    if (!courseInstances?.teacher_id) return
 
     // Calculate earnings based on compensation type
     const compType = (courseInstances as any).compensation_type || 'percentage'

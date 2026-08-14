@@ -5,7 +5,6 @@ import { TableCell, TableRow } from "@/components/ui/table"
 import { Tables } from "@/types/database.types"
 import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem } from "@/components/ui/dropdown-menu"
 import { Button } from "@/components/ui/button"
-import { Badge } from "@/components/ui/badge"
 import {
   AlertDialog,
   AlertDialogAction,
@@ -103,9 +102,7 @@ export function GradeLevelTableRow({ gradeLevel: gradeLevel, onGradeLevelUpdated
           </Button>
         </TableCell>
         <TableCell>
-          <Badge variant={gradeLevel.type === "academic" ? "default" : "secondary"}>
-            {formatCourseType(gradeLevel.type)}
-          </Badge>
+          <span className="text-sm text-muted-foreground">{formatCourseType(gradeLevel.type)}</span>
         </TableCell>
         <TableCell>
           <DropdownMenu>

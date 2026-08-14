@@ -8,7 +8,6 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
-import { Label } from "@/components/ui/label"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { ArrowLeft, Download, User, BookOpen, AlertTriangle, CheckCircle } from "lucide-react"
 import { Student, studentService } from "@/services/studentService"
@@ -17,7 +16,14 @@ import { UpdateStudentDialog } from "@/components/tabs/StudentsTab/UpdateStudent
 import { revalidateData } from "@/hooks/swr-config"
 import { toast } from "@/hooks/use-toast"
 import { useSchoolSettings } from "@/hooks/useSchoolSettings"
+import { usePaginatedGradeLevels } from "@/hooks/useGradeLevels"
 import { getCourseDisplayName } from "@/lib/course-display"
+
+function formatBirthDate(value: string | null): string {
+  if (!value) return "-"
+  const [y, m, d] = value.split("-")
+  return d && m && y ? `${d}/${m}/${y}` : value
+}
 
 function StudentDashboardContent() {
   const router = useRouter()
@@ -28,6 +34,7 @@ function StudentDashboardContent() {
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false)
   const [isPayingFee, setIsPayingFee] = useState(false)
   const { settings } = useSchoolSettings()
+  const { gradeLevels } = usePaginatedGradeLevels(1, 0)
   const registrationFee = settings?.default_registration_fee || 500
 
   const handlePayRegistrationFee = async () => {
@@ -83,16 +90,22 @@ function StudentDashboardContent() {
   const payments = student.student_payments
 
   const totalMonthlyFees = student.course_enrollments.reduce((sum, ce) => ce.status === "enrolled" ? sum + (ce.course_instances.monthly_price || 0) : sum + 0, 0)
+
+  const academicLevelName = student.grade_levels?.name
+  const extracurricularNames = (student.extracurricular_grade_level_ids || [])
+    .map((id) => gradeLevels.find((g) => g.id === id)?.name)
+    .filter((name): name is string => Boolean(name))
+
+  const paidPayments = payments.filter((p) => p.status === 'paid')
   const now = new Date()
-  const paidThisMonth = payments
+  const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1)
+  const paidThisMonth = paidPayments
     .filter((p) => {
-      if (p.status !== 'paid') return false
-      const dateStr = p.payment_date || p.created_at
-      if (!dateStr) return false
-      const d = new Date(dateStr)
-      return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear()
+      const d = new Date(p.payment_date || p.created_at)
+      return !isNaN(d.getTime()) && d >= startOfMonth && d <= now
     })
     .reduce((sum, p) => sum + (p.amount || 0), 0)
+  const paidAllTime = paidPayments.reduce((sum, p) => sum + (p.amount || 0), 0)
 
   const missedPayments = payments.filter((p) => p.status != 'paid').length
 
@@ -127,55 +140,58 @@ function StudentDashboardContent() {
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
-                <div className="space-y-4">
-                  <div className="space-y-2">
-                    <Label>Full Name</Label>
-                    <h3 className="font-semibold text-lg">{student.name}</h3>
+                <div className="space-y-3">
+                  <div className="space-y-1">
+                    <span className="text-xs text-muted-foreground font-medium">Full Name</span>
+                    <h3 className="font-semibold text-base">{student.name}</h3>
                   </div>
 
-                  <div className="space-y-2">
-                    <Label>School Level</Label>
-                    <p className="text-gray-600">{student.grade_levels?.name || '-'}</p>
+                  <div className="space-y-1">
+                    <span className="text-xs text-muted-foreground font-medium">Grade Levels</span>
+                    <div className="flex flex-wrap gap-1.5">
+                      {academicLevelName && <Badge variant="secondary">{academicLevelName}</Badge>}
+                      {extracurricularNames.map((name) => (
+                        <Badge key={name} variant="outline">{name}</Badge>
+                      ))}
+                      {!academicLevelName && extracurricularNames.length === 0 && (
+                        <span className="text-sm text-gray-700">-</span>
+                      )}
+                    </div>
                   </div>
 
-                  <div className="space-y-2">
-                    <Label>School</Label>
-                    <p className="text-gray-600">{student.school || '-'}</p>
+                  <div className="space-y-1">
+                    <span className="text-xs text-muted-foreground font-medium">Current School Name</span>
+                    <p className="text-sm text-gray-700">{(student as any).school_name || '-'}</p>
                   </div>
 
-                  <div className="space-y-2">
-                    <Label>Current School Name</Label>
-                    <p className="text-gray-600">{(student as any).school_name || '-'}</p>
+                  <div className="space-y-1">
+                    <span className="text-xs text-muted-foreground font-medium">Birth Date</span>
+                    <p className="text-sm text-gray-700">{formatBirthDate(student.birth_date)}</p>
                   </div>
 
-                  <div className="space-y-2">
-                    <Label>Birth Date</Label>
-                    <p className="text-gray-600">{student.birth_date || '-'}</p>
+                  <div className="space-y-1">
+                    <span className="text-xs text-muted-foreground font-medium">Student Phone</span>
+                    <p className="text-sm text-gray-700">{student.phone || '-'}</p>
                   </div>
 
-                  <div className="space-y-2">
-                    <Label>Student Phone</Label>
-                    <p className="text-gray-600">{student.phone || '-'}</p>
+                  <div className="space-y-1">
+                    <span className="text-xs text-muted-foreground font-medium">Parent Phone</span>
+                    <p className="text-sm text-gray-700">{(student as any).parent_phone || '-'}</p>
                   </div>
 
-                  <div className="space-y-2">
-                    <Label>Parent Phone</Label>
-                    <p className="text-gray-600">{(student as any).parent_phone || '-'}</p>
+                  <div className="space-y-1">
+                    <span className="text-xs text-muted-foreground font-medium">Email</span>
+                    <p className="text-sm text-gray-700">{student.email || '-'}</p>
                   </div>
 
-                  <div className="space-y-2">
-                    <Label>Email</Label>
-                    <p className="text-gray-600">{student.email || '-'}</p>
+                  <div className="space-y-1">
+                    <span className="text-xs text-muted-foreground font-medium">Address</span>
+                    <p className="text-sm text-gray-700">{student.address || '-'}</p>
                   </div>
 
-                  <div className="space-y-2">
-                    <Label>Address</Label>
-                    <p className="text-gray-600">{student.address || '-'}</p>
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label>Registration Date</Label>
-                    <p className="text-gray-600">{student.created_at ? new Date(student.created_at).toLocaleDateString() : 'N/A'}</p>
+                  <div className="space-y-1">
+                    <span className="text-xs text-muted-foreground font-medium">Registration Date</span>
+                    <p className="text-sm text-gray-700">{student.created_at ? new Date(student.created_at).toLocaleDateString() : 'N/A'}</p>
                   </div>
                 </div>
                 <div className="pt-4 border-t">
@@ -209,6 +225,10 @@ function StudentDashboardContent() {
                   <div className="flex justify-between items-center">
                     <span className="font-medium">Paid This Month:</span>
                     <span className="text-lg font-bold text-green-600">{paidThisMonth.toLocaleString()} DA</span>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span className="text-xs text-muted-foreground">All-Time Paid:</span>
+                    <span className="text-xs text-muted-foreground">{paidAllTime.toLocaleString()} DA</span>
                   </div>
                 </div>
                 <Button onClick={downloadStudentCard} className="w-full">

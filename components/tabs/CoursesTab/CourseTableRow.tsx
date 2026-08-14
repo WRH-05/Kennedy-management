@@ -2,7 +2,6 @@
 "use client"
 
 import { TableCell, TableRow } from "@/components/ui/table"
-import { Badge } from "@/components/ui/badge"
 import { Tables } from "@/types/database.types"
 import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem } from "@/components/ui/dropdown-menu"
 import { Button } from "@/components/ui/button"
@@ -104,9 +103,7 @@ export function CourseTableRow({ course, onCourseUpdated }: CourseTableRowProps)
         </TableCell>
 
         <TableCell>
-          <Badge variant={course.type === "academic" ? "default" : "secondary"}>
-            {formatCourseType(course.type)}
-          </Badge>
+          <span className="text-sm text-muted-foreground">{formatCourseType(course.type)}</span>
         </TableCell>
         <TableCell>
           <DropdownMenu>

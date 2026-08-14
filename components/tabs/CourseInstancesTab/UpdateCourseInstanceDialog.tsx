@@ -191,7 +191,7 @@ export function UpdateCourseInstanceDialog({
           <div className="py-8 text-center text-gray-500">Loading course data...</div>
         ) : (
           <form onSubmit={handleSubmit} className="space-y-4 pt-2">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 items-start">
               {/* Display Name */}
               <div className="space-y-2">
                 <Label htmlFor="edit-ci-display-name">Display Name</Label>
@@ -203,8 +203,20 @@ export function UpdateCourseInstanceDialog({
                 />
               </div>
 
-              {/* Grade Levels (search-and-select badges) */}
+              {/* Student Tuition Price */}
               <div className="space-y-2">
+                <Label htmlFor="edit-ci-price">Student Tuition Price</Label>
+                <Input
+                  id="edit-ci-price"
+                  type="number"
+                  value={price}
+                  onChange={(e) => setPrice(parseInt(e.target.value) || 0)}
+                  required
+                />
+              </div>
+
+              {/* Grade Levels (search-and-select badges) */}
+              <div className="space-y-2 md:col-span-2">
                 <Label>Grade Levels</Label>
                 <div className="flex flex-wrap gap-2 min-h-8 p-2 border rounded-md bg-gray-50/50">
                   {selectedGradeLevelIds.length === 0 ? (
@@ -257,18 +269,6 @@ export function UpdateCourseInstanceDialog({
                 </div>
               </div>
 
-              {/* Student Tuition Price */}
-              <div className="space-y-2">
-                <Label htmlFor="edit-ci-price">Student Tuition Price</Label>
-                <Input
-                  id="edit-ci-price"
-                  type="number"
-                  value={price}
-                  onChange={(e) => setPrice(parseInt(e.target.value) || 0)}
-                  required
-                />
-              </div>
-
               {/* Teacher Compensation */}
               <div className="space-y-2">
                 <Label htmlFor="edit-ci-comp-type">Teacher Compensation</Label>
@@ -309,28 +309,31 @@ export function UpdateCourseInstanceDialog({
               )}
 
               {/* Individual Course Toggle */}
-              <div className="space-y-2">
-                <div className="flex items-center space-x-2 pt-1">
-                  <Checkbox
-                    id="edit-is-individual"
-                    checked={isIndividual}
-                    onCheckedChange={(checked) => setIsIndividual(checked as boolean)}
-                  />
-                  <Label htmlFor="edit-is-individual">Individual Course / Private Lesson</Label>
-                </div>
-                {isIndividual && (
-                  <div className="space-y-1 ml-6">
-                    <Label htmlFor="edit-max-students">Max Students</Label>
-                    <Input
-                      id="edit-max-students"
-                      type="number"
-                      min="1"
-                      max="10"
-                      value={maxStudents ?? 2}
-                      onChange={(e) => setMaxStudents(parseInt(e.target.value) || 1)}
+              <div className="space-y-2 md:col-span-2">
+                <div className="flex items-center gap-3">
+                  <div className="flex items-center gap-2">
+                    <Checkbox
+                      id="edit-is-individual"
+                      checked={isIndividual}
+                      onCheckedChange={(checked) => setIsIndividual(checked as boolean)}
                     />
+                    <Label htmlFor="edit-is-individual">Individual Course / Private Lesson</Label>
                   </div>
-                )}
+                  {isIndividual && (
+                    <div className="ml-auto flex items-center gap-2">
+                      <Label htmlFor="edit-max-students">Max Students</Label>
+                      <Input
+                        id="edit-max-students"
+                        type="number"
+                        min="1"
+                        max="10"
+                        className="w-24"
+                        value={maxStudents ?? 2}
+                        onChange={(e) => setMaxStudents(parseInt(e.target.value) || 1)}
+                      />
+                    </div>
+                  )}
+                </div>
               </div>
 
               {/* Weekly Schedule Slots */}
