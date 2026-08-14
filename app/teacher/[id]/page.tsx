@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button"
 
 import { Teacher, teacherService } from "@/services/teacherService"
 import { courseInstancesService, CourseInstanceWithEnrichment } from "@/services/courseInstancesService"
+import { teacherPayoutService } from "@/services/teacherPayoutService"
 import { UpdateTeacherDialog } from "@/components/tabs/TeacherTab/UpdateTeacherDialog"
 
 // Sub-components imports
@@ -21,6 +22,7 @@ function TeacherProfileContent() {
 
   const [teacher, setTeacher] = useState<Teacher | null>(null)
   const [courseInstances, setCourseInstances] = useState<CourseInstanceWithEnrichment[]>([])
+  const [totalPayouts, setTotalPayouts] = useState(0)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false)
@@ -39,6 +41,9 @@ function TeacherProfileContent() {
 
       const assignedCourseInstances = await courseInstancesService.getCourseInstancesByTeacherId(teacherId)
       setCourseInstances(assignedCourseInstances)
+
+      const totalPaid = await teacherPayoutService.getTotalPaidPayouts(teacherId)
+      setTotalPayouts(totalPaid)
     } catch (err) {
       console.error("Error loading teacher data:", err)
       setError("Failed to load teacher data")
@@ -92,6 +97,7 @@ function TeacherProfileContent() {
               activeCourses={activeCourses.length}
               totalStudents={numberOfActiveStudents}
               completedCourses={completedCourses.length}
+              totalPayouts={totalPayouts}
             />
           </div>
 

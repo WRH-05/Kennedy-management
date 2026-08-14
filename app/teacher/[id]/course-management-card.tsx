@@ -5,6 +5,16 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { BookOpen } from "lucide-react"
 import Link from "next/link"
 import { CourseInstanceWithEnrichment } from "@/services/courseInstancesService"
+import { usePaginatedGradeLevels } from "@/hooks/useGradeLevels"
+
+function teacherEarnings(course: CourseInstanceWithEnrichment): number {
+  const compType = (course as any).compensation_type || "percentage"
+  const studentCount = course.student_ids?.length || 0
+  if (compType === "fixed_salary") {
+    return (course as any).fixed_salary_amount || 0
+  }
+  return Math.round((course.price * studentCount * (course.percentage_cut || 0)) / 100)
+}
 
 interface CourseManagementCardProps {
   activeCourses: CourseInstanceWithEnrichment[]
@@ -12,6 +22,18 @@ interface CourseManagementCardProps {
 }
 
 export function CourseManagementCard({ activeCourses, completedCourses }: CourseManagementCardProps) {
+  const { gradeLevels } = usePaginatedGradeLevels(1, 0)
+
+  const gradeNamesFor = (course: CourseInstanceWithEnrichment) => {
+    if (course.grade_level_ids?.length) {
+      const names = course.grade_level_ids
+        .map((id) => gradeLevels.find((gl) => gl.id === id)?.name)
+        .filter((n): n is string => Boolean(n))
+      if (names.length) return names.join(", ")
+    }
+    return course.course_eligibility?.grade_levels?.name ?? "—"
+  }
+
   return (
     <Card>
       <CardHeader>
@@ -30,8 +52,8 @@ export function CourseManagementCard({ activeCourses, completedCourses }: Course
                 <TableHeader>
                   <TableRow>
                     <TableHead>Subject</TableHead>
-                    <TableHead>School Year</TableHead>
-                    <TableHead>Price</TableHead>
+                    <TableHead>Grade Levels</TableHead>
+                    <TableHead>Earnings</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -39,11 +61,11 @@ export function CourseManagementCard({ activeCourses, completedCourses }: Course
                     <TableRow key={course.id}>
                       <TableCell className="font-medium">
                         <Link href={`/course-instance/${course.id}`} className="hover:underline">
-                          {course.course_eligibility?.courses?.name ?? "—"}
+                          {(course.display_name || course.course_eligibility?.courses?.name) ?? "—"}
                         </Link>
                       </TableCell>
-                      <TableCell>{course.course_eligibility?.grade_levels?.name ?? "—"}</TableCell>
-                      <TableCell>{course.price} DA</TableCell>
+                      <TableCell>{gradeNamesFor(course)}</TableCell>
+                      <TableCell>{teacherEarnings(course)} DA</TableCell>
                     </TableRow>
                   ))}
                 </TableBody>
@@ -61,17 +83,21 @@ export function CourseManagementCard({ activeCourses, completedCourses }: Course
                 <TableHeader>
                   <TableRow>
                     <TableHead>Subject</TableHead>
-                    <TableHead>School Year</TableHead>
-                    <TableHead>Price</TableHead>
+                    <TableHead>Grade Levels</TableHead>
+                    <TableHead>Earnings</TableHead>
                     <TableHead>Students</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {completedCourses.map((course) => (
                     <TableRow key={course.id} className="opacity-60">
-                      <TableCell className="font-medium">{course.course_eligibility?.courses?.name ?? "—"}</TableCell>
-                      <TableCell>{course.course_eligibility?.grade_levels?.name ?? "—"}</TableCell>
-                      <TableCell>{course.price} DA</TableCell>
+                      <TableCell className="font-medium">
+                        <Link href={`/course-instance/${course.id}`} className="hover:underline">
+                          {(course.display_name || course.course_eligibility?.courses?.name) ?? "—"}
+                        </Link>
+                      </TableCell>
+                      <TableCell>{gradeNamesFor(course)}</TableCell>
+                      <TableCell>{teacherEarnings(course)} DA</TableCell>
                       <TableCell>{course.student_ids.length || 0}</TableCell>
                     </TableRow>
                   ))}

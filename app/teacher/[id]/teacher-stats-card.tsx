@@ -5,28 +5,32 @@ interface TeacherStatsCardProps {
   activeCourses: number
   totalStudents: number
   completedCourses: number
+  totalPayouts: number
 }
 
-export function TeacherStatsCard({ totalCourses, activeCourses, totalStudents, completedCourses }: TeacherStatsCardProps) {
+export function TeacherStatsCard({ totalCourses, activeCourses, totalStudents, completedCourses, totalPayouts }: TeacherStatsCardProps) {
   const statsConfig = [
-    { label: "Total courseInstances", count: totalCourses, bg: "bg-blue-50", text: "text-blue-600" },
-    { label: "Active courseInstances", count: activeCourses, bg: "bg-green-50", text: "text-green-600" },
-    { label: "Total Students", count: totalStudents, bg: "bg-purple-50", text: "text-purple-600" },
-    { label: "Completed courseInstances", count: completedCourses, bg: "bg-orange-50", text: "text-orange-600" },
+    { label: "Total Classes", count: totalCourses, format: false },
+    { label: "Active Classes", count: activeCourses, format: false },
+    { label: "Total Students", count: totalStudents, format: false },
+    { label: "Completed Classes", count: completedCourses, format: false },
+    { label: "Total Payouts Received (DA)", count: totalPayouts, format: true },
   ]
 
   return (
     <Card>
-      <CardHeader>
-        <CardTitle>Performance Statistics</CardTitle>
+      <CardHeader className="pb-2">
+        <CardTitle className="text-sm font-medium">Performance Statistics</CardTitle>
       </CardHeader>
-      <CardContent className="space-y-4">
-        {statsConfig.map((stat, i) => (
-          <div key={i} className={`text-center p-4 ${stat.bg} rounded-lg`}>
-            <p className="text-sm text-gray-600">{stat.label}</p>
-            <p className={`text-2xl font-bold ${stat.text}`}>{stat.count}</p>
-          </div>
-        ))}
+      <CardContent>
+        <div className="grid grid-cols-2 gap-3">
+          {statsConfig.map((stat, i) => (
+            <div key={i} className={`rounded-lg border p-3 ${i === statsConfig.length - 1 ? "col-span-2" : ""}`}>
+              <p className="text-xs text-muted-foreground">{stat.label}</p>
+              <p className="text-lg font-bold text-foreground">{stat.format ? stat.count.toLocaleString() : stat.count}</p>
+            </div>
+          ))}
+        </div>
       </CardContent>
     </Card>
   )

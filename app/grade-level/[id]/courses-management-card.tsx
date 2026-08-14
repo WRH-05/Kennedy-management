@@ -2,7 +2,7 @@
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
-import { BookOpen, Plus } from "lucide-react"
+import { BookOpen, Plus, Trash2 } from "lucide-react"
 import Link from "next/link"
 import { AssociatedGradeLevelsCourses, gradeLevelsService } from "@/services/gradeLevelsService"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
@@ -64,16 +64,26 @@ export function CourseManagementCard({ courses, gradeLevelId, onRefresh }: Cours
     }
   }
 
+  const handleRemoveCourse = async (eligibilityId: string) => {
+    if (!eligibilityId) return
+    try {
+      await coursesEligiblityService.deleteCourseEligibility(eligibilityId)
+      toast({ title: "Success", description: "Course removed." })
+      onRefresh()
+    } catch (error) {
+      console.error(error)
+    }
+  }
+
   return (
     <Card>
-      <CardHeader>
-        <CardTitle className="flex items-center flex-row">
-          <div className="flex items-center">
-            <BookOpen className="h-5 w-5 mr-2" />
-            Grade Levels Management
-          </div>
-          <Dialog open={showAddGradeLevelDialog} onOpenChange={setShowAddGradeLevelDialog}>
-            <DialogTrigger asChild className="m-2">
+      <CardHeader className="flex flex-row items-center justify-between">
+        <CardTitle className="flex items-center">
+          <BookOpen className="h-5 w-5 mr-2" />
+          Connected Courses
+        </CardTitle>
+        <Dialog open={showAddGradeLevelDialog} onOpenChange={setShowAddGradeLevelDialog}>
+          <DialogTrigger asChild>
               <Button>
                 <Plus className="h-4 w-4 mr-2" /> Add Course
               </Button>
@@ -126,8 +136,7 @@ export function CourseManagementCard({ courses, gradeLevelId, onRefresh }: Cours
                 </div>
               </form>
             </DialogContent>
-          </Dialog>
-        </CardTitle>
+        </Dialog>
       </CardHeader>
       <CardContent>
         <div className="space-y-6">
@@ -140,6 +149,7 @@ export function CourseManagementCard({ courses, gradeLevelId, onRefresh }: Cours
                   <TableRow>
                     <TableHead>Name</TableHead>
                     <TableHead>Type</TableHead>
+                    <TableHead className="w-10"><span className="sr-only">Remove</span></TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -154,6 +164,16 @@ export function CourseManagementCard({ courses, gradeLevelId, onRefresh }: Cours
                         <Badge variant={course.courses.type === "academic" ? "default" : "secondary"}>
                           {course.courses.type}
                         </Badge>
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8 text-red-500 hover:bg-red-50"
+                          onClick={() => handleRemoveCourse(course.id)}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
                       </TableCell>
                     </TableRow>
                   ))}

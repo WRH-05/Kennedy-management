@@ -104,6 +104,17 @@ export const teacherPayoutService = {
 
         return data || []
     },
+
+    async getTotalPaidPayouts(teacherId: string): Promise<number> {
+        const { data } = await supabase
+            .from('teacher_payouts')
+            .select('amount')
+            .eq('teacher_id', teacherId)
+            .eq('status', 'paid')
+            .throwOnError()
+
+        return (data || []).reduce((sum, p) => sum + (p.amount || 0), 0)
+    },
     async getAllTeachersPayments(
         page = 1,
         pageSize = 0,

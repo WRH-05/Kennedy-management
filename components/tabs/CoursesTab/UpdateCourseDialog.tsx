@@ -73,7 +73,7 @@ export function UpdateCourseDialog({ course, onCourseUpdated, open, onOpenChange
             {/* Trigger is removed here because it's handled by the parent row */}
             <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
                 <DialogHeader>
-                    <DialogTitle>Update Course</DialogTitle>
+                    <DialogTitle>Edit Course</DialogTitle>
                 </DialogHeader>
                 <form onSubmit={handleUpdateCourse} className="space-y-4">
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -111,7 +111,7 @@ export function UpdateCourseDialog({ course, onCourseUpdated, open, onOpenChange
                             Cancel
                         </Button>
                         <Button type="submit" disabled={isSubmitting}>
-                            {isSubmitting ? "Updating..." : "Update Course"} 
+                            {isSubmitting ? "Saving..." : "Save Changes"}
                         </Button>
                     </div>
                 </form>

@@ -107,6 +107,40 @@ export const courseInstancesService = {
         return await this.enrichCoursesWithStudentsBatch(instances);
     },
 
+    async getCourseInstancesByCourseId(courseId: string): Promise<CourseInstanceWithEnrichment[]> {
+        const { data: eligibilities } = await supabase
+            .from('course_eligibility')
+            .select('id')
+            .eq('course_id', courseId)
+            .throwOnError();
+
+        const eligibilityIds = (eligibilities || []).map((e) => e.id);
+
+        if (eligibilityIds.length === 0) return [];
+
+        const { data } = await supabase
+            .from('course_instances')
+            .select('*, teachers(*), course_eligibility(id, courses(*), grade_levels(*))')
+            .in('course_eligibility_id', eligibilityIds)
+            .eq('archived', false)
+            .order('created_at', { ascending: false })
+            .throwOnError();
+
+        return await this.enrichCoursesWithStudentsBatch(data || []);
+    },
+
+    async getCourseInstancesByGradeLevelId(gradeLevelId: string): Promise<CourseInstanceWithEnrichment[]> {
+        const { data } = await supabase
+            .from('course_instances')
+            .select('*, teachers(*), course_eligibility(id, courses(*), grade_levels(*))')
+            .contains('grade_level_ids', [gradeLevelId])
+            .eq('archived', false)
+            .order('created_at', { ascending: false })
+            .throwOnError();
+
+        return await this.enrichCoursesWithStudentsBatch(data || []);
+    },
+
     async enrollStudent(courseId: string, studentId: string, firstBillingId: string) {
         const { data } = await supabase
             .rpc('enroll_student_with_billing', {

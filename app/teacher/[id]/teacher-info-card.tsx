@@ -11,18 +11,24 @@ interface TeacherInfoCardProps {
 }
 
 export function TeacherInfoCard({ teacher }: TeacherInfoCardProps) {
-  const eligibleCourseNames =
-    teacher.teachers_course_eligibility?.flatMap(
-      (tce) => (tce.course_eligibility.courses.name ? [tce.course_eligibility.courses.name] : [])
-    ) ?? []
+  const eligibleCourseNames = Array.from(
+    new Set(
+      teacher.teachers_course_eligibility?.flatMap(
+        (tce) => (tce.course_eligibility.courses.name ? [tce.course_eligibility.courses.name] : [])
+      ) ?? []
+    )
+  )
 
-  const eligibleClassCombinations =
-    teacher.teachers_course_eligibility?.flatMap((tce) => {
-      const courseName = tce.course_eligibility.courses.name
-      const gradeLevelName = tce.course_eligibility.grade_levels?.name
-      const combinedName = gradeLevelName ? `${courseName} (${gradeLevelName})` : courseName
-      return combinedName ? [combinedName] : []
-    }) ?? []
+  const eligibleClassCombinations = Array.from(
+    new Set(
+      teacher.teachers_course_eligibility?.flatMap((tce) => {
+        const courseName = tce.course_eligibility.courses.name
+        const gradeLevelName = tce.course_eligibility.grade_levels?.name
+        const combinedName = gradeLevelName ? `${courseName} (${gradeLevelName})` : courseName
+        return combinedName ? [combinedName] : []
+      }) ?? []
+    )
+  )
 
   const renderBadges = (items: string[], variant: "default" | "secondary") => {
     const validItems = items.filter((item) => item && item.trim())

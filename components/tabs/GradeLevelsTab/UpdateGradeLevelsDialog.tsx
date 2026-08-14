@@ -73,7 +73,7 @@ export function UpdateGradeLevelDialog({ GradeLevel: gradeLevel, onGradeLevelUpd
             {/* Trigger is removed here because it's handled by the parent row */}
             <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
                 <DialogHeader>
-                    <DialogTitle>Update Grade Level</DialogTitle>
+                    <DialogTitle>Edit Grade Level</DialogTitle>
                 </DialogHeader>
                 <form onSubmit={handleUpdateGradeLevel} className="space-y-4">
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -108,7 +108,7 @@ export function UpdateGradeLevelDialog({ GradeLevel: gradeLevel, onGradeLevelUpd
                             Cancel
                         </Button>
                         <Button type="submit" disabled={isSubmitting}>
-                            {isSubmitting ? "Updating..." : "Update Grade Level"}
+                            {isSubmitting ? "Saving..." : "Save Changes"}
                         </Button>
                     </div>
                 </form>

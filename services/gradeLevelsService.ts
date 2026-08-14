@@ -4,7 +4,7 @@ import { createClient } from "@/lib/supabase/client"
 
 const supabase = createClient();
 
-export type AssociatedGradeLevelsCourses = {
+export type AssociatedGradeLevelsCourses = Tables<"course_eligibility"> & {
     courses: Tables<"courses">,
     grade_levels: Tables<"grade_levels">
 }

@@ -119,7 +119,7 @@ export const coursesEligiblityService = {
     ): Promise<{ data: AssociatedGradeLevelsCourses[]; total: number; page: number; pageSize: number }> {
         let query = supabase
             .from('course_eligibility')
-            .select('courses(*), grade_levels(*)', { count: pageSize > 0 ? 'exact' : 'estimated' })
+            .select('id, courses(*), grade_levels(*)', { count: pageSize > 0 ? 'exact' : 'estimated' })
             .eq('course_id', courseId);
 
         query = query.order('created_at', { ascending: false });
@@ -149,7 +149,7 @@ export const coursesEligiblityService = {
     ): Promise<{ data: AssociatedGradeLevelsCourses[]; total: number; page: number; pageSize: number }> {
         let query = supabase
             .from('course_eligibility')
-            .select('courses(*), grade_levels(*)', { count: pageSize > 0 ? 'exact' : 'estimated' })
+            .select('id, courses(*), grade_levels(*)', { count: pageSize > 0 ? 'exact' : 'estimated' })
             .eq('grade_level_id', gradeLevelId);
 
         query = query.order('created_at', { ascending: false });

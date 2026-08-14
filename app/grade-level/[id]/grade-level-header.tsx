@@ -1,10 +1,10 @@
 "use client"
 
 import { Button } from "@/components/ui/button"
-import { ArrowLeft } from "lucide-react"
+import { ArrowLeft, Edit3 } from "lucide-react"
 import { useRouter } from "next/navigation"
 
-export function CourseHeader() {
+export function CourseHeader({ onEdit }: { onEdit?: () => void }) {
     const router = useRouter()
 
     return (
@@ -18,6 +18,12 @@ export function CourseHeader() {
                         </Button>
                         <h1 className="text-xl font-semibold text-gray-900">Grade Level</h1>
                     </div>
+                    {onEdit && (
+                        <Button variant="outline" size="sm" onClick={onEdit}>
+                            <Edit3 className="h-4 w-4 mr-2" />
+                            Edit Grade Level
+                        </Button>
+                    )}
                 </div>
             </div>
         </header>
