@@ -113,7 +113,7 @@
    * like `[data-radix-portal]` never matches. Hiding every direct child except
    * the report is the only reliable way to suppress the dialog during print.
    */
-  body > *:not(#printable-payout-report) {
+  body > *:not(#printable-payout-report):not(#printable-thermal-receipt) {
     display: none !important;
   }
 
@@ -129,5 +129,15 @@
     border: none !important;
     -webkit-print-color-adjust: exact;
     print-color-adjust: exact;
+  }
+
+  #printable-thermal-receipt {
+    display: block !important;
+    width: 80mm !important;
+    margin: 0 auto !important;
+    padding: 5mm !important;
+    font-family: monospace !important;
+    background: #fff !important;
+    color: #000 !important;
   }
 }

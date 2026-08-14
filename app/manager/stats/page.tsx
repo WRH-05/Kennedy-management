@@ -5,7 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Progress } from "@/components/ui/progress"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
-import { TrendingUp, DollarSign, Users, Wallet, BarChart3, Loader2, Receipt, GraduationCap, type LucideIcon } from "lucide-react"
+import { TrendingUp, DollarSign, Users, Wallet, BarChart3, Loader2, Receipt, GraduationCap, BookOpen, type LucideIcon } from "lucide-react"
 import { useStats } from "@/hooks/useStats"
 import { DateRangeKey, StatsData } from "@/services/statsService"
 
@@ -223,7 +223,7 @@ export default function StatsPage() {
         </div>
       ) : (
         <>
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             <KpiCard
               title="Total Income"
               icon={TrendingUp}
@@ -250,6 +250,18 @@ export default function StatsPage() {
               icon={Users}
               value={stats.activeStudents}
               caption="Enrolled, non-archived"
+            />
+            <KpiCard
+              title="Total Teachers"
+              icon={GraduationCap}
+              value={stats.totalTeachers}
+              caption="Non-archived teachers"
+            />
+            <KpiCard
+              title="Total Courses"
+              icon={BookOpen}
+              value={stats.totalCourses}
+              caption="All courses"
             />
           </div>
 

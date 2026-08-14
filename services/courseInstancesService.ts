@@ -1,5 +1,6 @@
 import { createClient } from "@/lib/supabase/client"
 import { Tables, TablesInsert, TablesUpdate } from "@/types/database.types"
+import { getCourseDisplayName } from "@/lib/course-display"
 
 const supabase = createClient();
 
@@ -29,6 +30,14 @@ export type CourseInstancesResponse = Awaited<
 >
 
 export type CourseInstance = CourseInstancesResponse["data"][number];
+
+export type TodayScheduleItem = {
+    courseInstanceId: string;
+    displayName: string;
+    teacherName: string;
+    startTime: string;
+    endTime: string;
+};
 
 
 export const courseInstancesService = {
@@ -139,6 +148,31 @@ export const courseInstancesService = {
             .throwOnError();
 
         return await this.enrichCoursesWithStudentsBatch(data || []);
+    },
+
+    async getTodaysSchedule(day: string): Promise<TodayScheduleItem[]> {
+        const { data } = await supabase
+            .from('course_instances')
+            .select('*, course_schedule!inner(*), teachers(name), course_eligibility(id, courses(name), grade_levels(name))')
+            .eq('archived', false)
+            .eq('course_schedule.day', day as any)
+            .throwOnError();
+
+        const rows: TodayScheduleItem[] = [];
+        for (const ci of (data || []) as any[]) {
+            const slots = (ci.course_schedule || []).filter((s: any) => s.day === day);
+            for (const slot of slots) {
+                rows.push({
+                    courseInstanceId: ci.id,
+                    displayName: getCourseDisplayName(ci),
+                    teacherName: ci.teachers?.name || '-',
+                    startTime: slot.start_time?.slice(0, 5) || '',
+                    endTime: slot.end_time?.slice(0, 5) || '',
+                });
+            }
+        }
+        rows.sort((a, b) => a.startTime.localeCompare(b.startTime));
+        return rows;
     },
 
     async enrollStudent(courseId: string, studentId: string, firstBillingId: string) {

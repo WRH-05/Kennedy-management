@@ -33,6 +33,8 @@ export interface StatsData {
   droppedStudents: number
   fixedSalaryPayouts: number
   percentagePayouts: number
+  totalTeachers: number
+  totalCourses: number
   topClasses: TopClass[]
   recentCollections: RecentCollection[]
 }
@@ -76,13 +78,12 @@ export const statsService = {
     const payoutsQuery = (() => {
       let q = supabase
         .from("teacher_payouts")
-        .select("amount, status, payment_date, course_instances(compensation_type)")
+        .select("amount, status, payment_date, created_at, course_instances(compensation_type)")
         .eq("status", "paid")
-      if (start.date) q = q.gte("payment_date", start.date)
       return q
     })()
 
-    const [paymentsRes, payoutsRes, studentsRes, enrollmentsRes, instancesRes] = await Promise.all([
+    const [paymentsRes, payoutsRes, studentsRes, enrollmentsRes, instancesRes, teachersCountRes, coursesCountRes] = await Promise.all([
       paymentsQuery.throwOnError(),
       payoutsQuery.throwOnError(),
       supabase.from("students").select("id, registration_fee_paid").eq("archived", false).throwOnError(),
@@ -92,6 +93,8 @@ export const statsService = {
         .select("id, display_name, max_students, teachers(name), course_eligibility(courses(name), grade_levels(name))")
         .eq("archived", false)
         .throwOnError(),
+      supabase.from("teachers").select("id", { count: "exact", head: true }).eq("archived", false).throwOnError(),
+      supabase.from("courses").select("id", { count: "exact", head: true }).throwOnError(),
     ])
 
     const payments: any[] = paymentsRes.data || []
@@ -99,6 +102,8 @@ export const statsService = {
     const students: any[] = studentsRes.data || []
     const enrollments: any[] = enrollmentsRes.data || []
     const instances: any[] = instancesRes.data || []
+    const totalTeachers = teachersCountRes.count ?? 0
+    const totalCourses = coursesCountRes.count ?? 0
 
     // Financial totals (paid student payments split by source)
     let tuitionRevenue = 0
@@ -115,6 +120,8 @@ export const statsService = {
     let fixedSalaryPayouts = 0
     let percentagePayouts = 0
     for (const t of payouts) {
+      const effectiveDate = (t.payment_date || t.created_at || "").slice(0, 10)
+      if (start.date && effectiveDate && effectiveDate < start.date) continue
       const amount = Number(t.amount) || 0
       teacherExpenses += amount
       if (t.course_instances?.compensation_type === "fixed_salary") fixedSalaryPayouts += amount
@@ -171,6 +178,8 @@ export const statsService = {
       droppedStudents: droppedSet.size,
       fixedSalaryPayouts,
       percentagePayouts,
+      totalTeachers,
+      totalCourses,
       topClasses,
       recentCollections,
     }

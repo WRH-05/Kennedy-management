@@ -315,6 +315,7 @@ export function UpdateCourseInstanceDialog({
                     <Checkbox
                       id="edit-is-individual"
                       checked={isIndividual}
+                      disabled={true}
                       onCheckedChange={(checked) => setIsIndividual(checked as boolean)}
                     />
                     <Label htmlFor="edit-is-individual">Individual Course / Private Lesson</Label>
@@ -334,6 +335,9 @@ export function UpdateCourseInstanceDialog({
                     </div>
                   )}
                 </div>
+                <p className="text-xs text-muted-foreground">
+                  Course instance type (Group vs Private) cannot be modified after creation.
+                </p>
               </div>
 
               {/* Weekly Schedule Slots */}

@@ -20,6 +20,8 @@ import { Badge } from "@/components/ui/badge"
 import { Enums, Tables } from "@/types/database.types"
 import { EnrichedCourseEnrollements } from "@/services/courseEnrollmentService"
 import { revalidateData } from "@/hooks/swr-config"
+import { useAuth } from "@/context/AuthContext"
+import { StudentPaymentReceipt, type StudentReceiptData } from "@/components/dashboard/StudentPaymentReceipt"
 
 const PAYMENT_STATUSES = [
   { value: "paid", label: "Paid" },
@@ -48,9 +50,11 @@ export function StudentsManagementCard({
   courseInstance, selectedPeriodId, filteredStudents, studentSearchQuery, billingPeriods, setStudentSearchQuery, onRefresh, setSelectedPeriodId
 }: StudentsManagementProps) {
   const router = useRouter()
+  const { profile } = useAuth()
   const [showAddStudentDialog, setShowAddStudentDialog] = useState(false)
   const [selectedStudent, setSelectedStudent] = useState("")
   const [showStudentResults, setShowStudentResults] = useState(false)
+  const [receiptData, setReceiptData] = useState<StudentReceiptData | null>(null)
 
   // SWR Hooks
   const { payments, isLoading, mutate } = useStudentsData(selectedPeriodId);
@@ -115,6 +119,35 @@ export function StudentsManagementCard({
     } catch (error) {
       console.error(error)
     }
+  }
+
+  const handlePayAndPrint = async (p: any) => {
+    const studentId = p.students?.id
+    if (!studentId) return
+    await onChangeStudentPaymentStatus(studentId, 'paid')
+    setReceiptData({
+      receiptId: p.id,
+      studentName: p.students?.name || "Unknown Student",
+      parentPhone: p.students?.parent_phone ?? null,
+      amount: courseInstance.price,
+      sourceLabel: "Course Tuition",
+      className: courseInstance.display_name || "Course",
+      recordedByName: profile?.full_name || "-",
+      paymentDate: new Date().toISOString(),
+    })
+  }
+
+  const handleReprint = (p: any) => {
+    setReceiptData({
+      receiptId: p.id,
+      studentName: p.students?.name || "Unknown Student",
+      parentPhone: p.students?.parent_phone ?? null,
+      amount: Number(p.amount) || courseInstance.price,
+      sourceLabel: "Course Tuition",
+      className: courseInstance.display_name || "Course",
+      recordedByName: profile?.full_name || "-",
+      paymentDate: p.payment_date || p.created_at || new Date().toISOString(),
+    })
   }
 
   const getStatusBadge = (status: string) => {
@@ -312,7 +345,14 @@ export function StudentsManagementCard({
                     <TableCell className="group">
                       <div className="flex items-center justify-between">
                         {isPaid ? (
-                          <span className="text-xs text-emerald-600 font-medium">Paid</span>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="text-xs text-emerald-600 font-medium p-0 h-auto"
+                            onClick={() => handleReprint(p)}
+                          >
+                            Paid
+                          </Button>
                         ) : isFinalizedEnrollment ? (
                           <span className="text-xs text-rose-600 font-medium">Dropped</span>
                         ) : p.status === 'cancelled' ? (
@@ -326,7 +366,7 @@ export function StudentsManagementCard({
                             </DropdownMenuTrigger>
                             <DropdownMenuContent align="end">
                               <DropdownMenuItem
-                                onClick={() => onChangeStudentPaymentStatus(currentStudentId, 'paid')}
+                                onClick={() => handlePayAndPrint(p)}
                                 className="text-emerald-600 focus:text-emerald-600 cursor-pointer"
                               >
                                 <Check className="mr-2 h-4 w-4" />
@@ -344,6 +384,9 @@ export function StudentsManagementCard({
           </TableBody>
         </Table>
       </CardContent>
+      {receiptData && (
+        <StudentPaymentReceipt data={receiptData} onDone={() => setReceiptData(null)} />
+      )}
     </Card>
   )
 }

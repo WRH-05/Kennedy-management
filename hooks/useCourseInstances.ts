@@ -86,3 +86,21 @@ export function useCourseInstancesByStudent(studentId: string ) {
     mutate: () => mutate(`course-instances-student-${studentId}`),
   }
 }
+
+export function useTodaySchedule() {
+  const day = new Date().toLocaleDateString('en-US', { weekday: 'long' }).toLowerCase()
+  const key = `today-schedule-${day}`
+  const { data, error, isLoading, isValidating } = useSWR(
+    key,
+    () => courseInstancesService.getTodaysSchedule(day),
+    swrConfig
+  )
+
+  return {
+    schedule: data || [],
+    isLoading,
+    isValidating,
+    error,
+    mutate: () => mutate(key),
+  }
+}
