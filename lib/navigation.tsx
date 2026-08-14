@@ -7,6 +7,7 @@ import {
   Briefcase,
   TrendingUp,
   CalendarDays,
+  BarChart3,
   type LucideIcon,
 } from "lucide-react"
 
@@ -91,6 +92,15 @@ export const ALL_NAVIGATION_CARDS: NavItem[] = [
     icon: <Layers className="h-5 w-5 text-teal-600" />,
     iconComponent: Layers,
     iconClassName: "text-teal-600",
+    allowedRoles: ["owner", "manager"],
+  },
+  {
+    title: "Analytics & Stats",
+    description: "School financial health and class performance",
+    href: "/manager/stats",
+    icon: <BarChart3 className="h-5 w-5 text-purple-600" />,
+    iconComponent: BarChart3,
+    iconClassName: "text-purple-600",
     allowedRoles: ["owner", "manager"],
   },
 ]
