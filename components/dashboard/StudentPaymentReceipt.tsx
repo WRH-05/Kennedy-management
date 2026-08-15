@@ -64,6 +64,7 @@ export function printStudentReceipt(data: StudentReceiptData, settings: ReceiptS
       <div>________________</div>
       <div>Cachet et Signature</div>
     </div>
+    <div class="stamp-space"></div>
   `
 
   const el = document.createElement("div")
