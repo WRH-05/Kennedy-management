@@ -21,7 +21,8 @@ import { Enums, Tables } from "@/types/database.types"
 import { EnrichedCourseEnrollements } from "@/services/courseEnrollmentService"
 import { revalidateData } from "@/hooks/swr-config"
 import { useAuth } from "@/context/AuthContext"
-import { StudentPaymentReceipt, type StudentReceiptData } from "@/components/dashboard/StudentPaymentReceipt"
+import { printStudentReceipt } from "@/components/dashboard/StudentPaymentReceipt"
+import { useSchoolSettings } from "@/hooks/useSchoolSettings"
 
 const PAYMENT_STATUSES = [
   { value: "paid", label: "Paid" },
@@ -51,10 +52,10 @@ export function StudentsManagementCard({
 }: StudentsManagementProps) {
   const router = useRouter()
   const { profile } = useAuth()
+  const { settings } = useSchoolSettings()
   const [showAddStudentDialog, setShowAddStudentDialog] = useState(false)
   const [selectedStudent, setSelectedStudent] = useState("")
   const [showStudentResults, setShowStudentResults] = useState(false)
-  const [receiptData, setReceiptData] = useState<StudentReceiptData | null>(null)
 
   // SWR Hooks
   const { payments, isLoading, mutate } = useStudentsData(selectedPeriodId);
@@ -106,7 +107,7 @@ export function StudentsManagementCard({
     }
   }
 
-  const onChangeStudentPaymentStatus = async (student_id: string, status: Enums<"payment_status">) => {
+  const onChangeStudentPaymentStatus = async (student_id: string, status: Enums<"payment_status">): Promise<boolean> => {
     try {
       const updates: any = { status, amount: courseInstance.price }
       if (status === 'paid') {
@@ -116,38 +117,42 @@ export function StudentsManagementCard({
 
       await mutate()
       onRefresh()
+      return true
     } catch (error) {
       console.error(error)
+      return false
     }
   }
 
   const handlePayAndPrint = async (p: any) => {
     const studentId = p.students?.id
     if (!studentId) return
-    await onChangeStudentPaymentStatus(studentId, 'paid')
-    setReceiptData({
+    const ok = await onChangeStudentPaymentStatus(studentId, 'paid')
+    if (!ok) return
+    revalidateData('course-instances')
+    printStudentReceipt({
       receiptId: p.id,
       studentName: p.students?.name || "Unknown Student",
       parentPhone: p.students?.parent_phone ?? null,
       amount: courseInstance.price,
-      sourceLabel: "Course Tuition",
+      sourceLabel: "Frais de Cours",
       className: courseInstance.display_name || "Course",
       recordedByName: profile?.full_name || "-",
       paymentDate: new Date().toISOString(),
-    })
+    }, settings)
   }
 
   const handleReprint = (p: any) => {
-    setReceiptData({
+    printStudentReceipt({
       receiptId: p.id,
       studentName: p.students?.name || "Unknown Student",
       parentPhone: p.students?.parent_phone ?? null,
       amount: Number(p.amount) || courseInstance.price,
-      sourceLabel: "Course Tuition",
+      sourceLabel: "Frais de Cours",
       className: courseInstance.display_name || "Course",
       recordedByName: profile?.full_name || "-",
       paymentDate: p.payment_date || p.created_at || new Date().toISOString(),
-    })
+    }, settings)
   }
 
   const getStatusBadge = (status: string) => {
@@ -384,9 +389,6 @@ export function StudentsManagementCard({
           </TableBody>
         </Table>
       </CardContent>
-      {receiptData && (
-        <StudentPaymentReceipt data={receiptData} onDone={() => setReceiptData(null)} />
-      )}
     </Card>
   )
 }

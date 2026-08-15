@@ -96,6 +96,11 @@
     margin: 12mm;
   }
 
+  @page receipt {
+    size: 80mm auto;
+    margin: 0;
+  }
+
   body {
     background: #fff !important;
     color: #000 !important;
@@ -131,13 +136,58 @@
     print-color-adjust: exact;
   }
 
-  #printable-thermal-receipt {
-    display: block !important;
-    width: 80mm !important;
-    margin: 0 auto !important;
-    padding: 5mm !important;
-    font-family: monospace !important;
+  /* Thermal receipt print overrides */
+  body.printing-receipt {
     background: #fff !important;
     color: #000 !important;
+    margin: 0 !important;
+    padding: 0 !important;
+  }
+
+  /* Hide everything except the receipt while printing (visibility keeps boxes,
+     then the receipt subtree is re-shown below). */
+  body.printing-receipt * {
+    visibility: hidden !important;
+  }
+
+  body.printing-receipt #app-root,
+  body.printing-receipt main,
+  body.printing-receipt header,
+  body.printing-receipt nav,
+  body.printing-receipt aside,
+  body.printing-receipt [data-radix-portal],
+  body.printing-receipt .no-print {
+    display: none !important;
+  }
+
+  body.printing-receipt #printable-thermal-receipt,
+  body.printing-receipt #printable-thermal-receipt * {
+    display: block !important;
+    visibility: visible !important;
+    color: #000 !important;
+    opacity: 1 !important;
+  }
+
+  body.printing-receipt #printable-thermal-receipt {
+    page: receipt;
+    width: 80mm !important;
+    max-width: 80mm !important;
+    margin: 0 auto !important;
+    padding: 3mm !important;
+    font-family: 'Courier New', Courier, monospace !important;
+    font-size: 11px !important;
+    line-height: 1.3 !important;
+    color: #000 !important;
+    background: #fff !important;
+    box-shadow: none !important;
+    border: none !important;
+  }
+
+  body.printing-receipt #printable-thermal-receipt img.receipt-logo {
+    display: block !important;
+    margin: 0 auto 3mm auto !important;
+    max-height: 14mm !important;
+    max-width: 50mm !important;
+    object-fit: contain !important;
   }
 }
