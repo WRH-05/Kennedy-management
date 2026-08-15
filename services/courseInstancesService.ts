@@ -49,7 +49,7 @@ export const courseInstancesService = {
 
         let query = supabase
             .from('course_instances')
-            .select('*, teachers(*), course_eligibility(id, courses(*), grade_levels(*)), course_enrollments(*, students(*))', { count: 'exact' });
+            .select('*, teachers(*), course_eligibility(id, courses(*), grade_levels(*)), course_enrollments(*, students(*)), course_schedule(*)', { count: 'exact' });
 
         if (!includeArchived) {
             query = query.eq('archived', false);

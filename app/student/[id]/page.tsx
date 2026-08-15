@@ -109,6 +109,10 @@ function StudentDashboardContent() {
 
   const missedPayments = payments.filter((p) => p.status != 'paid').length
 
+  const isCardUnlocked =
+    student.registration_fee_paid &&
+    Boolean(student.name && (student as any).parent_phone && student.birth_date)
+
   return (
     <div>
       <header className="bg-white shadow-sm border-b">
@@ -231,10 +235,15 @@ function StudentDashboardContent() {
                     <span className="text-xs text-muted-foreground">{paidAllTime.toLocaleString()} DA</span>
                   </div>
                 </div>
-                <Button onClick={downloadStudentCard} className="w-full">
+                <Button onClick={downloadStudentCard} className="w-full" disabled={!isCardUnlocked}>
                   <Download className="h-4 w-4 mr-2" />
                   Download Student Card
                 </Button>
+                {!isCardUnlocked && (
+                  <p className="text-xs text-muted-foreground text-center">
+                    Registration fee payment and complete student information are required to unlock student card.
+                  </p>
+                )}
               </CardContent>
             </Card>
 

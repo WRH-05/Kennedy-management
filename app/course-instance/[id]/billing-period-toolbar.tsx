@@ -21,7 +21,7 @@ interface BillingPeriodToolbarProps {
 
 const STATUS_COLORS: Record<string, string> = {
   red: 'bg-red-500',
-  orange: 'bg-orange-500',
+  orange: 'bg-amber-400',
   green: 'bg-green-500',
 }
 

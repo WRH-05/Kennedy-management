@@ -51,3 +51,33 @@ export const VALID_WEEK_DAYS = ["monday", "tuesday", "wednesday", "thursday", "f
 export function isValidWeekDay(day: string): boolean {
   return VALID_WEEK_DAYS.includes(day as any)
 }
+
+const DAY_INDEX: Record<string, number> = {
+  sunday: 0,
+  monday: 1,
+  tuesday: 2,
+  wednesday: 3,
+  thursday: 4,
+  friday: 5,
+  saturday: 6,
+}
+
+export function minutesUntilNextSession(schedules: Tables<"course_schedule">[], now: Date = new Date()): number {
+  if (!schedules || schedules.length === 0) return Number.POSITIVE_INFINITY
+
+  const nowDay = now.getDay()
+  const nowMinutes = now.getHours() * 60 + now.getMinutes()
+  const nowAbs = nowDay * 1440 + nowMinutes
+
+  let best = Number.POSITIVE_INFINITY
+  for (const s of schedules) {
+    const dayIdx = DAY_INDEX[s.day]
+    if (dayIdx === undefined) continue
+    const [h, m] = (s.start_time || "00:00").slice(0, 5).split(":").map(Number)
+    const slotMinutes = (h || 0) * 60 + (m || 0)
+    const slotAbs = dayIdx * 1440 + slotMinutes
+    const delta = (slotAbs - nowAbs + 7 * 1440) % (7 * 1440)
+    if (delta < best) best = delta
+  }
+  return best
+}
