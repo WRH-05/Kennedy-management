@@ -22,6 +22,7 @@ export default function SettingsPage() {
   const [phone, setPhone] = useState("")
   const [registrationFee, setRegistrationFee] = useState(500)
   const [logoUrl, setLogoUrl] = useState("/home.png")
+  const [previousLogoUrls, setPreviousLogoUrls] = useState<string[]>([])
   const [isSaving, setIsSaving] = useState(false)
   const [isUploading, setIsUploading] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
@@ -33,6 +34,7 @@ export default function SettingsPage() {
       setPhone(settings.phone || "")
       setRegistrationFee(settings.default_registration_fee || 500)
       setLogoUrl(settings.logo_url || "/home.png")
+      setPreviousLogoUrls(settings.previous_logo_urls || [])
     }
   }, [settings])
 
@@ -65,14 +67,30 @@ export default function SettingsPage() {
 
     setIsUploading(true)
     try {
-      const publicUrl = await schoolSettingsService.uploadLogo(file)
-      setLogoUrl(publicUrl)
+      const updated = await schoolSettingsService.uploadLogo(file)
+      setLogoUrl(updated.logo_url || "/home.png")
+      setPreviousLogoUrls(updated.previous_logo_urls || [])
+      await mutate()
       toast({ title: "Success", description: "Logo uploaded." })
     } catch (error) {
       console.error("Failed to upload logo:", error)
       toast({ title: "Error", description: "Failed to upload logo.", variant: "destructive" })
     } finally {
       setIsUploading(false)
+    }
+  }
+
+  const handleSelectPreviousLogo = async (url: string) => {
+    if (!canEdit) return
+    try {
+      const updated = await schoolSettingsService.selectPreviousLogo(url)
+      setLogoUrl(updated.logo_url || "/home.png")
+      setPreviousLogoUrls(updated.previous_logo_urls || [])
+      await mutate()
+      toast({ title: "Success", description: "Logo updated." })
+    } catch (error) {
+      console.error("Failed to select previous logo:", error)
+      toast({ title: "Error", description: "Failed to update logo.", variant: "destructive" })
     }
   }
 
@@ -127,6 +145,25 @@ export default function SettingsPage() {
                   </div>
                 )}
               </div>
+
+              {previousLogoUrls.length > 0 && (
+                <div className="space-y-2">
+                  <Label>Previous Logos</Label>
+                  <div className="flex items-center gap-3">
+                    {previousLogoUrls.slice(0, 3).map((url) => (
+                      <img
+                        key={url}
+                        src={url}
+                        alt="Previous Logo"
+                        className="h-12 w-auto object-contain rounded border cursor-pointer transition-colors hover:border-primary"
+                        title="Click to use this logo"
+                        onClick={() => handleSelectPreviousLogo(url)}
+                        onError={(e) => { (e.target as HTMLImageElement).src = '/home.png' }}
+                      />
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
 
             {/* School Name */}

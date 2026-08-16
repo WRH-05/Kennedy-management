@@ -8,6 +8,7 @@ export interface SchoolSettings {
   address: string | null
   phone: string | null
   logo_url: string | null
+  previous_logo_urls: string[] | null
   default_registration_fee: number | null
   created_at: string | null
   updated_at: string | null
@@ -15,6 +16,12 @@ export interface SchoolSettings {
 
 // Helper: cast the supabase client to accept our custom table name
 const db = supabase as any
+
+// Extract the storage object path (after "/logos/") from a public logo URL.
+function extractLogoPath(url: string): string | null {
+  const idx = url.indexOf('/logos/')
+  return idx === -1 ? null : url.slice(idx + '/logos/'.length)
+}
 
 let cachedId: string | null = null
 
@@ -48,6 +55,7 @@ export const schoolSettingsService = {
         address: '',
         phone: '',
         logo_url: '/home.png',
+        previous_logo_urls: [],
         default_registration_fee: 500,
         created_at: now,
         updated_at: now,
@@ -84,7 +92,7 @@ export const schoolSettingsService = {
     return data as SchoolSettings
   },
 
-  async uploadLogo(file: File): Promise<string> {
+  async uploadLogo(file: File): Promise<SchoolSettings> {
     const fileExt = file.name.split('.').pop()
     const fileName = `logo-${Date.now()}.${fileExt}`
 
@@ -101,6 +109,41 @@ export const schoolSettingsService = {
       .from('logos')
       .getPublicUrl(fileName)
 
-    return urlData.publicUrl
+    const newLogoUrl = urlData.publicUrl
+    const current = await this.getSettings()
+
+    // Prepend the current logo to the history (newest first), skipping the placeholder.
+    const prev = current.logo_url && current.logo_url !== '/home.png'
+      ? [current.logo_url, ...(current.previous_logo_urls || []).filter(u => u !== current.logo_url)]
+      : (current.previous_logo_urls || [])
+
+    // Cap the history at 3 entries; evict the oldest (4th) file from storage.
+    let evictedUrl: string | null = null
+    let next = prev
+    if (next.length > 3) {
+      evictedUrl = next[next.length - 1]
+      next = next.slice(0, 3)
+    }
+
+    const updated = await this.updateSettings({ logo_url: newLogoUrl, previous_logo_urls: next })
+
+    if (evictedUrl) {
+      const path = extractLogoPath(evictedUrl)
+      if (path) await supabase.storage.from('logos').remove([path])
+    }
+
+    return updated
+  },
+
+  async selectPreviousLogo(selectedUrl: string): Promise<SchoolSettings> {
+    const current = await this.getSettings()
+
+    // Promote the selected URL to active and move the former logo into the history.
+    const rest = (current.previous_logo_urls || []).filter(u => u !== selectedUrl)
+    const prev = current.logo_url && current.logo_url !== '/home.png'
+      ? [current.logo_url, ...rest]
+      : rest
+
+    return this.updateSettings({ logo_url: selectedUrl, previous_logo_urls: prev })
   },
 }

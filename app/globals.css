@@ -186,6 +186,7 @@
 
   body.printing-receipt #printable-thermal-receipt img.receipt-logo {
     display: block !important;
+    visibility: visible !important;
     margin: 0 auto 3mm auto !important;
     max-height: 14mm !important;
     max-width: 50mm !important;
