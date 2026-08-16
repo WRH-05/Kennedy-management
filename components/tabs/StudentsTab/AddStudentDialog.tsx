@@ -85,11 +85,11 @@ export function AddStudentDialog({ onStudentAdded }: AddStudentDialogProps) {
                 return
             }
 
-            // Require at least one academic grade level
-            if (!academicLevel) {
+            // Require at least one grade level (academic or extracurricular)
+            if (!academicLevel && extracurricularLevels.length === 0) {
                 toast({
                     title: "Grade Level Required",
-                    description: "Please select an academic grade level.",
+                    description: "Please select at least one grade level.",
                     variant: "destructive",
                 })
                 setIsSubmitting(false)
@@ -98,7 +98,7 @@ export function AddStudentDialog({ onStudentAdded }: AddStudentDialogProps) {
 
             const payload: TablesInsert<"students"> = {
                 ...newStudent,
-                school_level: academicLevel.id,
+                school_level: academicLevel ? academicLevel.id : (null as any),
                 extracurricular_grade_level_ids: extracurricularLevels.map((l) => l.id),
             }
 

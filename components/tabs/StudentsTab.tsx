@@ -62,7 +62,10 @@ export default function StudentsTab({
                       {student.name}
                     </Button>
                   </TableCell>
-                  <TableCell className="capitalize">{student.grade_levels.name}</TableCell>
+                  <TableCell className="capitalize">
+                    {student.grade_levels?.name ||
+                      (student.extracurricular_grade_level_ids?.length ? "Extracurricular" : "—")}
+                  </TableCell>
                   {showPaymentStatus && (
                     <TableCell>
                       <Badge variant={student.registration_fee_paid ? "default" : "destructive"}>

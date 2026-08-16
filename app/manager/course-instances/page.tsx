@@ -1,9 +1,8 @@
 "use client"
 import { useMemo, useState } from "react"
-import { usePaginatedCourseInstances } from "@/hooks/useCourseInstances"
+import { useCourseInstances } from "@/hooks/useCourseInstances"
 
-import CourseInstancesTab from "@/components/tabs/CoursesInstancesTab"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import CourseInstancesTab, { type CourseInstanceSort } from "@/components/tabs/CoursesInstancesTab"
 import { getCourseDisplayName } from "@/lib/course-display"
 import { minutesUntilNextSession } from "@/lib/schedule"
 import { revalidateData } from "@/hooks/swr-config"
@@ -45,10 +44,10 @@ function getPageItems(page: number, totalPages: number) {
 
 export default function CoursesPage() {
   const [page, setPage] = useState(1)
-  const [sort, setSort] = useState<'default' | 'closest' | 'name' | 'teacher'>('default')
-  const { courseInstances: allCourses, total, isLoading: isCourseLoading, mutate } = usePaginatedCourseInstances(page, PAGE_SIZE)
+  const [sort, setSort] = useState<CourseInstanceSort>('default')
+  const { data: allCourses, isLoading: isCourseLoading, mutate } = useCourseInstances()
 
-  const courseInstances = useMemo(() => {
+  const sortedCourses = useMemo(() => {
     const list = [...allCourses];
     if (sort === 'name') {
       list.sort((a, b) => getCourseDisplayName(a).localeCompare(getCourseDisplayName(b)))
@@ -62,32 +61,25 @@ export default function CoursesPage() {
     return list;
   }, [allCourses, sort]);
 
-
+  const handleSortChange = (value: CourseInstanceSort) => {
+    setSort(value)
+    setPage(1)
+  }
 
   if (isCourseLoading) return <div className="p-8 text-center text-gray-500">Loading Course Instances...</div>
 
+  const total = sortedCourses.length
   const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE))
+  const courseInstances = sortedCourses.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE)
 
   return (
     <div className="space-y-6">
-      <div className="flex justify-end">
-        <Select value={sort} onValueChange={(v) => setSort(v as 'default' | 'closest' | 'name' | 'teacher')}>
-          <SelectTrigger className="w-48">
-            <SelectValue placeholder="Sort by" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="default">Default</SelectItem>
-            <SelectItem value="closest">Closest to Happen</SelectItem>
-            <SelectItem value="name">Name</SelectItem>
-            <SelectItem value="teacher">Teacher</SelectItem>
-          </SelectContent>
-        </Select>
-      </div>
-
       <CourseInstancesTab
         courseInstances={courseInstances}
         onCoursesUpdate={() => { mutate(); revalidateData('course-instances') }}
         canAdd={true}
+        sort={sort}
+        onSortChange={handleSortChange}
       />
 
       <Pagination className="pt-4">

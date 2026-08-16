@@ -109,9 +109,10 @@ function StudentDashboardContent() {
 
   const missedPayments = payments.filter((p) => p.status != 'paid').length
 
+  const hasPhone = Boolean(student.phone || (student as any).parent_phone);
   const isCardUnlocked =
     student.registration_fee_paid &&
-    Boolean(student.name && (student as any).parent_phone && student.birth_date)
+    Boolean(student.name && hasPhone && student.birth_date)
 
   return (
     <div>

@@ -76,7 +76,8 @@ export function minutesUntilNextSession(schedules: Tables<"course_schedule">[], 
     const [h, m] = (s.start_time || "00:00").slice(0, 5).split(":").map(Number)
     const slotMinutes = (h || 0) * 60 + (m || 0)
     const slotAbs = dayIdx * 1440 + slotMinutes
-    const delta = (slotAbs - nowAbs + 7 * 1440) % (7 * 1440)
+    let delta = slotAbs - nowAbs
+    if (delta < 0) delta += 7 * 1440
     if (delta < best) best = delta
   }
   return best

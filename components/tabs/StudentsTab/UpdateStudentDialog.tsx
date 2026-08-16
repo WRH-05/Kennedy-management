@@ -111,10 +111,10 @@ export function UpdateStudentDialog({
 
     setIsSubmitting(true)
     try {
-      if (!academicLevel) {
+      if (!academicLevel && extracurricularLevels.length === 0) {
         toast({
           title: "Grade Level Required",
-          description: "Please select an academic grade level.",
+          description: "Please select at least one grade level.",
           variant: "destructive",
         })
         setIsSubmitting(false)
@@ -123,7 +123,7 @@ export function UpdateStudentDialog({
 
       await studentService.updateStudent(student.id, {
         ...formData,
-        school_level: academicLevel.id,
+        school_level: academicLevel ? academicLevel.id : (null as any),
         extracurricular_grade_level_ids: extracurricularLevels.map((l) => l.id),
       })
       toast({

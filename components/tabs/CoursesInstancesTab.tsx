@@ -6,17 +6,24 @@ import { BookOpen } from "lucide-react"
 import { AddCourseDialog } from "./CourseInstancesTab/AddCourseInstanceDialog"
 import { CourseInstanceTableRow } from "./CourseInstancesTab/CourseInstanceTableRow"
 import { CourseInstance } from "@/services/courseInstancesService"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+
+export type CourseInstanceSort = "default" | "closest" | "name" | "teacher"
 
 interface CourseIntancesTabProps {
   courseInstances: CourseInstance[]
   onCoursesUpdate: (courseInstances: CourseInstance[]) => void
   canAdd?: boolean
+  sort: CourseInstanceSort
+  onSortChange: (sort: CourseInstanceSort) => void
 }
 
 export default function CoursesTab({
   courseInstances,
   onCoursesUpdate,
   canAdd = false,
+  sort,
+  onSortChange,
 }: CourseIntancesTabProps) {
 
   return (
@@ -27,11 +34,24 @@ export default function CoursesTab({
             <BookOpen className="h-5 w-5 mr-2" />
             All Course Instances
           </CardTitle>
-          {canAdd && (
-            <AddCourseDialog
-              onCourseAdded={onCoursesUpdate}
-            />
-          )}
+          <div className="flex items-center gap-2">
+            <Select value={sort} onValueChange={(v) => onSortChange(v as CourseInstanceSort)}>
+              <SelectTrigger className="w-48">
+                <SelectValue placeholder="Sort by" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="default">Default</SelectItem>
+                <SelectItem value="closest">Next</SelectItem>
+                <SelectItem value="name">Name</SelectItem>
+                <SelectItem value="teacher">Teacher</SelectItem>
+              </SelectContent>
+            </Select>
+            {canAdd && (
+              <AddCourseDialog
+                onCourseAdded={onCoursesUpdate}
+              />
+            )}
+          </div>
         </div>
       </CardHeader>
       <CardContent>
