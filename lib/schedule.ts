@@ -82,3 +82,47 @@ export function minutesUntilNextSession(schedules: Tables<"course_schedule">[], 
   }
   return best
 }
+
+// Expand a weekly course_schedule into concrete "YYYY-MM-DD" session dates
+// within [startDate, endDate] inclusive, sorted ascending.
+export function getSessionDates(
+  schedules: Tables<"course_schedule">[],
+  startDate: string,
+  endDate: string
+): string[] {
+  if (!schedules || schedules.length === 0) return []
+  const start = new Date(`${startDate}T00:00:00`)
+  const end = new Date(`${endDate}T00:00:00`)
+  if (isNaN(start.getTime()) || isNaN(end.getTime()) || start > end) return []
+
+  const targetDays = new Set<number>()
+  for (const s of schedules) {
+    const dayIdx = DAY_INDEX[s.day]
+    if (dayIdx !== undefined) targetDays.add(dayIdx)
+  }
+  if (targetDays.size === 0) return []
+
+  const dates: string[] = []
+  const cursor = new Date(start)
+  while (cursor <= end) {
+    if (targetDays.has(cursor.getDay())) {
+      const y = cursor.getFullYear()
+      const m = String(cursor.getMonth() + 1).padStart(2, "0")
+      const d = String(cursor.getDate()).padStart(2, "0")
+      dates.push(`${y}-${m}-${d}`)
+    }
+    cursor.setDate(cursor.getDate() + 1)
+  }
+  return dates
+}
+
+// Pro-rate a full-period price to the remaining sessions, rounded to nearest 50 DA.
+export function proRateTuition(
+  fullPrice: number,
+  totalSessions: number,
+  remainingSessions: number
+): number {
+  if (!totalSessions || totalSessions <= 0) return fullPrice
+  const raw = (fullPrice * remainingSessions) / totalSessions
+  return Math.round(raw / 50) * 50
+}

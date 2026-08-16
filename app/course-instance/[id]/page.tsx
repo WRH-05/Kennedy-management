@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback, useMemo, useRef } from "react"
 import { useRouter, useParams, useSearchParams } from "next/navigation"
 import { Button } from "@/components/ui/button"
-import { ArrowLeft, Printer } from "lucide-react"
+import { ArrowLeft, Printer, CalendarDays } from "lucide-react"
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog"
 
 import { CourseInstanceDetail, courseInstancesService, CourseInstanceWithEnrichment } from "@/services/courseInstancesService"
@@ -219,7 +219,10 @@ function CourseInstancesDetailContent() {
             <ArrowLeft className="h-4 w-4 mr-2" /> Back
           </Button>
           <h1 className="text-xl font-semibold text-gray-900">Course Details</h1>
-          <Button variant="outline" size="sm" onClick={() => setShowReport(true)} className="ml-auto">
+          <Button variant="outline" size="sm" onClick={() => router.push(`/course-instance/${CourseInstancesId}/attendance`)} className="ml-auto mr-2">
+            <CalendarDays className="h-4 w-4 mr-2" /> Attendance Register
+          </Button>
+          <Button variant="outline" size="sm" onClick={() => setShowReport(true)}>
             <Printer className="h-4 w-4 mr-2" /> Print Teacher Report
           </Button>
         </div>

@@ -23,6 +23,7 @@ import { revalidateData } from "@/hooks/swr-config"
 import { useAuth } from "@/context/AuthContext"
 import { printStudentReceipt } from "@/components/dashboard/StudentPaymentReceipt"
 import { useSchoolSettings } from "@/hooks/useSchoolSettings"
+import { getSessionDates, proRateTuition } from "@/lib/schedule"
 
 const PAYMENT_STATUSES = [
   { value: "paid", label: "Paid" },
@@ -56,6 +57,7 @@ export function StudentsManagementCard({
   const [showAddStudentDialog, setShowAddStudentDialog] = useState(false)
   const [selectedStudent, setSelectedStudent] = useState("")
   const [showStudentResults, setShowStudentResults] = useState(false)
+  const [feeOverride, setFeeOverride] = useState("")
 
   // SWR Hooks
   const { payments, isLoading, mutate } = useStudentsData(selectedPeriodId);
@@ -71,6 +73,24 @@ export function StudentsManagementCard({
     (enrolledStudentsRaw && 'data' in enrolledStudentsRaw ? enrolledStudentsRaw.data : []),
     [enrolledStudentsRaw]
   )
+
+  const enrollmentPricing = useMemo(() => {
+    const schedule = (courseInstance as any)?.course_schedule || []
+    const selectedPeriod = billingPeriods.find((p) => p.id === selectedPeriodId)
+    const d = new Date()
+    const todayStr = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`
+    const fullPrice = Number(courseInstance.price) || 0
+    if (!selectedPeriod) {
+      return { todayStr, fullPrice, isMidCycle: false, totalSessions: 0, remainingSessions: 0, proRatedFee: fullPrice }
+    }
+    const start = selectedPeriod.start_date || ""
+    const end = selectedPeriod.end_date || ""
+    const totalSessions = getSessionDates(schedule, start, end).length
+    const remainingSessions = getSessionDates(schedule, todayStr, end).length
+    const isMidCycle = todayStr > start && todayStr <= end
+    const proRatedFee = proRateTuition(fullPrice, totalSessions, remainingSessions)
+    return { todayStr, fullPrice, isMidCycle, totalSessions, remainingSessions, proRatedFee }
+  }, [courseInstance, billingPeriods, selectedPeriodId])
 
   const handleAddStudent = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -92,6 +112,12 @@ export function StudentsManagementCard({
       const student = students.find((s: Tables<"students">) => s.id.toString() === selectedStudent)
       if (!student) return
       await courseInstancesService.enrollStudent(courseInstance.id, student.id, selectedPeriodId)
+
+      const finalFee = enrollmentPricing.isMidCycle
+        ? (feeOverride !== "" && !isNaN(Number(feeOverride)) ? Number(feeOverride) : enrollmentPricing.proRatedFee)
+        : enrollmentPricing.fullPrice
+      await studentPaymentService.updateRecordStudentPayment(courseInstance.id, student.id, selectedPeriodId, { amount: finalFee })
+
       toast({ title: "Success", description: "New student added." })
 
       await Promise.all([mutate(), mutateEnrolled()])
@@ -101,6 +127,7 @@ export function StudentsManagementCard({
 
       setSelectedStudent("")
       setStudentSearchQuery("")
+      setFeeOverride("")
       setShowAddStudentDialog(false)
     } catch (error) {
       console.error(error)
@@ -109,7 +136,7 @@ export function StudentsManagementCard({
 
   const onChangeStudentPaymentStatus = async (student_id: string, status: Enums<"payment_status">): Promise<boolean> => {
     try {
-      const updates: any = { status, amount: courseInstance.price }
+      const updates: any = { status }
       if (status === 'paid') {
         updates.payment_date = new Date().toISOString()
       }
@@ -134,7 +161,7 @@ export function StudentsManagementCard({
       receiptId: p.id,
       studentName: p.students?.name || "Unknown Student",
       parentPhone: p.students?.parent_phone ?? null,
-      amount: courseInstance.price,
+      amount: Number(p.amount) || courseInstance.price,
       sourceLabel: "Frais de Cours",
       className: courseInstance.display_name || "Course",
       recordedByName: profile?.full_name || "-",
@@ -257,6 +284,34 @@ export function StudentsManagementCard({
                     <span className="text-xs text-muted-foreground block">No defined periods</span>
                   )}
                 </div>
+
+                {enrollmentPricing.isMidCycle && (
+                  <div className="space-y-2 rounded-md border p-3 bg-muted/40">
+                    <h4 className="text-sm font-semibold">Mid-Cycle Enrollment</h4>
+                    <div className="flex justify-between text-sm">
+                      <span className="text-muted-foreground">Full Price</span>
+                      <span className="font-medium">{enrollmentPricing.fullPrice} DA</span>
+                    </div>
+                    <div className="flex justify-between text-sm">
+                      <span className="text-muted-foreground">Remaining Sessions</span>
+                      <span className="font-medium">{enrollmentPricing.remainingSessions} of {enrollmentPricing.totalSessions} sessions</span>
+                    </div>
+                    <div className="flex justify-between text-sm">
+                      <span className="text-muted-foreground">Auto-Calculated Fee</span>
+                      <span className="font-medium">{enrollmentPricing.proRatedFee} DA</span>
+                    </div>
+                    <div className="space-y-1">
+                      <Label htmlFor="feeOverride">Override Fee (DA)</Label>
+                      <Input
+                        id="feeOverride"
+                        type="number"
+                        placeholder={String(enrollmentPricing.proRatedFee)}
+                        value={feeOverride}
+                        onChange={(e) => setFeeOverride(e.target.value)}
+                      />
+                    </div>
+                  </div>
+                )}
 
                 <div className="flex justify-end space-x-2 pt-2">
                   <Button type="button" variant="outline" onClick={() => setShowAddStudentDialog(false)}>

@@ -9,7 +9,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Alert, AlertDescription } from "@/components/ui/alert"
-import { ArrowLeft, Download, User, BookOpen, AlertTriangle, CheckCircle } from "lucide-react"
+import { ArrowLeft, Download, User, BookOpen, AlertTriangle, CheckCircle, CalendarDays } from "lucide-react"
 import { Student, studentService } from "@/services/studentService"
 import { studentPaymentService } from "@/services/studentPaymentService"
 import { UpdateStudentDialog } from "@/components/tabs/StudentsTab/UpdateStudentDialog"
@@ -18,11 +18,17 @@ import { toast } from "@/hooks/use-toast"
 import { useSchoolSettings } from "@/hooks/useSchoolSettings"
 import { usePaginatedGradeLevels } from "@/hooks/useGradeLevels"
 import { getCourseDisplayName } from "@/lib/course-display"
+import { attendanceService, AttendanceStats } from "@/services/attendanceService"
 
 function formatBirthDate(value: string | null): string {
   if (!value) return "-"
   const [y, m, d] = value.split("-")
   return d && m && y ? `${d}/${m}/${y}` : value
+}
+
+function formatAttendanceDate(value: string): string {
+  const d = new Date(`${value}T00:00:00`)
+  return isNaN(d.getTime()) ? value : d.toLocaleDateString()
 }
 
 function StudentDashboardContent() {
@@ -33,6 +39,7 @@ function StudentDashboardContent() {
   const [loading, setLoading] = useState(true)
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false)
   const [isPayingFee, setIsPayingFee] = useState(false)
+  const [attendanceStats, setAttendanceStats] = useState<AttendanceStats | null>(null)
   const { settings } = useSchoolSettings()
   const { gradeLevels } = usePaginatedGradeLevels(1, 0)
   const registrationFee = settings?.default_registration_fee || 500
@@ -69,6 +76,13 @@ function StudentDashboardContent() {
     loadStudentData()
   }, [loadStudentData])
 
+  useEffect(() => {
+    if (!studentId) return
+    attendanceService.getStudentAttendanceStats(studentId)
+      .then(setAttendanceStats)
+      .catch((error) => console.error("Failed to load attendance stats:", error))
+  }, [studentId])
+
   const downloadStudentCard = () => {
     toast({ title: "Coming Soon", description: "Student card download is coming soon." })
   }
@@ -86,6 +100,11 @@ function StudentDashboardContent() {
   const studentCourseInstances = student.course_enrollments.flatMap((ce) => ce.course_instances)
   const activeCourses = studentCourseInstances.filter((course) => !course.archived)
   const completedCourses = studentCourseInstances.filter((course) => course.archived)
+
+  const courseNameById = new Map<string, string>()
+  studentCourseInstances.forEach((course) => {
+    courseNameById.set(course.id, getCourseDisplayName(course))
+  })
 
   const payments = student.student_payments
 
@@ -267,6 +286,46 @@ function StudentDashboardContent() {
                     <CheckCircle className="h-4 w-4" />
                     <AlertDescription>All payments up to date</AlertDescription>
                   </Alert>
+                )}
+              </CardContent>
+            </Card>
+
+            {/* Attendance Summary */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center">
+                  <CalendarDays className="h-5 w-5 mr-2" />
+                  Attendance Summary
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                {attendanceStats ? (
+                  <>
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm text-muted-foreground">Attendance Rate</span>
+                      <span className="text-2xl font-bold">{attendanceStats.rate}%</span>
+                    </div>
+                    <div className="flex flex-wrap gap-2">
+                      <Badge className="bg-emerald-100 text-emerald-800">{attendanceStats.present} Present</Badge>
+                      <Badge className="bg-rose-100 text-rose-800">{attendanceStats.absent} Absent</Badge>
+                      <Badge className="bg-sky-100 text-sky-800">{attendanceStats.excused} Excused</Badge>
+                    </div>
+                    {attendanceStats.history.length > 0 && (
+                      <div className="space-y-1 pt-2 border-t">
+                        <span className="text-xs text-muted-foreground font-medium">Recent Attendance</span>
+                        {attendanceStats.history.map((h, i) => (
+                          <div key={i} className="flex justify-between text-sm">
+                            <span className="text-muted-foreground truncate">
+                              {formatAttendanceDate(h.session_date)} · {courseNameById.get(h.course_instance_id) || "Course"}
+                            </span>
+                            <span className="capitalize font-medium">{h.status}</span>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </>
+                ) : (
+                  <p className="text-sm text-muted-foreground">No attendance recorded.</p>
                 )}
               </CardContent>
             </Card>
