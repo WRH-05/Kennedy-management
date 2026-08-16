@@ -9,11 +9,11 @@ export default function DashboardLayout({
   children: React.ReactNode
 }) {
   const pathname = usePathname()
-  const isStats = pathname === "/manager/stats"
+  const hideSummary = pathname === "/manager/stats" || pathname === "/manager/logs"
 
   return (
     <div className="w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-      {!isStats && <SummaryCards />}
+      {!hideSummary && <SummaryCards />}
       {children}
     </div>
   )

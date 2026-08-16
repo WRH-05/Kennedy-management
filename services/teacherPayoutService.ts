@@ -1,5 +1,6 @@
 import { createClient } from "@/lib/supabase/client"
 import { Tables, TablesUpdate } from "@/types/database.types";
+import { activityLogService } from "@/services/activityLogService";
 
 const supabase = createClient();
 
@@ -190,6 +191,15 @@ export const teacherPayoutService = {
             .select()
             .single()
             .throwOnError()
+
+        await activityLogService.logActivity({
+            action_type: 'payout',
+            title: `Teacher payout recorded`,
+            description: `Payout of ${amount} DA recorded`,
+            amount: amount,
+            entity_type: 'teacher',
+            entity_id: data?.teacher_id,
+        })
 
         return data
     },

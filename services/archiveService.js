@@ -2,6 +2,7 @@ import { createClient } from "@/lib/supabase/client"
 
 const supabase = createClient();
 import { profileService } from "./profileService"
+import { activityLogService } from "./activityLogService"
 export const archiveService = {
     // Get all archive requests
     async getAllArchiveRequests() {
@@ -87,6 +88,15 @@ export const archiveService = {
             .single()
 
         if (error) throw error
+
+        await activityLogService.logActivity({
+            action_type: 'archive_request',
+            title: `Archive requested: ${entityName}`,
+            description: reason || undefined,
+            entity_type: entityType,
+            entity_id: entityId,
+        })
+
         return data
     },
 
@@ -170,6 +180,14 @@ export const archiveService = {
             .single()
 
         if (error) throw error
+
+        await activityLogService.logActivity({
+            action_type: 'archive_approved',
+            title: `Archive approved: ${request.entity_name || 'Unknown'}`,
+            entity_type: request.entity_type,
+            entity_id: request.entity_id,
+        })
+
         return data
     },
 
@@ -191,6 +209,23 @@ export const archiveService = {
             .single()
 
         if (error) throw error
+
+        // Fetch entity info for the audit log
+        const { data: deniedReq } = await supabase
+            .from('archive_requests')
+            .select('entity_type, entity_id, entity_name')
+            .eq('id', requestId)
+            .maybeSingle()
+
+        if (deniedReq) {
+            await activityLogService.logActivity({
+                action_type: 'archive_rejected',
+                title: `Archive rejected: ${deniedReq.entity_name || 'Unknown'}`,
+                entity_type: deniedReq.entity_type,
+                entity_id: deniedReq.entity_id,
+            })
+        }
+
         return data
     },
 
@@ -231,6 +266,14 @@ export const archiveService = {
             .eq('id', requestId)
 
         if (deleteError) throw deleteError
+
+        await activityLogService.logActivity({
+            action_type: 'unarchive',
+            title: `Unarchived: ${request.entity_name || 'Unknown'}`,
+            entity_type: request.entity_type,
+            entity_id: request.entity_id,
+        })
+
         return true
     },
 

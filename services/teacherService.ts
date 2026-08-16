@@ -3,6 +3,7 @@ import { createClient } from "@/lib/supabase/client"
 const supabase = createClient();
 import { Tables, TablesInsert, TablesUpdate } from "@/types/database.types";
 import { PostgrestError } from "@supabase/supabase-js";
+import { activityLogService } from "@/services/activityLogService";
 
 
 export type TeachersResponse = Awaited<
@@ -122,6 +123,13 @@ export const teacherService = {
             .single()
             .throwOnError()
 
+        await activityLogService.logActivity({
+            action_type: 'teacher_registration',
+            title: `Teacher registered: ${data.name}`,
+            entity_type: 'teacher',
+            entity_id: data.id,
+        })
+
         return data
     },
 
@@ -156,6 +164,13 @@ export const teacherService = {
             .select()
             .maybeSingle()
             .throwOnError()
+
+        await activityLogService.logActivity({
+            action_type: 'permanent_delete',
+            title: `Teacher deleted: ${data?.name ?? 'Unknown'}`,
+            entity_type: 'teacher',
+            entity_id: id,
+        })
 
         return data
     },

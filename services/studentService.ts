@@ -1,6 +1,7 @@
 import { Tables, TablesInsert, TablesUpdate } from "@/types/database.types"
 
 import { createClient } from "@/lib/supabase/client"
+import { activityLogService } from "@/services/activityLogService"
 
 const supabase = createClient();
 
@@ -73,6 +74,13 @@ export const studentService = {
       .single()
       .throwOnError()
 
+    await activityLogService.logActivity({
+      action_type: 'student_registration',
+      title: `Student registered: ${data.name}`,
+      entity_type: 'student',
+      entity_id: data.id,
+    })
+
     return data
   },
 
@@ -110,6 +118,13 @@ export const studentService = {
       .select()
       .maybeSingle()
       .throwOnError()
+
+    await activityLogService.logActivity({
+      action_type: 'permanent_delete',
+      title: `Student deleted: ${data?.name ?? 'Unknown'}`,
+      entity_type: 'student',
+      entity_id: id,
+    })
 
     return data
   },

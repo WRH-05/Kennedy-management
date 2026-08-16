@@ -1,6 +1,7 @@
 import { createClient } from "@/lib/supabase/client"
 import { Tables, TablesInsert, TablesUpdate } from "@/types/database.types"
 import { getCourseDisplayName } from "@/lib/course-display"
+import { activityLogService } from "@/services/activityLogService"
 
 const supabase = createClient();
 
@@ -265,6 +266,13 @@ export const courseInstancesService = {
             .select()
             .maybeSingle()
             .throwOnError();
+
+        await activityLogService.logActivity({
+            action_type: 'permanent_delete',
+            title: `Course deleted: ${data?.display_name ?? 'Unknown'}`,
+            entity_type: 'course',
+            entity_id: id,
+        });
 
         return data;
     },

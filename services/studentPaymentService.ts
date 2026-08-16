@@ -1,5 +1,6 @@
 import { createClient } from "@/lib/supabase/client"
 import { Tables, TablesInsert, TablesUpdate } from "@/types/database.types";
+import { activityLogService } from "@/services/activityLogService";
 
 const supabase = createClient();
 
@@ -114,6 +115,17 @@ export const studentPaymentService = {
             .single()
             .throwOnError()
 
+        if (data?.status === 'paid') {
+            await activityLogService.logActivity({
+                action_type: 'payment',
+                title: `Payment recorded`,
+                description: `Payment of ${data.amount ?? 0} DA recorded`,
+                amount: data.amount ?? 0,
+                entity_type: 'student',
+                entity_id: data.student_id,
+            })
+        }
+
         return data
     },
 
@@ -129,6 +141,16 @@ export const studentPaymentService = {
             .single()
 
         if (error) throw error
+
+        await activityLogService.logActivity({
+            action_type: 'payment',
+            title: `Payment marked as paid`,
+            description: `Payment of ${data?.amount ?? 0} DA recorded`,
+            amount: data?.amount ?? 0,
+            entity_type: 'student',
+            entity_id: data?.student_id,
+        })
+
         return data
     },
 
