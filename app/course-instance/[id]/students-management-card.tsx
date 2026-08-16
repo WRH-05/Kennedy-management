@@ -24,6 +24,7 @@ import { useAuth } from "@/context/AuthContext"
 import { printStudentReceipt } from "@/components/dashboard/StudentPaymentReceipt"
 import { useSchoolSettings } from "@/hooks/useSchoolSettings"
 import { getSessionDates, proRateTuition } from "@/lib/schedule"
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
 
 const PAYMENT_STATUSES = [
   { value: "paid", label: "Paid" },
@@ -213,6 +214,7 @@ export function StudentsManagementCard({
   }
 
   return (
+    <TooltipProvider>
     <Card>
       <CardHeader>
         <div className="flex justify-between items-center">
@@ -371,9 +373,24 @@ export function StudentsManagementCard({
                       </Button>
                     </TableCell>
 
-                    {/* Payment Status Dropdown Column */}
+                    {/* Payment Status Column */}
                     <TableCell>
-                      {getStatusBadge(p.status)}
+                      <div className="space-y-1">
+                        <div className="flex items-center gap-1.5">
+                          <span className="text-sm font-medium">{Number(p.amount || 0).toLocaleString()} DA</span>
+                          {Number(p.amount || 0) < Number(courseInstance.price || 0) && (
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <Badge variant="outline" className="text-xs cursor-default">Pro-rated</Badge>
+                              </TooltipTrigger>
+                              <TooltipContent>
+                                Base Course Fee: {Number(courseInstance.price || 0).toLocaleString()} DA • Pro-rated Fee: {Number(p.amount || 0).toLocaleString()} DA
+                              </TooltipContent>
+                            </Tooltip>
+                          )}
+                        </div>
+                        {getStatusBadge(p.status)}
+                      </div>
                     </TableCell>
 
                     {/* Enrollment Status Dropdown Column */}
@@ -445,5 +462,6 @@ export function StudentsManagementCard({
         </Table>
       </CardContent>
     </Card>
+    </TooltipProvider>
   )
 }

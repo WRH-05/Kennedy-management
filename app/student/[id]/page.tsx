@@ -359,6 +359,10 @@ function StudentDashboardContent() {
                           const isPaymentMissing = payments.filter((p) => {
                             return p.course_id == course.id && p.status != 'paid'
                           }).length > 0
+                          const coursePayments = payments.filter((p) => p.course_id === course.id)
+                          const latestPayment = coursePayments.length > 0
+                            ? coursePayments.reduce((a, b) => (a.created_at > b.created_at ? a : b))
+                            : null
                           return (
                             <TableRow key={course.id}>
                               <TableCell className="font-medium">
@@ -379,7 +383,15 @@ function StudentDashboardContent() {
                                   {course.teachers.name}
                                 </Button>
                               </TableCell>
-                              <TableCell>{course.monthly_price} DA</TableCell>
+                              <TableCell>
+                                <div className="text-sm">{course.monthly_price} DA</div>
+                                {latestPayment && Number(latestPayment.amount || 0) > 0 && (
+                                  <div className="text-xs text-muted-foreground">
+                                    Fee: {Number(latestPayment.amount || 0).toLocaleString()} DA
+                                    {Number(latestPayment.amount || 0) < Number((course as any).price || 0) && " (Pro-rated)"}
+                                  </div>
+                                )}
+                              </TableCell>
                               <TableCell>
                                 <Badge variant="outline">
                                   {isPaymentMissing ? "Missing payment" : "Paid"}

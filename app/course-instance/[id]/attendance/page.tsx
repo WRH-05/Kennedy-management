@@ -1,7 +1,7 @@
 "use client"
 
-import { useState, useEffect, useCallback } from "react"
-import { useRouter, useParams } from "next/navigation"
+import { useState, useEffect, useCallback, useRef } from "react"
+import { useRouter, useParams, useSearchParams } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Alert, AlertDescription } from "@/components/ui/alert"
@@ -9,7 +9,8 @@ import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Drawer, DrawerContent, DrawerFooter, DrawerHeader, DrawerTitle } from "@/components/ui/drawer"
-import { ArrowLeft, Lock, CalendarDays } from "lucide-react"
+import { ArrowLeft, Lock, CalendarDays, Pencil } from "lucide-react"
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
 import { CourseInstanceDetail, courseInstancesService } from "@/services/courseInstancesService"
 import { paymentService } from "@/services/paymentService"
 import {
@@ -56,7 +57,9 @@ function todayStr(): string {
 export default function CourseInstanceAttendancePage() {
   const router = useRouter()
   const params = useParams()
+  const searchParams = useSearchParams()
   const courseInstanceId = params.id as string
+  const initialCycleSet = useRef(false)
 
   const [course, setCourse] = useState<CourseInstanceDetail | null>(null)
   const [billingPeriods, setBillingPeriods] = useState<any[]>([])
@@ -67,6 +70,20 @@ export default function CourseInstanceAttendancePage() {
   const [saving, setSaving] = useState(false)
   const [teacherStatus, setTeacherStatus] = useState<TeacherAttendanceStatus>("present")
   const [studentStatuses, setStudentStatuses] = useState<Record<string, AttendanceStatus>>({})
+
+  const syncUrl = (cycleId: string, date: string | null) => {
+    const qs = new URLSearchParams()
+    if (cycleId) qs.set("cycle", cycleId)
+    if (date) qs.set("date", date)
+    const suffix = qs.toString() ? `?${qs.toString()}` : ""
+    router.replace(`/course-instance/${courseInstanceId}/attendance${suffix}`, { scroll: false })
+  }
+
+  const handleCycleChange = (cycleId: string) => {
+    setSelectedPeriodId(cycleId)
+    setDrawerDate(null)
+    syncUrl(cycleId, null)
+  }
 
   const loadMatrix = useCallback(async (periodId: string) => {
     if (!periodId) return
@@ -87,7 +104,6 @@ export default function CourseInstanceAttendancePage() {
         ])
         setCourse(courseData)
         setBillingPeriods(bps || [])
-        if (bps && bps.length > 0) setSelectedPeriodId(bps[0].id)
       } catch (error) {
         console.error("Failed to load attendance page:", error)
       } finally {
@@ -95,6 +111,26 @@ export default function CourseInstanceAttendancePage() {
       }
     })()
   }, [courseInstanceId])
+
+  // Reset the URL-seeding gate when navigating to a different course instance
+  useEffect(() => {
+    initialCycleSet.current = false
+    setSelectedPeriodId("")
+    setDrawerDate(null)
+  }, [courseInstanceId])
+
+  // Seed cycle + date from URL once billing periods are available
+  useEffect(() => {
+    if (billingPeriods.length > 0 && !initialCycleSet.current) {
+      const cycleParam = searchParams.get("cycle")
+      const validCycle = cycleParam ? billingPeriods.find((bp) => bp.id === cycleParam) : null
+      const targetId = validCycle ? validCycle.id : billingPeriods[0].id
+      setSelectedPeriodId(targetId)
+      const dateParam = searchParams.get("date")
+      if (dateParam) setDrawerDate(dateParam)
+      initialCycleSet.current = true
+    }
+  }, [billingPeriods, searchParams])
 
   useEffect(() => {
     if (selectedPeriodId) loadMatrix(selectedPeriodId)
@@ -125,6 +161,7 @@ export default function CourseInstanceAttendancePage() {
       })
     setStudentStatuses(map)
     setDrawerDate(date)
+    syncUrl(selectedPeriodId, date)
   }
 
   const markAllPresent = () => {
@@ -177,6 +214,7 @@ export default function CourseInstanceAttendancePage() {
   }
 
   return (
+    <TooltipProvider>
     <div>
       <header className="bg-white shadow-sm border-b">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex items-center h-16">
@@ -200,7 +238,7 @@ export default function CourseInstanceAttendancePage() {
               </div>
               <div className="w-64">
                 <Label className="text-xs text-muted-foreground">Billing Cycle</Label>
-                <Select value={selectedPeriodId} onValueChange={setSelectedPeriodId}>
+                <Select value={selectedPeriodId} onValueChange={handleCycleChange}>
                   <SelectTrigger className="w-full h-9">
                     <SelectValue placeholder="Select Cycle" />
                   </SelectTrigger>
@@ -216,6 +254,16 @@ export default function CourseInstanceAttendancePage() {
             </div>
           </CardHeader>
           <CardContent>
+            <Button
+              variant="default"
+              size="sm"
+              className="mb-4"
+              disabled={isLocked || !matrix?.sessionDates.includes(todayStr())}
+              onClick={() => openDrawer(todayStr())}
+            >
+              Take Today's Attendance
+            </Button>
+
             {isLocked && selectedPeriod && (
               <Alert className="mb-4 border-amber-300 bg-amber-50">
                 <Lock className="h-4 w-4" />
@@ -237,15 +285,21 @@ export default function CourseInstanceAttendancePage() {
                       <TableHead className="min-w-[180px]">Student</TableHead>
                       {matrix.sessionDates.map((date) => (
                         <TableHead key={date} className="text-center">
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            className="p-0 h-auto font-medium"
-                            disabled={isLocked}
-                            onClick={() => openDrawer(date)}
-                          >
-                            {formatDayLabel(date)}
-                          </Button>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className="group p-0 h-auto font-medium rounded hover:bg-muted"
+                                disabled={isLocked}
+                                onClick={() => openDrawer(date)}
+                              >
+                                {formatDayLabel(date)}
+                                <Pencil className="ml-1 h-3 w-3 opacity-0 group-hover:opacity-100 transition-opacity" />
+                              </Button>
+                            </TooltipTrigger>
+                            <TooltipContent>Click date header to open daily attendance drawer</TooltipContent>
+                          </Tooltip>
                         </TableHead>
                       ))}
                     </TableRow>
@@ -286,7 +340,7 @@ export default function CourseInstanceAttendancePage() {
         </Card>
       </div>
 
-      <Drawer open={!!drawerDate} onOpenChange={(open) => { if (!open) setDrawerDate(null) }}>
+      <Drawer open={!!drawerDate} onOpenChange={(open) => { if (!open) { setDrawerDate(null); syncUrl(selectedPeriodId, null) } }}>
         <DrawerContent className="max-h-[85vh]">
           <DrawerHeader>
             <DrawerTitle>Mark Attendance — {drawerDate ? formatDayLabel(drawerDate) : ""}</DrawerTitle>
@@ -347,5 +401,6 @@ export default function CourseInstanceAttendancePage() {
         </DrawerContent>
       </Drawer>
     </div>
+    </TooltipProvider>
   )
 }
