@@ -1,6 +1,7 @@
 import { Tables, TablesInsert, TablesUpdate } from "@/types/database.types"
 
 import { createClient } from "@/lib/supabase/client"
+import { activityLogService } from "@/services/activityLogService"
 
 const supabase = createClient();
 
@@ -108,6 +109,13 @@ export const coursesService = {
             .select()
             .single()
             .throwOnError()
+
+        await activityLogService.logActivity({
+            action_type: 'course_delete',
+            title: `Course template deleted: ${data.name}`,
+            entity_type: 'course',
+            entity_id: id,
+        })
 
         return data
     },

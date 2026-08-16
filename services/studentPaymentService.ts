@@ -116,10 +116,17 @@ export const studentPaymentService = {
             .throwOnError()
 
         if (data?.status === 'paid') {
+            const [{ data: student }, { data: course }] = await Promise.all([
+                supabase.from('students').select('name').eq('id', studentId).maybeSingle(),
+                supabase.from('course_instances').select('display_name').eq('id', courseId).maybeSingle(),
+            ])
+
+            const studentName = student?.name ?? 'Unknown'
+            const className = course?.display_name ?? 'Unknown class'
+
             await activityLogService.logActivity({
                 action_type: 'payment',
-                title: `Payment recorded`,
-                description: `Payment of ${data.amount ?? 0} DA recorded`,
+                title: `Tuition Payment: ${studentName} - ${className} (${data.amount ?? 0} DA)`,
                 amount: data.amount ?? 0,
                 entity_type: 'student',
                 entity_id: data.student_id,
@@ -141,14 +148,22 @@ export const studentPaymentService = {
             .single()
 
         if (error) throw error
+        if (!data) return null
+
+        const [{ data: student }, { data: course }] = await Promise.all([
+            supabase.from('students').select('name').eq('id', (data as any).student_id).maybeSingle(),
+            supabase.from('course_instances').select('display_name').eq('id', (data as any).course_id).maybeSingle(),
+        ])
+
+        const studentName = student?.name ?? 'Unknown'
+        const className = course?.display_name ?? 'Unknown class'
 
         await activityLogService.logActivity({
             action_type: 'payment',
-            title: `Payment marked as paid`,
-            description: `Payment of ${data?.amount ?? 0} DA recorded`,
-            amount: data?.amount ?? 0,
+            title: `Tuition Payment: ${studentName} - ${className} (${data.amount ?? 0} DA)`,
+            amount: data.amount ?? 0,
             entity_type: 'student',
-            entity_id: data?.student_id,
+            entity_id: data.student_id,
         })
 
         return data
@@ -200,6 +215,12 @@ export const studentPaymentService = {
     },
 
     async payRegistrationFee(studentId: string) {
+        const { data: student } = await supabase
+            .from('students')
+            .select('name')
+            .eq('id', studentId)
+            .maybeSingle()
+
         // Mark registration fee as paid on the student record
         const { error: updateError } = await supabase
             .from('students')
@@ -232,6 +253,15 @@ export const studentPaymentService = {
             .throwOnError()
 
         if (error) throw error
+
+        await activityLogService.logActivity({
+            action_type: 'payment',
+            title: `Registration Fee Paid: ${student?.name ?? 'Unknown'} (${fee} DA)`,
+            amount: fee,
+            entity_type: 'student',
+            entity_id: studentId,
+        })
+
         return data
     },
 }

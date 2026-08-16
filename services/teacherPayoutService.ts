@@ -160,6 +160,22 @@ export const teacherPayoutService = {
             .single()
 
         if (error) throw error
+        if (!data) return null
+
+        const { data: teacher } = await supabase
+            .from('teachers')
+            .select('name')
+            .eq('id', (data as any).teacher_id)
+            .maybeSingle()
+
+        await activityLogService.logActivity({
+            action_type: 'payout_confirmed',
+            title: `Teacher Payout Confirmed: ${teacher?.name ?? 'Unknown'} (${data.amount ?? 0} DA)`,
+            amount: data.amount ?? 0,
+            entity_type: 'teacher',
+            entity_id: (data as any).teacher_id,
+        })
+
         return data
     },
 
@@ -192,13 +208,18 @@ export const teacherPayoutService = {
             .single()
             .throwOnError()
 
+        const { data: teacher } = await supabase
+            .from('teachers')
+            .select('name')
+            .eq('id', (data as any).teacher_id)
+            .maybeSingle()
+
         await activityLogService.logActivity({
-            action_type: 'payout',
-            title: `Teacher payout recorded`,
-            description: `Payout of ${amount} DA recorded`,
+            action_type: 'payout_request',
+            title: `Teacher Payout Requested: ${teacher?.name ?? 'Unknown'} (${amount} DA)`,
             amount: amount,
             entity_type: 'teacher',
-            entity_id: data?.teacher_id,
+            entity_id: (data as any).teacher_id,
         })
 
         return data

@@ -1,6 +1,7 @@
 "use client"
 
-import { useEffect, useMemo, useState } from "react"
+import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react"
+import { useRouter, useSearchParams } from "next/navigation"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -13,7 +14,7 @@ import { ClipboardList, Search, TrendingUp, DollarSign, Wallet } from "lucide-re
 
 const CATEGORIES = [
   { value: "all", label: "All Logs" },
-  { value: "payments-payouts", label: "Payments & Payouts" },
+  { value: "payments", label: "Payments & Payouts" },
   { value: "registrations", label: "Registrations" },
   { value: "archives", label: "Archives & Unarchives" },
   { value: "deletions", label: "Permanent Deletions" },
@@ -36,6 +37,8 @@ function getCategoryInfo(actionType: string): { label: string; className: string
     case "payment":
       return { label: "Payment", className: "bg-emerald-100 text-emerald-800" }
     case "payout":
+    case "payout_request":
+    case "payout_confirmed":
       return { label: "Payout", className: "bg-amber-100 text-amber-800" }
     case "student_registration":
     case "teacher_registration":
@@ -50,27 +53,57 @@ function getCategoryInfo(actionType: string): { label: string; className: string
     case "course_delete":
     case "grade_level_delete":
       return { label: "Deletion", className: "bg-rose-100 text-rose-800" }
+    case "course_instance_created":
+      return { label: "Class Created", className: "bg-indigo-100 text-indigo-800" }
     default:
       return { label: actionType, className: "bg-gray-100 text-gray-800" }
   }
 }
 
-export default function LogsPage() {
-  const [filterCategory, setFilterCategory] = useState("all")
-  const [dateRange, setDateRange] = useState("last30")
-  const [searchInput, setSearchInput] = useState("")
-  const [searchQuery, setSearchQuery] = useState("")
+function LogsDashboard() {
+  const router = useRouter()
+  const searchParams = useSearchParams()
+
+  const filterCategory = searchParams.get("category") || "all"
+  const dateRange = searchParams.get("range") || "last30"
+  const searchQuery = searchParams.get("q") || ""
+
+  const [searchInput, setSearchInput] = useState(searchQuery)
 
   const { logs, isLoading } = useActivityLogs(filterCategory, dateRange, searchQuery)
 
   const { data: revenueData } = useRevenue()
   const { payments: payoutsData } = useTeachersPayouts()
 
-  // Debounce the search input so we don't refetch on every keystroke
+  // Keep a ref to the latest searchParams so the debounced search never uses stale values.
+  const searchParamsRef = useRef(searchParams)
+  searchParamsRef.current = searchParams
+
+  const updateParam = useCallback(
+    (key: string, value: string) => {
+      const params = new URLSearchParams(searchParamsRef.current.toString())
+      const isDefault =
+        (key === "category" && value === "all") ||
+        (key === "range" && value === "last30") ||
+        (key === "q" && value === "")
+      if (isDefault) params.delete(key)
+      else params.set(key, value)
+      const qs = params.toString()
+      router.replace(qs ? `/manager/logs?${qs}` : "/manager/logs", { scroll: false })
+    },
+    [router]
+  )
+
+  // Debounce the search box into the `q` URL param.
   useEffect(() => {
-    const timer = setTimeout(() => setSearchQuery(searchInput), 200)
+    const timer = setTimeout(() => updateParam("q", searchInput), 200)
     return () => clearTimeout(timer)
-  }, [searchInput])
+  }, [searchInput, updateParam])
+
+  // Keep the search box in sync when Back/Forward changes the URL.
+  useEffect(() => {
+    setSearchInput(searchQuery)
+  }, [searchQuery])
 
   const payouts = useMemo(() => {
     if (payoutsData && 'data' in payoutsData) return payoutsData.data
@@ -88,7 +121,7 @@ export default function LogsPage() {
   )
 
   const netCashflow = totalPaymentsCollected - totalPayoutsIssued
-  const showFinancialSummary = filterCategory === "all" || filterCategory === "payments-payouts"
+  const showFinancialSummary = filterCategory === "all" || filterCategory === "payments"
 
   return (
     <div className="space-y-6">
@@ -150,7 +183,7 @@ export default function LogsPage() {
                   key={c.value}
                   variant={filterCategory === c.value ? "default" : "outline"}
                   size="sm"
-                  onClick={() => setFilterCategory(c.value)}
+                  onClick={() => updateParam("category", c.value)}
                 >
                   {c.label}
                 </Button>
@@ -158,7 +191,7 @@ export default function LogsPage() {
             </div>
 
             <div className="ml-auto flex flex-wrap items-center gap-2">
-              <Select value={dateRange} onValueChange={setDateRange}>
+              <Select value={dateRange} onValueChange={(value) => updateParam("range", value)}>
                 <SelectTrigger className="w-[160px] h-9">
                   <SelectValue placeholder="Date Range" />
                 </SelectTrigger>
@@ -183,58 +216,68 @@ export default function LogsPage() {
             </div>
           </div>
 
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Timestamp</TableHead>
-                <TableHead>Category</TableHead>
-                <TableHead>Activity</TableHead>
-                <TableHead className="text-right">Amount (DA)</TableHead>
-                <TableHead>Recorded By</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {isLoading ? (
+          <div className="overflow-x-auto">
+            <Table className="min-w-[640px]">
+              <TableHeader>
                 <TableRow>
-                  <TableCell colSpan={5} className="text-center text-muted-foreground py-8">
-                    Loading logs...
-                  </TableCell>
+                  <TableHead>Timestamp</TableHead>
+                  <TableHead>Category</TableHead>
+                  <TableHead>Activity</TableHead>
+                  <TableHead className="text-right">Amount (DA)</TableHead>
+                  <TableHead>Recorded By</TableHead>
                 </TableRow>
-              ) : logs.length === 0 ? (
-                <TableRow>
-                  <TableCell colSpan={5} className="text-center text-muted-foreground py-8">
-                    No activity recorded
-                  </TableCell>
-                </TableRow>
-              ) : (
-                logs.map((log) => {
-                  const cat = getCategoryInfo(log.action_type)
-                  return (
-                    <TableRow key={log.id}>
-                      <TableCell className="whitespace-nowrap text-muted-foreground">
-                        {formatTimestamp(log.created_at)}
-                      </TableCell>
-                      <TableCell>
-                        <Badge className={cat.className}>{cat.label}</Badge>
-                      </TableCell>
-                      <TableCell>
-                        <div className="font-medium">{log.title}</div>
-                        {log.description && (
-                          <div className="text-xs text-muted-foreground">{log.description}</div>
-                        )}
-                      </TableCell>
-                      <TableCell className="text-right">
-                        {log.amount ? `${log.amount.toLocaleString()} DA` : "-"}
-                      </TableCell>
-                      <TableCell>{log.actor_name || "-"}</TableCell>
-                    </TableRow>
-                  )
-                })
-              )}
-            </TableBody>
-          </Table>
+              </TableHeader>
+              <TableBody>
+                {isLoading ? (
+                  <TableRow>
+                    <TableCell colSpan={5} className="text-center text-muted-foreground py-8">
+                      Loading logs...
+                    </TableCell>
+                  </TableRow>
+                ) : logs.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={5} className="text-center text-muted-foreground py-8">
+                      No activity recorded
+                    </TableCell>
+                  </TableRow>
+                ) : (
+                  logs.map((log) => {
+                    const cat = getCategoryInfo(log.action_type)
+                    return (
+                      <TableRow key={log.id}>
+                        <TableCell className="whitespace-nowrap text-muted-foreground">
+                          {formatTimestamp(log.created_at)}
+                        </TableCell>
+                        <TableCell>
+                          <Badge className={cat.className}>{cat.label}</Badge>
+                        </TableCell>
+                        <TableCell>
+                          <div className="font-medium">{log.title}</div>
+                          {log.description && (
+                            <div className="text-xs text-muted-foreground">{log.description}</div>
+                          )}
+                        </TableCell>
+                        <TableCell className="text-right whitespace-nowrap">
+                          {log.amount ? `${log.amount.toLocaleString()} DA` : "-"}
+                        </TableCell>
+                        <TableCell>{log.actor_name || "-"}</TableCell>
+                      </TableRow>
+                    )
+                  })
+                )}
+              </TableBody>
+            </Table>
+          </div>
         </CardContent>
       </Card>
     </div>
+  )
+}
+
+export default function LogsPage() {
+  return (
+    <Suspense fallback={<div className="p-8 text-center text-muted-foreground">Loading logs...</div>}>
+      <LogsDashboard />
+    </Suspense>
   )
 }

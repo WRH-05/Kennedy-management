@@ -228,6 +228,13 @@ export const courseInstancesService = {
         })
             .throwOnError();
 
+        await activityLogService.logActivity({
+            action_type: 'course_instance_created',
+            title: `Class instance created: ${instanceData.display_name || 'Unknown'}`,
+            entity_type: 'course_instance',
+            entity_id: (data as any)?.id,
+        });
+
         return data;
     },
 

@@ -1,6 +1,7 @@
 import { Tables, TablesInsert, TablesUpdate } from "@/types/database.types"
 
 import { createClient } from "@/lib/supabase/client"
+import { activityLogService } from "@/services/activityLogService"
 
 const supabase = createClient();
 
@@ -113,6 +114,13 @@ export const gradeLevelsService = {
             .select()
             .single()
             .throwOnError()
+
+        await activityLogService.logActivity({
+            action_type: 'grade_level_delete',
+            title: `Grade level deleted: ${data.name}`,
+            entity_type: 'grade_level',
+            entity_id: id,
+        })
 
         return data
     },

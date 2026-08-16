@@ -46,15 +46,18 @@ export const activityLogService = {
   },
 
   async getLogs(filterCategory: string, dateRange: string, searchQuery: string): Promise<ActivityLog[]> {
+    // Silently prune logs older than 180 days to keep DB size under control.
+    const cutoffDate = new Date(Date.now() - 180 * 24 * 60 * 60 * 1000).toISOString()
+    db.from('activity_logs').delete().lt('created_at', cutoffDate).then(() => {}).catch(() => {})
+
     let query = db
       .from('activity_logs')
       .select('*, profiles!activity_logs_actor_id_fkey(full_name)')
       .order('created_at', { ascending: false })
 
     const categoryActions: Record<string, string[]> = {
-      payments: ['payment'],
-      payouts: ['payout'],
-      'payments-payouts': ['payment', 'payout'],
+      payments: ['payment', 'payout', 'payout_request', 'payout_confirmed'],
+      payouts: ['payout', 'payout_request', 'payout_confirmed'],
       registrations: ['student_registration', 'teacher_registration'],
       archives: ['archive_request', 'archive_approved', 'archive_rejected', 'unarchive'],
       deletions: ['permanent_delete', 'course_delete', 'grade_level_delete'],

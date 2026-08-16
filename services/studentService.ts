@@ -76,7 +76,7 @@ export const studentService = {
 
     await activityLogService.logActivity({
       action_type: 'student_registration',
-      title: `Student registered: ${data.name}`,
+      title: `Student Registered: ${data.name}`,
       entity_type: 'student',
       entity_id: data.id,
     })

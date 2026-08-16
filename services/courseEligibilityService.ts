@@ -1,6 +1,7 @@
 import { Tables, TablesInsert, TablesUpdate } from "@/types/database.types"
 
 import { createClient } from "@/lib/supabase/client"
+import { activityLogService } from "@/services/activityLogService"
 
 const supabase = createClient();
 
@@ -196,6 +197,12 @@ export const coursesEligiblityService = {
     },
 
     async deleteCourseEligibility(id: string) {
+        // Delete referencing teacher-assignment rows first to avoid a FK violation
+        await supabase
+            .from('teachers_course_eligibility')
+            .delete()
+            .eq('course_eligibility_id', id)
+
         const { data } = await supabase
             .from('course_eligibility')
             .delete()
@@ -203,6 +210,15 @@ export const coursesEligiblityService = {
             .select('*, courses(*), grade_levels(*)')
             .single()
             .throwOnError()
+
+        const deleted = data as any
+        await activityLogService.logActivity({
+            action_type: 'grade_level_delete',
+            title: 'Grade level detached from course',
+            description: `Detached grade level "${deleted.grade_levels?.name ?? 'Unknown'}" from course "${deleted.courses?.name ?? 'Unknown'}"`,
+            entity_type: 'course_eligibility',
+            entity_id: id,
+        })
 
         return data
     },
