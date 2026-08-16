@@ -135,6 +135,12 @@ function StudentDashboardContent() {
 
   return (
     <div>
+      {student.archived && (
+        <Alert className="mx-auto my-4 max-w-4xl w-full border-amber-300 bg-amber-50">
+          <AlertTriangle className="h-4 w-4" />
+          <AlertDescription className="text-amber-800">This Student is archived and in Read-Only Mode.</AlertDescription>
+        </Alert>
+      )}
       <header className="bg-white shadow-sm border-b">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-16">
@@ -147,7 +153,9 @@ function StudentDashboardContent() {
             </div>
 
             <div className="flex items-center space-x-2">
-              <Button onClick={() => setIsEditDialogOpen(true)}>Edit Student</Button>
+              {!student.archived && (
+                <Button onClick={() => setIsEditDialogOpen(true)}>Edit Student</Button>
+              )}
             </div>
           </div>
         </div>
@@ -236,7 +244,7 @@ function StudentDashboardContent() {
                         variant="outline"
                         className="w-full border-amber-500 text-amber-600 hover:bg-amber-50"
                         onClick={handlePayRegistrationFee}
-                        disabled={isPayingFee}
+                        disabled={isPayingFee || student.archived}
                       >
                         {isPayingFee ? "Processing..." : `Pay Registration Fee (${registrationFee} DA)`}
                       </Button>
@@ -255,7 +263,7 @@ function StudentDashboardContent() {
                     <span className="text-xs text-muted-foreground">{paidAllTime.toLocaleString()} DA</span>
                   </div>
                 </div>
-                <Button onClick={downloadStudentCard} className="w-full" disabled={!isCardUnlocked}>
+                <Button onClick={downloadStudentCard} className="w-full" disabled={!isCardUnlocked || student.archived}>
                   <Download className="h-4 w-4 mr-2" />
                   Download Student Card
                 </Button>

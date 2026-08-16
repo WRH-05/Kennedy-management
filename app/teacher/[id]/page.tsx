@@ -3,6 +3,8 @@
 import { useState, useEffect, useCallback } from "react"
 import { useRouter, useParams } from "next/navigation"
 import { Button } from "@/components/ui/button"
+import { Alert, AlertDescription } from "@/components/ui/alert"
+import { Archive } from "lucide-react"
 
 import { Teacher, teacherService } from "@/services/teacherService"
 import { courseInstancesService, CourseInstanceWithEnrichment } from "@/services/courseInstancesService"
@@ -75,13 +77,19 @@ function TeacherProfileContent() {
     )
   }
 
-  const canEdit = true
+  const canEdit = !teacher.archived
   const activeCourses = courseInstances.filter((course) => !course.archived)
   const completedCourses = courseInstances.filter((course) => course.archived)
   const numberOfActiveStudents = activeCourses.reduce((acc, course) => acc + (course.student_ids?.length || 0), 0)
 
   return (
     <div>
+      {teacher.archived && (
+        <Alert className="mx-auto my-4 max-w-4xl w-full border-amber-300 bg-amber-50">
+          <Archive className="h-4 w-4" />
+          <AlertDescription className="text-amber-800">This Teacher is archived and in Read-Only Mode.</AlertDescription>
+        </Alert>
+      )}
       <TeacherHeader
         canEdit={canEdit}
         onEdit={() => setIsEditDialogOpen(true)}

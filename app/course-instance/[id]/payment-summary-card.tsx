@@ -10,9 +10,10 @@ interface PaymentSummaryProps {
   teacherEarnings: number
   payout: Tables<"teacher_payouts"> | null
   onToggleTeacherPayment: () => void
+  readOnly?: boolean
 }
 
-export function PaymentSummaryCard({payout, teacherEarnings, onToggleTeacherPayment }: PaymentSummaryProps) {
+export function PaymentSummaryCard({payout, teacherEarnings, onToggleTeacherPayment, readOnly = false }: PaymentSummaryProps) {
   // Defensive extraction: payout could be an array, null, undefined, or a single object
   const existingPayout = Array.isArray(payout) ? payout[0] : (payout && payout.id ? payout : null);
   const hasPayout = Boolean(existingPayout);
@@ -60,7 +61,7 @@ export function PaymentSummaryCard({payout, teacherEarnings, onToggleTeacherPaym
         <div className="flex items-center justify-between pt-2">
           <Label>Teacher Payment</Label>
           <Button
-            disabled={!isPayable}
+            disabled={!isPayable || readOnly}
             variant={isPayable ? "default" : "outline"}
             size="sm"
             onClick={onToggleTeacherPayment}

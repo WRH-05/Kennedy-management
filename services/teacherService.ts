@@ -148,13 +148,13 @@ export const teacherService = {
     },
 
 
-    async deleteTeacher(id: string): Promise<Tables<"teachers"> | PostgrestError> {
+    async deleteTeacher(id: string): Promise<Tables<"teachers"> | null> {
         const { data } = await supabase
             .from('teachers')
             .delete()
             .eq('id', id)
             .select()
-            .single()
+            .maybeSingle()
             .throwOnError()
 
         return data

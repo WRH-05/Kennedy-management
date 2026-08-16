@@ -3,7 +3,8 @@
 import { useState, useEffect, useCallback, useMemo, useRef } from "react"
 import { useRouter, useParams, useSearchParams } from "next/navigation"
 import { Button } from "@/components/ui/button"
-import { ArrowLeft, Printer, CalendarDays } from "lucide-react"
+import { ArrowLeft, Printer, CalendarDays, Archive } from "lucide-react"
+import { Alert, AlertDescription } from "@/components/ui/alert"
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog"
 
 import { CourseInstanceDetail, courseInstancesService, CourseInstanceWithEnrichment } from "@/services/courseInstancesService"
@@ -213,6 +214,12 @@ function CourseInstancesDetailContent() {
 
   return (
     <div>
+      {courseInstances.archived && (
+        <Alert className="mx-auto my-4 max-w-4xl w-full border-amber-300 bg-amber-50">
+          <Archive className="h-4 w-4" />
+          <AlertDescription className="text-amber-800">This Class is archived and in Read-Only Mode.</AlertDescription>
+        </Alert>
+      )}
       <header className="bg-white shadow-sm border-b">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex items-center h-16">
           <Button variant="ghost" size="sm" onClick={() => router.back()} className="mr-4">
@@ -231,18 +238,19 @@ function CourseInstancesDetailContent() {
       <div className="w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           <div className="lg:col-span-1">
-            <CourseInstancesInfoCard courseInstances={simpleCourseInstances} onRefresh={loadInitialData} />
-            <PaymentSummaryCard payout={payout} teacherEarnings={teacherEarnings} onToggleTeacherPayment={toggleTeacherPayment} />
+            <CourseInstancesInfoCard courseInstances={simpleCourseInstances} onRefresh={loadInitialData} readOnly={courseInstances.archived} />
+            <PaymentSummaryCard payout={payout} teacherEarnings={teacherEarnings} onToggleTeacherPayment={toggleTeacherPayment} readOnly={courseInstances.archived} />
           </div>
 
           <div className="lg:col-span-2 space-y-6">
-            <BillingPeriodToolbar courseInstanceId={courseInstances.id} billingPeriods={billingPeriods} selectedPeriodId={selectedPeriodId} setSelectedPeriodId={handleCycleChange} cycleStatuses={cycleStatuses} onRefresh={loadInitialData} />
+            <BillingPeriodToolbar courseInstanceId={courseInstances.id} billingPeriods={billingPeriods} selectedPeriodId={selectedPeriodId} setSelectedPeriodId={handleCycleChange} cycleStatuses={cycleStatuses} onRefresh={loadInitialData} readOnly={courseInstances.archived} />
             <StudentsManagementCard
               courseInstance={courseInstances} filteredStudents={filteredStudents}
               studentSearchQuery={studentSearchQuery} selectedPeriodId={selectedPeriodId}
               billingPeriods={billingPeriods} setSelectedPeriodId={handleCycleChange}
               setStudentSearchQuery={setStudentSearchQuery}
               onRefresh={loadInitialData}
+              readOnly={courseInstances.archived}
             />
           </div>
         </div>

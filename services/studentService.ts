@@ -102,13 +102,13 @@ export const studentService = {
     return data
   },
 
-  async deleteStudent(id: string): Promise<Tables<"students">> {
+  async deleteStudent(id: string): Promise<Tables<"students"> | null> {
     const { data } = await supabase
       .from('students')
       .delete()
       .eq('id', id)
       .select()
-      .single()
+      .maybeSingle()
       .throwOnError()
 
     return data

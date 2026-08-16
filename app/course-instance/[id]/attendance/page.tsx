@@ -290,7 +290,7 @@ export default function CourseInstanceAttendancePage() {
                               <Button
                                 variant="ghost"
                                 size="sm"
-                                className="group p-0 h-auto font-medium rounded hover:bg-muted"
+                                className="group p-0 h-auto font-bold text-slate-900 rounded hover:bg-slate-200 hover:text-slate-950 transition-colors"
                                 disabled={isLocked}
                                 onClick={() => openDrawer(date)}
                               >

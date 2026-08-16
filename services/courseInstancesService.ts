@@ -257,6 +257,18 @@ export const courseInstancesService = {
         return data;
     },
 
+    async deleteCourseInstance(id: string): Promise<Tables<"course_instances"> | null> {
+        const { data } = await supabase
+            .from('course_instances')
+            .delete()
+            .eq('id', id)
+            .select()
+            .maybeSingle()
+            .throwOnError();
+
+        return data;
+    },
+
     // 2. Batching Strategy to crush the N+1 problem completely
     async enrichCoursesWithStudentsBatch(courseInstances: any[]): Promise<CourseInstanceWithEnrichment[]> {
         if (!courseInstances || courseInstances.length === 0) return [];

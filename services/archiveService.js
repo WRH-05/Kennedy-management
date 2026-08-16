@@ -193,4 +193,55 @@ export const archiveService = {
         if (error) throw error
         return data
     },
+
+    // Unarchive an entity and remove its archive request row so it leaves /manager/archive
+    async unarchiveEntity(requestId) {
+        const { data: request, error: fetchError } = await supabase
+            .from('archive_requests')
+            .select('*')
+            .eq('id', requestId)
+            .single()
+
+        if (fetchError) throw fetchError
+        if (!request) throw new Error('Archive request not found')
+
+        if (request.entity_type === 'student') {
+            const { error } = await supabase
+                .from('students')
+                .update({ archived: false, archived_date: null })
+                .eq('id', request.entity_id)
+            if (error) throw error
+        } else if (request.entity_type === 'teacher') {
+            const { error } = await supabase
+                .from('teachers')
+                .update({ archived: false, archived_date: null })
+                .eq('id', request.entity_id)
+            if (error) throw error
+        } else if (request.entity_type === 'course') {
+            const { error } = await supabase
+                .from('course_instances')
+                .update({ archived: false, archived_date: null })
+                .eq('id', request.entity_id)
+            if (error) throw error
+        }
+
+        const { error: deleteError } = await supabase
+            .from('archive_requests')
+            .delete()
+            .eq('id', requestId)
+
+        if (deleteError) throw deleteError
+        return true
+    },
+
+    // Permanently remove the archive request row (used after a permanent entity delete)
+    async deleteArchiveRequest(requestId) {
+        const { error } = await supabase
+            .from('archive_requests')
+            .delete()
+            .eq('id', requestId)
+
+        if (error) throw error
+        return true
+    },
 }

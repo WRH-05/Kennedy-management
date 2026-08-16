@@ -6,12 +6,15 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Badge } from "@/components/ui/badge"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
-import { Archive, Check, X, Undo, MoreHorizontal } from "lucide-react"
+import { Archive, Check, X, Undo, MoreHorizontal, Trash2 } from "lucide-react"
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog"
 import { studentService } from "@/services/studentService"
 import { teacherService } from "@/services/teacherService"
 import { courseInstancesService } from "@/services/courseInstancesService"
 import { archiveService } from "@/services/archiveService"
 import { toast } from "@/hooks/use-toast"
+import Link from "next/link"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 
 interface ArchiveTabProps {
   isManager?: boolean
@@ -34,10 +37,27 @@ interface ArchiveRequest {
   updated_at?: string | null
 }
 
+function clearPointerEvents() {
+  document.body.style.pointerEvents = ""
+  setTimeout(() => {
+    document.body.style.pointerEvents = ""
+  }, 100)
+}
+
+function getEntityHref(request: ArchiveRequest): string {
+  if (request.entity_type === "student") return `/student/${request.entity_id}`
+  if (request.entity_type === "teacher") return `/teacher/${request.entity_id}`
+  if (request.entity_type === "course") return `/course-instance/${request.entity_id}`
+  return "#"
+}
+
 export default function ArchiveTab({ isManager = false, onArchiveUpdate }: ArchiveTabProps) {
   const [archiveRequests, setArchiveRequests] = useState<ArchiveRequest[]>([])
   const [loading, setLoading] = useState(true)
   const [processingIds, setProcessingIds] = useState<Set<string>>(new Set())
+  const [filterType, setFilterType] = useState<"all" | "student" | "teacher" | "course">("all")
+  const [unarchiveTarget, setUnarchiveTarget] = useState<ArchiveRequest | null>(null)
+  const [deleteTarget, setDeleteTarget] = useState<ArchiveRequest | null>(null)
 
   useEffect(() => {
     loadArchiveRequests()
@@ -76,6 +96,7 @@ export default function ArchiveTab({ isManager = false, onArchiveUpdate }: Archi
       await loadArchiveRequests()
       onArchiveUpdate?.()
     } finally {
+      clearPointerEvents()
       setProcessingIds(prev => {
         const next = new Set(prev)
         next.delete(requestId)
@@ -104,6 +125,7 @@ export default function ArchiveTab({ isManager = false, onArchiveUpdate }: Archi
       await loadArchiveRequests()
       onArchiveUpdate?.()
     } finally {
+      clearPointerEvents()
       setProcessingIds(prev => {
         const next = new Set(prev)
         next.delete(requestId)
@@ -112,16 +134,9 @@ export default function ArchiveTab({ isManager = false, onArchiveUpdate }: Archi
     }
   }
 
-  const handleUnarchive = async (type: string, entityId: string) => {
+  const handleUnarchive = async (request: ArchiveRequest) => {
     try {
-      // Unarchive the entity based on type
-      if (type === 'student') {
-        await studentService.unarchiveStudent(entityId)
-      } else if (type === 'teacher') {
-        await teacherService.unarchiveTeacher(entityId)
-      } else if (type === 'course') {
-        await courseInstancesService.unarchiveCourse(entityId)
-      }
+      await archiveService.unarchiveEntity(request.id)
 
       // Reload archive requests
       await loadArchiveRequests()
@@ -130,11 +145,37 @@ export default function ArchiveTab({ isManager = false, onArchiveUpdate }: Archi
     } catch (error) {
       console.error('Error unarchiving entity:', error)
       toast({ title: "Error", description: (error as Error)?.message || "Failed to unarchive.", variant: "destructive" })
+    } finally {
+      clearPointerEvents()
+    }
+  }
+
+  const handleDelete = async (request: ArchiveRequest) => {
+    try {
+      if (request.entity_type === 'student') {
+        await studentService.deleteStudent(request.entity_id)
+      } else if (request.entity_type === 'teacher') {
+        await teacherService.deleteTeacher(request.entity_id)
+      } else if (request.entity_type === 'course') {
+        await courseInstancesService.deleteCourseInstance(request.entity_id)
+      }
+      await archiveService.deleteArchiveRequest(request.id)
+      toast({ title: "Entity deleted" })
+      await loadArchiveRequests()
+      onArchiveUpdate?.()
+    } catch (error) {
+      console.error('Error permanently deleting entity:', error)
+      toast({ title: "Error", description: (error as Error)?.message || "Failed to delete.", variant: "destructive" })
+    } finally {
+      clearPointerEvents()
+      setDeleteTarget(null)
     }
   }
 
   const pendingRequests = archiveRequests.filter(req => req.status === 'pending')
   const processedRequests = archiveRequests.filter(req => req.status !== 'pending')
+  const filteredPending = filterType === "all" ? pendingRequests : pendingRequests.filter(req => req.entity_type === filterType)
+  const filteredProcessed = filterType === "all" ? processedRequests : processedRequests.filter(req => req.entity_type === filterType)
 
   if (loading) {
     return (
@@ -156,18 +197,29 @@ export default function ArchiveTab({ isManager = false, onArchiveUpdate }: Archi
 
   return (
     <Card>
-      <CardHeader>
+      <CardHeader className="flex flex-row items-center justify-between space-y-0">
         <CardTitle className="flex items-center">
           <Archive className="h-5 w-5 mr-2" />
           Archive Management
         </CardTitle>
+        <Select value={filterType} onValueChange={(v) => setFilterType(v as "all" | "student" | "teacher" | "course")}>
+          <SelectTrigger className="w-48">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All</SelectItem>
+            <SelectItem value="student">Students</SelectItem>
+            <SelectItem value="teacher">Teachers</SelectItem>
+            <SelectItem value="course">Class Instances</SelectItem>
+          </SelectContent>
+        </Select>
       </CardHeader>
       <CardContent className="space-y-6">
         <div className="max-h-113.75 overflow-auto scrollbar-thin">
         {/* Pending Requests */}
         <div>
           <h3 className="text-lg font-medium mb-4">Pending Archive Requests</h3>
-          {pendingRequests.length > 0 ? (
+          {filteredPending.length > 0 ? (
             <Table>
               <TableHeader>
                 <TableRow>
@@ -179,14 +231,18 @@ export default function ArchiveTab({ isManager = false, onArchiveUpdate }: Archi
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {pendingRequests.map((request) => (
+                {filteredPending.map((request) => (
                   <TableRow key={request.id} className="group">
                     <TableCell>
                       <Badge variant="outline" className="capitalize">
                         {request.entity_type}
                       </Badge>
                     </TableCell>
-                    <TableCell className="font-medium">{request.entity_name}</TableCell>
+                    <TableCell className="font-medium">
+                      <Link href={getEntityHref(request)} className="hover:underline">
+                        {request.entity_name}
+                      </Link>
+                    </TableCell>
                     <TableCell>{request.requested_by_name || request.requested_by || 'Unknown'}</TableCell>
                     <TableCell>{new Date(request.created_at).toLocaleDateString()}</TableCell>
                     <TableCell>{request.reason || 'No reason provided'}</TableCell>
@@ -230,7 +286,7 @@ export default function ArchiveTab({ isManager = false, onArchiveUpdate }: Archi
         </div>
 
         {/* Processed Requests */}
-        {processedRequests.length > 0 && (
+        {filteredProcessed.length > 0 && (
           <div className="mt-6">
             <h3 className="text-lg font-medium mb-4">Archive History</h3>
             <Table>
@@ -245,14 +301,18 @@ export default function ArchiveTab({ isManager = false, onArchiveUpdate }: Archi
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {processedRequests.map((request) => (
+                {filteredProcessed.map((request) => (
                   <TableRow key={request.id} className="opacity-60 group">
                     <TableCell>
                       <Badge variant="outline" className="capitalize">
                         {request.entity_type}
                       </Badge>
                     </TableCell>
-                    <TableCell className="font-medium">{request.entity_name}</TableCell>
+                    <TableCell className="font-medium">
+                      <Link href={getEntityHref(request)} className="hover:underline">
+                        {request.entity_name}
+                      </Link>
+                    </TableCell>
                     <TableCell>{request.requested_by_name || request.requested_by || 'Unknown'}</TableCell>
                     <TableCell>
                       <Badge variant={request.status === 'approved' ? 'default' : 'destructive'}>
@@ -276,10 +336,17 @@ export default function ArchiveTab({ isManager = false, onArchiveUpdate }: Archi
                             </DropdownMenuTrigger>
                             <DropdownMenuContent align="end">
                               <DropdownMenuItem
-                                onClick={() => handleUnarchive(request.entity_type, request.entity_id)}
+                                onClick={() => setUnarchiveTarget(request)}
                               >
                                 <Undo className="mr-2 h-4 w-4" />
                                 Unarchive
+                              </DropdownMenuItem>
+                              <DropdownMenuItem
+                                onClick={() => setDeleteTarget(request)}
+                                className="text-red-600"
+                              >
+                                <Trash2 className="mr-2 h-4 w-4" />
+                                Delete
                               </DropdownMenuItem>
                             </DropdownMenuContent>
                           </DropdownMenu>
@@ -294,6 +361,50 @@ export default function ArchiveTab({ isManager = false, onArchiveUpdate }: Archi
         )}
         </div>
       </CardContent>
+
+      <AlertDialog open={!!unarchiveTarget} onOpenChange={(open) => { if (!open) setUnarchiveTarget(null) }}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Unarchive {unarchiveTarget?.entity_name}?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This will restore {unarchiveTarget?.entity_name} to active lists and search results.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={() => setUnarchiveTarget(null)}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => {
+                if (unarchiveTarget) {
+                  handleUnarchive(unarchiveTarget)
+                  setUnarchiveTarget(null)
+                }
+              }}
+            >
+              Unarchive
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <AlertDialog open={!!deleteTarget} onOpenChange={(open) => { if (!open) setDeleteTarget(null) }}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete {deleteTarget?.entity_name}?</AlertDialogTitle>
+            <AlertDialogDescription>
+              WARNING: This action is permanent and cannot be undone. All associated historical records will be permanently removed from the database.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={() => setDeleteTarget(null)}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-red-600 hover:bg-red-700"
+              onClick={() => { if (deleteTarget) handleDelete(deleteTarget) }}
+            >
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </Card>
   )
 }

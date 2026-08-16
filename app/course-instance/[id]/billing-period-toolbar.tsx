@@ -17,6 +17,7 @@ interface BillingPeriodToolbarProps {
   setSelectedPeriodId: (id: string) => void
   cycleStatuses?: Record<string, 'red' | 'orange' | 'green'>
   onRefresh: () => void
+  readOnly?: boolean
 }
 
 const STATUS_COLORS: Record<string, string> = {
@@ -25,7 +26,7 @@ const STATUS_COLORS: Record<string, string> = {
   green: 'bg-green-500',
 }
 
-export function BillingPeriodToolbar({ courseInstanceId, billingPeriods, selectedPeriodId, setSelectedPeriodId, cycleStatuses, onRefresh }: BillingPeriodToolbarProps) {
+export function BillingPeriodToolbar({ courseInstanceId, billingPeriods, selectedPeriodId, setSelectedPeriodId, cycleStatuses, onRefresh, readOnly = false }: BillingPeriodToolbarProps) {
   const { toast } = useToast()
   const [showAddBillingDialog, setShowAddBillingDialog] = useState(false)
   const [isSubmitting, setIsSubmitting] = useState(false)
@@ -93,7 +94,7 @@ export function BillingPeriodToolbar({ courseInstanceId, billingPeriods, selecte
         <Calendar className="h-5 w-5 text-gray-500" />
         <span className="font-semibold text-sm">Billing Cycle:</span>
         {billingPeriods.length > 0 ? (
-          <Select value={selectedPeriodId} onValueChange={setSelectedPeriodId}>
+          <Select value={selectedPeriodId} onValueChange={setSelectedPeriodId} disabled={readOnly}>
             <SelectTrigger className="min-w-[250px] h-9"><SelectValue placeholder="Select Cycle" /></SelectTrigger>
             <SelectContent>
               {billingPeriods.map((p) => {
@@ -116,17 +117,17 @@ export function BillingPeriodToolbar({ courseInstanceId, billingPeriods, selecte
 
       <div className="flex items-center gap-2">
         <div className="flex items-center border rounded-md h-9 overflow-hidden bg-gray-50">
-          <Button variant="ghost" size="icon" className="h-full rounded-none border-r" onClick={() => stepBillingPeriod('prev')} disabled={billingPeriods.findIndex(p => p.id === selectedPeriodId) >= billingPeriods.length - 1}>
+          <Button variant="ghost" size="icon" className="h-full rounded-none border-r" onClick={() => stepBillingPeriod('prev')} disabled={billingPeriods.findIndex(p => p.id === selectedPeriodId) >= billingPeriods.length - 1 || readOnly}>
             <ChevronLeft className="h-4 w-4" />
           </Button>
-          <Button variant="ghost" size="icon" className="h-full rounded-none" onClick={() => stepBillingPeriod('next')} disabled={billingPeriods.findIndex(p => p.id === selectedPeriodId) <= 0}>
+          <Button variant="ghost" size="icon" className="h-full rounded-none" onClick={() => stepBillingPeriod('next')} disabled={billingPeriods.findIndex(p => p.id === selectedPeriodId) <= 0 || readOnly}>
             <ChevronRight className="h-4 w-4" />
           </Button>
         </div>
 
         <Dialog open={showAddBillingDialog} onOpenChange={setShowAddBillingDialog}>
           <DialogTrigger asChild>
-            <Button size="sm" className="h-9"><Plus className="h-4 w-4 mr-1" /> Cycle</Button>
+            <Button size="sm" className="h-9" disabled={readOnly}><Plus className="h-4 w-4 mr-1" /> Cycle</Button>
           </DialogTrigger>
           <DialogContent>
             <DialogHeader><DialogTitle>Create New Billing Period</DialogTitle></DialogHeader>

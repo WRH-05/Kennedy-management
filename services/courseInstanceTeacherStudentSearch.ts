@@ -39,7 +39,8 @@ export async function searchAllCourseInstancesTeachersStudents(
 async function searchTeachers(name: string, page: number, pageSize: number) {
     let query = supabase
         .from('teachers')
-        .select('id, name', { count: pageSize > 0 ? 'exact' : 'estimated' });
+        .select('id, name', { count: pageSize > 0 ? 'exact' : 'estimated' })
+        .eq('archived', false);
 
     if (name && name.trim().length > 0) {
         const words = name.trim().split(/\s+/).filter(Boolean);
@@ -64,7 +65,8 @@ async function searchTeachers(name: string, page: number, pageSize: number) {
 async function searchStudents(name: string, page: number, pageSize: number) {
     let query = supabase
         .from('students')
-        .select('id, name', { count: pageSize > 0 ? 'exact' : 'estimated' });
+        .select('id, name', { count: pageSize > 0 ? 'exact' : 'estimated' })
+        .eq('archived', false);
 
     if (name && name.trim().length > 0) {
         const words = name.trim().split(/\s+/).filter(Boolean);
@@ -94,6 +96,7 @@ async function searchCourseInstances(name: string, page: number, pageSize: numbe
     let query = supabase
         .from('course_instances')
         .select('id, display_name, course_eligibility_id, course_eligibility!inner(courses!inner(name), grade_levels(name)), teachers(name), course_schedule(day, start_time, end_time)', { count: pageSize > 0 ? 'exact' : 'estimated' })
+        .eq('archived', false)
 
     const words = name.trim().split(/\s+/).filter(Boolean);
     // Search by display_name first, fallback to composed name

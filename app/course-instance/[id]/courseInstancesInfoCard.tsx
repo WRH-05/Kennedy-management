@@ -13,9 +13,11 @@ import { usePaginatedGradeLevels } from "@/hooks/useGradeLevels"
 export function CourseInstancesInfoCard({
   courseInstances,
   onRefresh,
+  readOnly = false,
 }: {
   courseInstances: CourseInstanceDetail
   onRefresh: () => void
+  readOnly?: boolean
 }) {
   const router = useRouter()
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false)
@@ -38,14 +40,16 @@ export function CourseInstancesInfoCard({
           <CardTitle className="flex items-center text-md font-medium">
             <BookOpen className="h-5 w-5 mr-2" /> Course Information
           </CardTitle>
-          <Button
-            variant="outline"
-            size="sm"
-            className="h-8 px-2"
-            onClick={() => setIsEditDialogOpen(true)}
-          >
-            <Edit3 className="h-4 w-4 mr-1" /> Edit
-          </Button>
+          {!readOnly && (
+            <Button
+              variant="outline"
+              size="sm"
+              className="h-8 px-2"
+              onClick={() => setIsEditDialogOpen(true)}
+            >
+              <Edit3 className="h-4 w-4 mr-1" /> Edit
+            </Button>
+          )}
         </CardHeader>
         <CardContent className="space-y-4">
           <div>

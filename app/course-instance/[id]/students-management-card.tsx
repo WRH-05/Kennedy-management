@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Users, Plus, MoreHorizontal, Check } from "lucide-react"
+import { Users, Plus, MoreHorizontal, Check, Printer } from "lucide-react"
 import { courseInstancesService } from "@/services/courseInstancesService"
 import { useStudentsData } from "@/hooks/usePayments"
 import { useStudents } from "@/hooks/useStudents"
@@ -47,10 +47,11 @@ interface StudentsManagementProps {
   setSelectedPeriodId: (id: string) => void
   setStudentSearchQuery: (query: string) => void
   onRefresh: () => void
+  readOnly?: boolean
 }
 
 export function StudentsManagementCard({
-  courseInstance, selectedPeriodId, filteredStudents, studentSearchQuery, billingPeriods, setStudentSearchQuery, onRefresh, setSelectedPeriodId
+  courseInstance, selectedPeriodId, filteredStudents, studentSearchQuery, billingPeriods, setStudentSearchQuery, onRefresh, setSelectedPeriodId, readOnly = false
 }: StudentsManagementProps) {
   const router = useRouter()
   const { profile } = useAuth()
@@ -74,6 +75,25 @@ export function StudentsManagementCard({
     (enrolledStudentsRaw && 'data' in enrolledStudentsRaw ? enrolledStudentsRaw.data : []),
     [enrolledStudentsRaw]
   )
+
+  const selectedPeriod = billingPeriods.find((p) => p.id === selectedPeriodId)
+
+  const enrolledAtByStudent = useMemo(() => {
+    const map = new Map<string, string>()
+    enrolledStudents.forEach((e: EnrichedCourseEnrollements) => {
+      if (e.student_id) map.set(e.student_id, e.enrolled_at)
+    })
+    return map
+  }, [enrolledStudents])
+
+  const isEnrollmentInPeriod = (studentId: string) => {
+    const enrolledAt = enrolledAtByStudent.get(studentId)
+    if (!enrolledAt || !selectedPeriod) return false
+    const date = enrolledAt.slice(0, 10)
+    const start = selectedPeriod.start_date || ""
+    const end = selectedPeriod.end_date || ""
+    return date >= start && date <= end
+  }
 
   const enrollmentPricing = useMemo(() => {
     const schedule = (courseInstance as any)?.course_schedule || []
@@ -223,7 +243,7 @@ export function StudentsManagementCard({
           </CardTitle>
           <Dialog open={showAddStudentDialog} onOpenChange={setShowAddStudentDialog}>
             <DialogTrigger asChild>
-              <Button disabled={billingPeriods.length === 0}>
+              <Button disabled={billingPeriods.length === 0 || readOnly}>
                 <Plus className="h-4 w-4 mr-2" /> Add Student
               </Button>
             </DialogTrigger>
@@ -360,35 +380,36 @@ export function StudentsManagementCard({
 
                 const isPaid = p.status === "paid";
                 const isFinalizedEnrollment = currentEnrollmentStatus === "dropped";
+                const isProRated = Number(p.amount || 0) < Number(courseInstance.price || 0) && isEnrollmentInPeriod(currentStudentId);
 
                 return (
                   <TableRow key={idx}>
                     <TableCell className="font-medium">
-                      <Button
-                        variant="link"
-                        className="p-0 h-auto font-medium text-left"
-                        onClick={() => router.push(`/student/${currentStudentId}`)}
-                      >
-                        {p.students?.name || "Unknown Student"}
-                      </Button>
+                      <div className="flex flex-col items-start gap-1">
+                        <Button
+                          variant="link"
+                          className="p-0 h-auto font-medium text-left"
+                          onClick={() => router.push(`/student/${currentStudentId}`)}
+                        >
+                          {p.students?.name || "Unknown Student"}
+                        </Button>
+                        {isProRated && (
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <Badge variant="outline" className="text-xs cursor-default">Pro-rated</Badge>
+                            </TooltipTrigger>
+                            <TooltipContent>
+                              Base Course Fee: {Number(courseInstance.price || 0).toLocaleString()} DA • Pro-rated Fee: {Number(p.amount || 0).toLocaleString()} DA
+                            </TooltipContent>
+                          </Tooltip>
+                        )}
+                      </div>
                     </TableCell>
 
                     {/* Payment Status Column */}
                     <TableCell>
-                      <div className="space-y-1">
-                        <div className="flex items-center gap-1.5">
-                          <span className="text-sm font-medium">{Number(p.amount || 0).toLocaleString()} DA</span>
-                          {Number(p.amount || 0) < Number(courseInstance.price || 0) && (
-                            <Tooltip>
-                              <TooltipTrigger asChild>
-                                <Badge variant="outline" className="text-xs cursor-default">Pro-rated</Badge>
-                              </TooltipTrigger>
-                              <TooltipContent>
-                                Base Course Fee: {Number(courseInstance.price || 0).toLocaleString()} DA • Pro-rated Fee: {Number(p.amount || 0).toLocaleString()} DA
-                              </TooltipContent>
-                            </Tooltip>
-                          )}
-                        </div>
+                      <div className="flex flex-col items-start gap-1">
+                        <span className="text-sm font-semibold">{Number(p.amount || 0).toLocaleString()} DA</span>
                         {getStatusBadge(p.status)}
                       </div>
                     </TableCell>
@@ -397,7 +418,7 @@ export function StudentsManagementCard({
                     <TableCell>
                       <Select
                         value={currentEnrollmentStatus}
-                        disabled={isFinalizedEnrollment}
+                        disabled={isFinalizedEnrollment || readOnly}
                         onValueChange={(newStatus) => onChangeEnrollmentStatus(currentStudentId, currentEnrollmentStatus, newStatus)}
                       >
                         <SelectTrigger
@@ -420,28 +441,25 @@ export function StudentsManagementCard({
                     </TableCell>
 
                     <TableCell className="group">
-                      <div className="flex items-center justify-between">
-                        {isPaid ? (
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            className="text-xs text-emerald-600 font-medium p-0 h-auto"
-                            onClick={() => handleReprint(p)}
-                          >
-                            Paid
-                          </Button>
-                        ) : isFinalizedEnrollment ? (
-                          <span className="text-xs text-rose-600 font-medium">Dropped</span>
-                        ) : p.status === 'cancelled' ? (
-                          <span className="text-xs text-muted-foreground">Cancelled</span>
-                        ) : (
-                          <DropdownMenu>
-                            <DropdownMenuTrigger asChild>
-                              <Button variant="ghost" className="h-8 w-8 p-0">
-                                <MoreHorizontal className="h-4 w-4" />
-                              </Button>
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent align="end">
+                      {readOnly ? (
+                        <span className="text-xs text-muted-foreground">Read-only</span>
+                      ) : (
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button variant="ghost" className="h-8 w-8 p-0">
+                              <MoreHorizontal className="h-4 w-4" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end">
+                            {isPaid ? (
+                              <DropdownMenuItem
+                                onClick={() => handleReprint(p)}
+                                className="cursor-pointer"
+                              >
+                                <Printer className="mr-2 h-4 w-4" />
+                                Re-print Receipt
+                              </DropdownMenuItem>
+                            ) : !isFinalizedEnrollment && p.status !== 'cancelled' ? (
                               <DropdownMenuItem
                                 onClick={() => handlePayAndPrint(p)}
                                 className="text-emerald-600 focus:text-emerald-600 cursor-pointer"
@@ -449,10 +467,14 @@ export function StudentsManagementCard({
                                 <Check className="mr-2 h-4 w-4" />
                                 Record Payment
                               </DropdownMenuItem>
-                            </DropdownMenuContent>
-                          </DropdownMenu>
-                        )}
-                      </div>
+                            ) : (
+                              <DropdownMenuItem disabled className="cursor-default">
+                                {isFinalizedEnrollment ? "Dropped" : "Cancelled"}
+                              </DropdownMenuItem>
+                            )}
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      )}
                     </TableCell>
                   </TableRow>
                 );
