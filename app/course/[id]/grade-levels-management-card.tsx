@@ -71,6 +71,7 @@ export function GradeLevelManagementCard({ gradeLevels, courseId, courseType, on
       onRefresh()
     } catch (error) {
       console.error(error)
+      toast({ title: "Cannot detach grade level", description: (error as Error).message, variant: "destructive" })
     }
   }
 

@@ -32,7 +32,7 @@ export default function CoursesTab({
         <div className="flex justify-between items-center">
           <CardTitle className="flex items-center">
             <BookOpen className="h-5 w-5 mr-2" />
-            All Course Instances
+            All Class Instances
           </CardTitle>
           <div className="flex items-center gap-2">
             <Select value={sort} onValueChange={(v) => onSortChange(v as CourseInstanceSort)}>

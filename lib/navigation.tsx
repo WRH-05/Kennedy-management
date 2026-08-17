@@ -50,7 +50,7 @@ export const ALL_NAVIGATION_CARDS: NavItem[] = [
     allowedRoles: ["owner", "manager"],
   },
   {
-    title: "Manage Course Instances",
+    title: "Manage Class Instances",
     description: "Edit active class schedules and instances",
     href: "/manager/course-instances",
     icon: <CalendarDays className="h-5 w-5 text-red-500" />,

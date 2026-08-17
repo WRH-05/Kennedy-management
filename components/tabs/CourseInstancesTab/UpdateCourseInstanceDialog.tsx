@@ -182,7 +182,7 @@ export function UpdateCourseInstanceDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>Edit Course Details</DialogTitle>
+          <DialogTitle>Edit Class Instance</DialogTitle>
         </DialogHeader>
 
         {isLoading ? (

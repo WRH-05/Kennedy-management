@@ -224,7 +224,7 @@ export function AddCourseDialog({ onCourseAdded }: AddCourseInstanceDialogProps)
 
       toast({
         title: "Course added",
-        description: `Course Instance has been successfully added.`,
+        description: `Class Instance has been successfully added.`,
       })
     } catch (error) {
       toast({

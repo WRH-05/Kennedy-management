@@ -126,7 +126,7 @@ export const studentPaymentService = {
 
             await activityLogService.logActivity({
                 action_type: 'payment',
-                title: `Tuition Payment: ${studentName} - ${className} (${data.amount ?? 0} DA)`,
+                title: `Tuition Payment: ${studentName} - ${className}`,
                 amount: data.amount ?? 0,
                 entity_type: 'student',
                 entity_id: data.student_id,
@@ -256,7 +256,7 @@ export const studentPaymentService = {
 
         await activityLogService.logActivity({
             action_type: 'payment',
-            title: `Registration Fee Paid: ${student?.name ?? 'Unknown'} (${fee} DA)`,
+            title: `Registration Fee Paid: ${student?.name ?? 'Unknown'}`,
             amount: fee,
             entity_type: 'student',
             entity_id: studentId,

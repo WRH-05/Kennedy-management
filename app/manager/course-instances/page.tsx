@@ -66,7 +66,7 @@ export default function CoursesPage() {
     setPage(1)
   }
 
-  if (isCourseLoading) return <div className="p-8 text-center text-gray-500">Loading Course Instances...</div>
+  if (isCourseLoading) return <div className="p-8 text-center text-gray-500">Loading Class Instances...</div>
 
   const total = sortedCourses.length
   const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE))

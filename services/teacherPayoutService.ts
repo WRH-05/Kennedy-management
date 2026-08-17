@@ -170,7 +170,7 @@ export const teacherPayoutService = {
 
         await activityLogService.logActivity({
             action_type: 'payout_confirmed',
-            title: `Teacher Payout Confirmed: ${teacher?.name ?? 'Unknown'} (${data.amount ?? 0} DA)`,
+            title: `Teacher Payout Confirmed: ${teacher?.name ?? 'Unknown'}`,
             amount: data.amount ?? 0,
             entity_type: 'teacher',
             entity_id: (data as any).teacher_id,
@@ -216,7 +216,7 @@ export const teacherPayoutService = {
 
         await activityLogService.logActivity({
             action_type: 'payout_request',
-            title: `Teacher Payout Requested: ${teacher?.name ?? 'Unknown'} (${amount} DA)`,
+            title: `Teacher Payout Requested: ${teacher?.name ?? 'Unknown'}`,
             amount: amount,
             entity_type: 'teacher',
             entity_id: (data as any).teacher_id,

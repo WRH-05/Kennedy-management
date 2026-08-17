@@ -1,7 +1,7 @@
 "use client"
 
-import { useState, useEffect, useCallback, useRef } from "react"
-import { useRouter, useParams, useSearchParams } from "next/navigation"
+import React, { Suspense, useState, useEffect, useCallback, useRef } from "react"
+import { useRouter, useSearchParams } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Alert, AlertDescription } from "@/components/ui/alert"
@@ -9,7 +9,7 @@ import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Drawer, DrawerContent, DrawerFooter, DrawerHeader, DrawerTitle } from "@/components/ui/drawer"
-import { ArrowLeft, Lock, CalendarDays, Pencil } from "lucide-react"
+import { ArrowLeft, Lock, CalendarDays, Pencil, Loader2 } from "lucide-react"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
 import { CourseInstanceDetail, courseInstancesService } from "@/services/courseInstancesService"
 import { paymentService } from "@/services/paymentService"
@@ -54,11 +54,18 @@ function todayStr(): string {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`
 }
 
-export default function CourseInstanceAttendancePage() {
+export default function AttendancePage({ params }: { params: Promise<{ id: string }> }) {
+  const { id } = React.use(params)
+  return (
+    <Suspense fallback={<div className="flex justify-center p-12"><Loader2 className="h-8 w-8 animate-spin" /></div>}>
+      <AttendanceContent courseInstanceId={id} />
+    </Suspense>
+  )
+}
+
+function AttendanceContent({ courseInstanceId }: { courseInstanceId: string }) {
   const router = useRouter()
-  const params = useParams()
   const searchParams = useSearchParams()
-  const courseInstanceId = params.id as string
   const initialCycleSet = useRef(false)
 
   const [course, setCourse] = useState<CourseInstanceDetail | null>(null)
@@ -66,6 +73,7 @@ export default function CourseInstanceAttendancePage() {
   const [selectedPeriodId, setSelectedPeriodId] = useState("")
   const [matrix, setMatrix] = useState<AttendanceMatrix | null>(null)
   const [loading, setLoading] = useState(true)
+  const [loadError, setLoadError] = useState<string | null>(null)
   const [drawerDate, setDrawerDate] = useState<string | null>(null)
   const [saving, setSaving] = useState(false)
   const [teacherStatus, setTeacherStatus] = useState<TeacherAttendanceStatus>("present")
@@ -92,6 +100,7 @@ export default function CourseInstanceAttendancePage() {
       setMatrix(m)
     } catch (error) {
       console.error("Failed to load attendance matrix:", error)
+      setLoadError("Failed to load attendance matrix.")
     }
   }, [courseInstanceId])
 
@@ -106,6 +115,7 @@ export default function CourseInstanceAttendancePage() {
         setBillingPeriods(bps || [])
       } catch (error) {
         console.error("Failed to load attendance page:", error)
+        setLoadError("Failed to load attendance data.")
       } finally {
         setLoading(false)
       }
@@ -205,10 +215,23 @@ export default function CourseInstanceAttendancePage() {
     }
   }
 
+  if (loadError) {
+    return (
+      <div className="flex flex-col items-center justify-center py-20 gap-4">
+        <Alert variant="destructive" className="max-w-md">
+          <AlertDescription>{loadError}</AlertDescription>
+        </Alert>
+        <Button variant="outline" onClick={() => router.push(`/course-instance/${courseInstanceId}`)}>
+          <ArrowLeft className="h-4 w-4 mr-2" /> Back to Class Details
+        </Button>
+      </div>
+    )
+  }
+
   if (loading || !course) {
     return (
       <div className="flex items-center justify-center py-20">
-        <h2 className="text-xl font-semibold text-gray-900">Loading...</h2>
+        <Loader2 className="h-8 w-8 animate-spin text-gray-400" />
       </div>
     )
   }
