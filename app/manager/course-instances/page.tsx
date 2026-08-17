@@ -1,5 +1,6 @@
 "use client"
-import { useMemo, useState } from "react"
+import { Suspense, useMemo, useState } from "react"
+import { useRouter, useSearchParams } from "next/navigation"
 import { useCourseInstances } from "@/hooks/useCourseInstances"
 
 import CourseInstancesTab, { type CourseInstanceSort } from "@/components/tabs/CoursesInstancesTab"
@@ -43,9 +44,27 @@ function getPageItems(page: number, totalPages: number) {
 }
 
 export default function CoursesPage() {
-  const [page, setPage] = useState(1)
+  return (
+    <Suspense fallback={<div className="p-8 text-center text-gray-500">Loading Class Instances...</div>}>
+      <CoursesPageContent />
+    </Suspense>
+  )
+}
+
+function CoursesPageContent() {
+  const router = useRouter()
+  const searchParams = useSearchParams()
+  const page = Math.max(1, Number(searchParams.get("page")) || 1)
   const [sort, setSort] = useState<CourseInstanceSort>('default')
   const { data: allCourses, isLoading: isCourseLoading, mutate } = useCourseInstances()
+
+  const setPage = (n: number) => {
+    const params = new URLSearchParams(searchParams.toString())
+    if (n <= 1) params.delete("page")
+    else params.set("page", String(n))
+    const qs = params.toString()
+    router.replace(qs ? `/manager/course-instances?${qs}` : "/manager/course-instances", { scroll: false })
+  }
 
   const sortedCourses = useMemo(() => {
     const list = [...allCourses];

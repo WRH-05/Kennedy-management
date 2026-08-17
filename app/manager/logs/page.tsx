@@ -10,7 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { useActivityLogs } from "@/hooks/useActivityLogs"
 import { useRevenue, useTeachersPayouts } from "@/hooks/usePayments"
-import { ClipboardList, Search, TrendingUp, DollarSign, Wallet } from "lucide-react"
+import { Search, TrendingUp, DollarSign, Wallet } from "lucide-react"
 
 const CATEGORIES = [
   { value: "all", label: "All Logs" },
@@ -21,6 +21,7 @@ const CATEGORIES = [
 ]
 
 const DATE_RANGES = [
+  { value: "last24h", label: "Last 24 Hours" },
   { value: "last30", label: "Last 30 Days" },
   { value: "thisMonth", label: "This Month" },
   { value: "allTime", label: "All Time" },
@@ -125,18 +126,6 @@ function LogsDashboard() {
 
   return (
     <div className="space-y-6">
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <ClipboardList className="h-5 w-5 text-primary" />
-            Activity &amp; Financial Logs
-          </CardTitle>
-          <p className="text-sm text-muted-foreground">
-            Audit history of school registrations, cash desk payments, teacher payouts, and administrative actions.
-          </p>
-        </CardHeader>
-      </Card>
-
       {showFinancialSummary && (
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           <Card>

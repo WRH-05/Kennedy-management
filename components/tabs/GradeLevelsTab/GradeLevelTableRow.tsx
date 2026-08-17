@@ -18,13 +18,10 @@ import {
 import { MoreHorizontal, Trash2 } from "lucide-react"
 import { UpdateGradeLevelDialog } from "./UpdateGradeLevelsDialog"
 import { gradeLevelsService } from "@/services/gradeLevelsService"
-import { createClient } from "@/lib/supabase/client"
 import { useToast } from "@/hooks/use-toast"
 import { useState } from "react"
 import { useRouter } from "next/navigation"
 import { formatCourseType } from "@/lib/course-display"
-
-const supabase = createClient()
 
 interface GradeLevelTableRowProps {
   gradeLevel: Tables<"grade_levels">,
@@ -41,24 +38,15 @@ export function GradeLevelTableRow({ gradeLevel: gradeLevel, onGradeLevelUpdated
   const handleDelete = async () => {
     setIsDeleting(true)
     try {
-      // Check for dependent records in course_eligibility
-      const { count, error: checkError } = await supabase
-        .from('course_eligibility')
-        .select('*', { count: 'exact', head: true })
-        .eq('grade_level_id', gradeLevel.id)
-
-      if (checkError) throw checkError
-
-      if (count && count > 0) {
+      const res = await gradeLevelsService.deleteGradeLevel(gradeLevel.id)
+      if (!res.success) {
         toast({
-          title: "Cannot Delete",
-          description: "Cannot delete this grade level because it has courses assigned to it.",
+          title: "Action Failed",
+          description: res.error,
           variant: "destructive",
         })
         return
       }
-
-      await gradeLevelsService.deleteGradeLevel(gradeLevel.id)
       toast({
         title: "Grade level deleted",
         description: `${gradeLevel.name} has been successfully deleted.`,

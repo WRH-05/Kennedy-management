@@ -106,7 +106,7 @@ export const gradeLevelsService = {
         return data
     },
 
-    async deleteGradeLevel(id: string): Promise<Tables<"grade_levels">> {
+    async deleteGradeLevel(id: string): Promise<{ success: boolean; error?: string }> {
         // Check for students assigned to this grade level before deleting
         const { data: assignedStudents } = await supabase
             .from('students')
@@ -114,7 +114,7 @@ export const gradeLevelsService = {
             .or(`school_level.eq.${id},extracurricular_grade_level_ids.cs.{${id}}`)
 
         if (assignedStudents && assignedStudents.length > 0) {
-            throw new Error("Cannot delete grade level: Students are currently assigned to this grade level.")
+            return { success: false, error: "Cannot delete grade level: Students are currently assigned to this grade level." }
         }
 
         // Check for course eligibilities referencing this grade level
@@ -124,24 +124,27 @@ export const gradeLevelsService = {
             .eq('grade_level_id', id)
 
         if (linkedEligibilities && linkedEligibilities.length > 0) {
-            throw new Error("Cannot delete grade level: This grade level is assigned to one or more courses.")
+            return { success: false, error: "Cannot delete grade level: This grade level is assigned to one or more courses." }
         }
 
-        const { data } = await supabase
+        const { data, error } = await supabase
             .from('grade_levels')
             .delete()
             .eq('id', id)
             .select()
             .single()
-            .throwOnError()
+
+        if (error) {
+            return { success: false, error: error.message }
+        }
 
         await activityLogService.logActivity({
             action_type: 'grade_level_delete',
-            title: `Grade level deleted: ${data.name}`,
+            title: `Grade level deleted: ${data?.name ?? 'Unknown'}`,
             entity_type: 'grade_level',
             entity_id: id,
         })
 
-        return data
+        return { success: true }
     },
 }
