@@ -197,11 +197,21 @@ export const coursesEligiblityService = {
     },
 
     async deleteCourseEligibility(id: string) {
+        // Check for class instances linked to this course eligibility before deleting
+        const { data: instances } = await supabase
+            .from('course_instances')
+            .select('id')
+            .eq('course_eligibility_id', id)
+
+        if (instances && instances.length > 0) {
+            throw new Error("Cannot detach grade level: Active or historical class instances are currently linked to this course level.")
+        }
+
         // Delete referencing teacher-assignment rows first to avoid a FK violation
         await supabase
             .from('teachers_course_eligibility')
             .delete()
-            .eq('course_eligibility_id', id)
+            .eq('course_eligibility', id)
 
         const { data } = await supabase
             .from('course_eligibility')

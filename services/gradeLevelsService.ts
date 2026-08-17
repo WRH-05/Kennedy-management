@@ -107,6 +107,26 @@ export const gradeLevelsService = {
     },
 
     async deleteGradeLevel(id: string): Promise<Tables<"grade_levels">> {
+        // Check for students assigned to this grade level before deleting
+        const { data: assignedStudents } = await supabase
+            .from('students')
+            .select('id')
+            .or(`school_level.eq.${id},extracurricular_grade_level_ids.cs.{${id}}`)
+
+        if (assignedStudents && assignedStudents.length > 0) {
+            throw new Error("Cannot delete grade level: Students are currently assigned to this grade level.")
+        }
+
+        // Check for course eligibilities referencing this grade level
+        const { data: linkedEligibilities } = await supabase
+            .from('course_eligibility')
+            .select('id')
+            .eq('grade_level_id', id)
+
+        if (linkedEligibilities && linkedEligibilities.length > 0) {
+            throw new Error("Cannot delete grade level: This grade level is assigned to one or more courses.")
+        }
+
         const { data } = await supabase
             .from('grade_levels')
             .delete()
