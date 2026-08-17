@@ -1,6 +1,7 @@
 "use client"
 
-import { useMemo, useState } from "react"
+import { Suspense, useMemo } from "react"
+import { useRouter, useSearchParams } from "next/navigation"
 import { usePaginatedStudents } from "@/hooks/useStudents"
 import { usePendingArchives } from "@/hooks/usePayments"
 import StudentsTab from "@/components/tabs/StudentsTab"
@@ -43,7 +44,26 @@ function getPageItems(page: number, totalPages: number) {
 }
 
 export default function StudentsPage() {
-  const [page, setPage] = useState(1)
+  return (
+    <Suspense fallback={<div className="p-8 text-center text-gray-500">Loading Student Records...</div>}>
+      <StudentsPageContent />
+    </Suspense>
+  )
+}
+
+function StudentsPageContent() {
+  const router = useRouter()
+  const searchParams = useSearchParams()
+  const page = Math.max(1, Number(searchParams.get("page")) || 1)
+
+  const setPage = (n: number) => {
+    const params = new URLSearchParams(searchParams.toString())
+    if (n <= 1) params.delete("page")
+    else params.set("page", String(n))
+    const qs = params.toString()
+    router.replace(qs ? `/manager/students?${qs}` : "/manager/students", { scroll: false })
+  }
+
   const { students, total, isLoading: studentLoading, mutate } = usePaginatedStudents(page, PAGE_SIZE)
   const { data: pendingArchiveMap } = usePendingArchives()
 

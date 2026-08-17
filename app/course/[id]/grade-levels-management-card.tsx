@@ -66,12 +66,16 @@ export function GradeLevelManagementCard({ gradeLevels, courseId, courseType, on
   const handleRemoveGradeLevel = async (eligibilityId: string) => {
     if (!eligibilityId) return
     try {
-      await coursesEligiblityService.deleteCourseEligibility(eligibilityId)
+      const res = await coursesEligiblityService.deleteCourseEligibility(eligibilityId)
+      if (!res.success) {
+        toast({ title: "Action Failed", description: res.error, variant: "destructive" })
+        return
+      }
       toast({ title: "Success", description: "Grade level removed." })
       onRefresh()
     } catch (error) {
       console.error(error)
-      toast({ title: "Cannot detach grade level", description: (error as Error).message, variant: "destructive" })
+      toast({ title: "Action Failed", description: (error as Error).message, variant: "destructive" })
     }
   }
 

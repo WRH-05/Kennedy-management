@@ -225,7 +225,7 @@ function CourseInstancesDetailContent() {
           <Button variant="ghost" size="sm" onClick={() => router.back()} className="mr-4">
             <ArrowLeft className="h-4 w-4 mr-2" /> Back
           </Button>
-          <h1 className="text-xl font-semibold text-gray-900">Course Details</h1>
+          <h1 className="text-xl font-semibold text-gray-900">Class Details</h1>
           <Button variant="outline" size="sm" onClick={() => router.push(`/course-instance/${CourseInstancesId}/attendance`)} className="ml-auto mr-2">
             <CalendarDays className="h-4 w-4 mr-2" /> Attendance Register
           </Button>

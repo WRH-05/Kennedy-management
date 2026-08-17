@@ -41,6 +41,12 @@ const TEACHER_STATUS_OPTIONS: { value: TeacherAttendanceStatus; label: string }[
   { value: "cancelled", label: "Cancelled" },
 ]
 
+const TEACHER_STATUS_META: Record<TeacherAttendanceStatus, { label: string; className: string }> = {
+  present: { label: "P", className: "bg-emerald-100 text-emerald-800 font-semibold" },
+  absent: { label: "A", className: "bg-rose-100 text-rose-800 font-semibold" },
+  cancelled: { label: "C", className: "bg-amber-100 text-amber-800 font-semibold" },
+}
+
 const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"]
 
 function formatDayLabel(dateStr: string): string {
@@ -328,6 +334,21 @@ function AttendanceContent({ courseInstanceId }: { courseInstanceId: string }) {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
+                    <TableRow>
+                      <TableCell className="font-medium min-w-[180px]">Teacher</TableCell>
+                      {matrix.sessionDates.map((date) => {
+                        const tStatus = matrix.teacherRows.find((r) => r.session_date === date)?.status
+                        return tStatus ? (
+                          <TableCell key={date} className="text-center">
+                            <span className={`inline-flex items-center justify-center h-6 w-6 rounded text-xs ${TEACHER_STATUS_META[tStatus].className}`}>
+                              {TEACHER_STATUS_META[tStatus].label}
+                            </span>
+                          </TableCell>
+                        ) : (
+                          <TableCell key={date} className="text-center text-slate-300">—</TableCell>
+                        )
+                      })}
+                    </TableRow>
                     {matrix.students.map((student) => (
                       <TableRow key={student.student_id}>
                         <TableCell className="font-medium min-w-[180px]">{student.name}</TableCell>

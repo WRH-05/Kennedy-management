@@ -1,6 +1,7 @@
 "use client"
 
-import { useState } from "react"
+import { Suspense } from "react"
+import { useRouter, useSearchParams } from "next/navigation"
 import { Pagination, PaginationContent, PaginationItem, PaginationLink, PaginationPrevious, PaginationNext, PaginationEllipsis } from "@/components/ui/pagination"
 import { usePaginatedGradeLevels } from "@/hooks/useGradeLevels"
 import GradeLevelTab from "@/components/tabs/GradeLevelsTab"
@@ -42,7 +43,26 @@ function getPageItems(page: number, totalPages: number) {
 }
 
 export default function GradeLevelsPage() {
-  const [page, setPage] = useState(1)
+  return (
+    <Suspense fallback={<div className="p-8 text-center text-gray-500">Loading Courses Records...</div>}>
+      <GradeLevelsPageContent />
+    </Suspense>
+  )
+}
+
+function GradeLevelsPageContent() {
+  const router = useRouter()
+  const searchParams = useSearchParams()
+  const page = Math.max(1, Number(searchParams.get("page")) || 1)
+
+  const setPage = (n: number) => {
+    const params = new URLSearchParams(searchParams.toString())
+    if (n <= 1) params.delete("page")
+    else params.set("page", String(n))
+    const qs = params.toString()
+    router.replace(qs ? `/manager/gradeLevels?${qs}` : "/manager/gradeLevels", { scroll: false })
+  }
+
   const { gradeLevels, total, isLoading: coursesLoading, mutate } = usePaginatedGradeLevels(page, PAGE_SIZE)
 
   if (coursesLoading) {

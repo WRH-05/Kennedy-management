@@ -70,6 +70,9 @@ export const activityLogService = {
     if (dateRange === 'last30') {
       const cutoff = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString()
       query = query.gte('created_at', cutoff)
+    } else if (dateRange === 'last24h') {
+      const cutoff = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString()
+      query = query.gte('created_at', cutoff)
     } else if (dateRange === 'thisMonth') {
       const now = new Date()
       const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1).toISOString()
