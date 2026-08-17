@@ -1,6 +1,6 @@
 "use client"
 
-import React, { Component, ErrorInfo, ReactNode } from 'react'
+import { Component, ErrorInfo, ReactNode } from 'react'
 import { Button } from '@/components/ui/button'
 
 interface Props {
@@ -108,20 +108,6 @@ export class ErrorBoundary extends Component<Props, State> {
     }
 
     return this.props.children
-  }
-}
-
-// HOC for wrapping components with error boundary
-export function withErrorBoundary<P extends object>(
-  WrappedComponent: React.ComponentType<P>,
-  fallback?: ReactNode
-) {
-  return function WithErrorBoundaryWrapper(props: P) {
-    return (
-      <ErrorBoundary fallback={fallback}>
-        <WrappedComponent {...props} />
-      </ErrorBoundary>
-    )
   }
 }
 

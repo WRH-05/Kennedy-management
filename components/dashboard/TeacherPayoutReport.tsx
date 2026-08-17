@@ -26,7 +26,6 @@ export function TeacherPayoutReport({
   open,
   onOpenChange,
   courseInstance,
-  courseInstanceEnriched: _courseInstanceEnriched,
   selectedPeriodId,
   billingPeriods,
   teacherEarnings,

@@ -8,10 +8,6 @@ export const swrConfig = {
   errorRetryInterval: 5000,
 }
 
-export function invalidateAllCache() {
-  mutate(() => true, undefined, { revalidate: false })
-}
-
 export type RevalidateKey =
   | 'students'
   | 'teachers'

@@ -4,22 +4,6 @@ import useSWR, { mutate } from 'swr'
 import { swrConfig } from './swr-config'
 import { gradeLevelsService } from '@/services/gradeLevelsService'
 
-export function useGradeLevels() {
-  const { data, error, isLoading, isValidating } = useSWR(
-    'grade-levels',
-    () => gradeLevelsService.getAllGradeLevels(),
-    swrConfig
-  )
-
-  return {
-    gradeLevels: data || [],
-    isLoading,
-    isValidating,
-    error,
-    mutate: () => mutate('grade-levels'),
-  }
-}
-
 export function usePaginatedGradeLevels(page: number, pageSize: number) {
   const key = `grade-levels-page-${page}-size-${pageSize}`
   const { data, error, isLoading, isValidating } = useSWR(
@@ -37,21 +21,5 @@ export function usePaginatedGradeLevels(page: number, pageSize: number) {
     isValidating,
     error,
     mutate: () => mutate(key),
-  }
-}
-
-export function useGradeLevel(id: string) {
-  const { data, error, isLoading, isValidating } = useSWR(
-    id ? `grade-levels-${id}` : null,
-    () => gradeLevelsService.getGradeLevelById(id),
-    swrConfig
-  )
-
-  return {
-    gradeLevels: data,
-    isLoading,
-    isValidating,
-    error,
-    mutate: () => mutate(`grade-levels-${id}`),
   }
 }

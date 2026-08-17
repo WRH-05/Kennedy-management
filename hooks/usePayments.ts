@@ -3,9 +3,6 @@
 import useSWR, { mutate } from 'swr'
 import { paymentService, UnifiedPaymentActivity } from "@/services/paymentService"
 import { swrConfig } from './swr-config'
-import { useStudents } from './useStudents'
-import { useTeachers } from './useTeachers'
-import { useCourseInstances } from './useCourseInstances'
 import { studentPaymentService } from '@/services/studentPaymentService'
 import { teacherPayoutService } from '@/services/teacherPayoutService'
 import { archiveService } from '@/services/archiveService'
@@ -23,22 +20,6 @@ export function usePayments() {
     isValidating,
     error,
     mutate: () => mutate('payments'),
-  }
-}
-
-export function useStudentsPayments() {
-  const { data, error, isLoading, isValidating, mutate } = useSWR(
-    'students-payments',
-    () => studentPaymentService.getAllStudentsPayments(),
-    swrConfig
-  )
-
-  return {
-    payments: data,
-    isLoading,
-    isValidating,
-    error,
-    mutate, // Returns the bound mutator for this specific key
   }
 }
 
@@ -122,31 +103,5 @@ export function useTeachersPayouts() {
     isValidating,
     error,
     mutate, // Returns the bound mutator for this specific key
-  }
-}
-
-// COMBINED DASHBOARD DATA HOOK
-export function useDashboardData() {
-  const { students, isLoading: studentsLoading, error: studentsError } = useStudents()
-  const { teachers, isLoading: teachersLoading, error: teachersError } = useTeachers()
-  const { data: courseInstances, isLoading: coursesLoading, error: coursesError } = useCourseInstances()
-  const { payments, isLoading: paymentsLoading, error: paymentsError } = usePayments()
-
-  const isLoading = studentsLoading || teachersLoading || coursesLoading || paymentsLoading
-  const error = studentsError || teachersError || coursesError || paymentsError
-
-  return {
-    students,
-    teachers,
-    courseInstances,
-    payments,
-    isLoading,
-    error,
-    refreshAll: () => {
-      mutate('students')
-      mutate('teachers')
-      mutate('courseInstances')
-      mutate('payments')
-    },
   }
 }
