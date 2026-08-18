@@ -58,10 +58,45 @@ export default function ArchiveTab({ isManager = false, onArchiveUpdate }: Archi
   const [filterType, setFilterType] = useState<"all" | "student" | "teacher" | "course">("all")
   const [unarchiveTarget, setUnarchiveTarget] = useState<ArchiveRequest | null>(null)
   const [deleteTarget, setDeleteTarget] = useState<ArchiveRequest | null>(null)
+  const [approveTarget, setApproveTarget] = useState<ArchiveRequest | null>(null)
+  const [approveSummary, setApproveSummary] = useState("")
 
   useEffect(() => {
     loadArchiveRequests()
   }, [])
+
+  useEffect(() => {
+    if (!approveTarget) {
+      setApproveSummary("")
+      return
+    }
+    let cancelled = false
+    ;(async () => {
+      try {
+        const impact = await archiveService.getArchiveImpact(approveTarget.entity_type, approveTarget.entity_id)
+        if (cancelled) return
+        if (approveTarget.entity_type === "student") {
+          const list = impact.classes.length > 0 ? impact.classes.join(", ") : "no active classes"
+          setApproveSummary(
+            `Approving this request will archive ${approveTarget.entity_name} and drop them from ${impact.classes.length} active classes: ${list}. Unpaid payments will be cancelled.`
+          )
+        } else if (approveTarget.entity_type === "teacher") {
+          const list = impact.classes.length > 0 ? impact.classes.join(", ") : "no active classes"
+          setApproveSummary(
+            `Approving this request will archive ${approveTarget.entity_name}, archive ${impact.classes.length} active class instances (${list}), and drop ${impact.enrolledStudentCount} enrolled students.`
+          )
+        } else {
+          setApproveSummary(`Approve this archive request for ${approveTarget.entity_name}?`)
+        }
+      } catch (error) {
+        console.error("Error loading archive impact:", error)
+        if (!cancelled) setApproveSummary(`Approve this archive request for ${approveTarget.entity_name}?`)
+      }
+    })()
+    return () => {
+      cancelled = true
+    }
+  }, [approveTarget])
 
   const loadArchiveRequests = async () => {
     setLoading(true)
@@ -256,7 +291,7 @@ export default function ArchiveTab({ isManager = false, onArchiveUpdate }: Archi
                           </DropdownMenuTrigger>
                           <DropdownMenuContent align="end">
                             <DropdownMenuItem
-                              onClick={() => handleApproveArchive(request.id)}
+                              onClick={() => setApproveTarget(request)}
                               className="text-green-600"
                             >
                               <Check className="mr-2 h-4 w-4" />
@@ -361,6 +396,30 @@ export default function ArchiveTab({ isManager = false, onArchiveUpdate }: Archi
         )}
         </div>
       </CardContent>
+
+      <AlertDialog open={!!approveTarget} onOpenChange={(open) => { if (!open) setApproveTarget(null) }}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Approve Archive Request?</AlertDialogTitle>
+            <AlertDialogDescription>
+              {approveSummary || "Loading impact..."}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={() => setApproveTarget(null)}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => {
+                if (approveTarget) {
+                  handleApproveArchive(approveTarget.id)
+                  setApproveTarget(null)
+                }
+              }}
+            >
+              Approve
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       <AlertDialog open={!!unarchiveTarget} onOpenChange={(open) => { if (!open) setUnarchiveTarget(null) }}>
         <AlertDialogContent>
