@@ -16,6 +16,7 @@ import { toast } from "@/hooks/use-toast"
 import { useSchoolSettings } from "@/hooks/useSchoolSettings"
 import { usePaginatedGradeLevels } from "@/hooks/useGradeLevels"
 import { getCourseDisplayName } from "@/lib/course-display"
+import { formatScheduleString } from "@/lib/schedule"
 import { attendanceService, AttendanceStats } from "@/services/attendanceService"
 
 function formatBirthDate(value: string | null): string {
@@ -356,6 +357,7 @@ function StudentDashboardContent() {
                         <TableRow>
                           <TableHead>Course</TableHead>
                           <TableHead>Teacher</TableHead>
+                          <TableHead>Schedule</TableHead>
                           <TableHead>Monthly Price</TableHead>
                           <TableHead>Payment Status</TableHead>
                         </TableRow>
@@ -388,6 +390,9 @@ function StudentDashboardContent() {
                                 >
                                   {course.teachers.name}
                                 </Button>
+                              </TableCell>
+                              <TableCell>
+                                {formatScheduleString((course as any).course_schedule)}
                               </TableCell>
                               <TableCell>
                                 <div className="text-sm">{course.monthly_price} DA</div>

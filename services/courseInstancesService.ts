@@ -92,7 +92,7 @@ export const courseInstancesService = {
     async getCourseInstancesByTeacherId(teacherId: string): Promise<CourseInstanceWithEnrichment[]> {
         const { data } = await supabase
             .from('course_instances')
-            .select('*, teachers(*), course_eligibility(id, courses(*), grade_levels(*))')
+            .select('*, course_schedule(*), teachers(*), course_eligibility(id, courses(*), grade_levels(*))')
             .eq('teacher_id', teacherId)
             .order('created_at', { ascending: false })
             .throwOnError();

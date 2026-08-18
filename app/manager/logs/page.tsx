@@ -18,6 +18,7 @@ const CATEGORIES = [
   { value: "registrations", label: "Registrations" },
   { value: "archives", label: "Archives & Unarchives" },
   { value: "deletions", label: "Permanent Deletions" },
+  { value: "expenses", label: "Expenses" },
 ]
 
 const DATE_RANGES = [
@@ -56,6 +57,9 @@ function getCategoryInfo(actionType: string): { label: string; className: string
       return { label: "Deletion", className: "bg-rose-100 text-rose-800" }
     case "course_instance_created":
       return { label: "Class Created", className: "bg-indigo-100 text-indigo-800" }
+    case "expense_added":
+    case "expense_deleted":
+      return { label: "Expense", className: "bg-orange-100 text-orange-800" }
     default:
       return { label: actionType, className: "bg-gray-100 text-gray-800" }
   }

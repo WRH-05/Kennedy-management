@@ -27,6 +27,7 @@ export interface StatsData {
   registrationPaidCount: number
   registrationUnpaidCount: number
   teacherExpenses: number
+  operationalExpenses: number
   netProfit: number
   activeStudents: number
   activeEnrolled: number
@@ -83,9 +84,16 @@ export const statsService = {
       return q
     })()
 
-    const [paymentsRes, payoutsRes, studentsRes, enrollmentsRes, instancesRes, teachersCountRes, coursesCountRes] = await Promise.all([
+    const expensesQuery = (() => {
+      let q = (supabase as any).from("school_expenses").select("amount, expense_date")
+      if (start.date) q = q.gte("expense_date", start.date)
+      return q
+    })()
+
+    const [paymentsRes, payoutsRes, expensesRes, studentsRes, enrollmentsRes, instancesRes, teachersCountRes, coursesCountRes] = await Promise.all([
       paymentsQuery.throwOnError(),
       payoutsQuery.throwOnError(),
+      expensesQuery.throwOnError(),
       supabase.from("students").select("id, registration_fee_paid").eq("archived", false).throwOnError(),
       supabase.from("course_enrollments").select("course_id, student_id, status").throwOnError(),
       supabase
@@ -99,6 +107,7 @@ export const statsService = {
 
     const payments: any[] = paymentsRes.data || []
     const payouts: any[] = payoutsRes.data || []
+    const expenses: any[] = expensesRes.data || []
     const students: any[] = studentsRes.data || []
     const enrollments: any[] = enrollmentsRes.data || []
     const instances: any[] = instancesRes.data || []
@@ -126,6 +135,12 @@ export const statsService = {
       teacherExpenses += amount
       if (t.course_instances?.compensation_type === "fixed_salary") fixedSalaryPayouts += amount
       else percentagePayouts += amount
+    }
+
+    // Operational expenses (sum of school_expenses in range)
+    let operationalExpenses = 0
+    for (const ex of expenses) {
+      operationalExpenses += Number(ex.amount) || 0
     }
 
     // Student metrics (current state, not date-bound)
@@ -172,7 +187,8 @@ export const statsService = {
       registrationPaidCount,
       registrationUnpaidCount,
       teacherExpenses,
-      netProfit: totalIncome - teacherExpenses,
+      operationalExpenses,
+      netProfit: totalIncome - teacherExpenses - operationalExpenses,
       activeStudents,
       activeEnrolled: enrolledSet.size,
       droppedStudents: droppedSet.size,
