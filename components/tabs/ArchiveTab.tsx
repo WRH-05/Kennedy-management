@@ -66,10 +66,8 @@ export default function ArchiveTab({ isManager = false, onArchiveUpdate }: Archi
   }, [])
 
   useEffect(() => {
-    if (!approveTarget) {
-      setApproveSummary("")
-      return
-    }
+    if (!approveTarget) return
+    setApproveSummary("")
     let cancelled = false
     ;(async () => {
       try {
@@ -397,7 +395,7 @@ export default function ArchiveTab({ isManager = false, onArchiveUpdate }: Archi
         </div>
       </CardContent>
 
-      <AlertDialog open={!!approveTarget} onOpenChange={(open) => { if (!open) setApproveTarget(null) }}>
+      <AlertDialog open={!!approveTarget} onOpenChange={(open) => { if (!open) { setApproveTarget(null); clearPointerEvents() } }}>
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>Approve Archive Request?</AlertDialogTitle>
