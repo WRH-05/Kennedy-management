@@ -49,6 +49,14 @@ export function AddExpenseDialog() {
       toast({ title: "Invalid amount", description: "Please enter an amount greater than zero.", variant: "destructive" })
       return
     }
+    if (!expenseDate) {
+      toast({ title: "Missing date", description: "Please select an expense date.", variant: "destructive" })
+      return
+    }
+    if (!proofFile) {
+      toast({ title: "Missing receipt", description: "Please upload a receipt proof (JPG/PNG/PDF).", variant: "destructive" })
+      return
+    }
 
     setIsSubmitting(true)
     try {
@@ -56,7 +64,7 @@ export function AddExpenseDialog() {
         title: title.trim(),
         category,
         amount: amountNum,
-        expense_date: expenseDate || new Date().toISOString().slice(0, 10),
+        expense_date: expenseDate,
         notes: notes.trim() || undefined,
         proof_file: proofFile,
       })

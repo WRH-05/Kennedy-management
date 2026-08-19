@@ -5,12 +5,22 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Badge } from "@/components/ui/badge"
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog"
 import { Receipt, Trash2, ExternalLink, Loader2 } from "lucide-react"
 import { useExpenses } from "@/hooks/useExpenses"
 import { AddExpenseDialog } from "@/components/tabs/AddExpenseDialog"
 import { useToast } from "@/hooks/use-toast"
 import { revalidateData } from "@/hooks/swr-config"
-import { expenseService, ExpenseCategory } from "@/services/expenseService"
+import { expenseService, Expense, ExpenseCategory } from "@/services/expenseService"
 
 const CATEGORY_BADGES: Record<ExpenseCategory, string> = {
   supplies: "bg-blue-100 text-blue-800",
@@ -38,15 +48,17 @@ function formatDate(dateStr: string | null): string {
 export default function ExpensesPage() {
   const { toast } = useToast()
   const { expenses, isLoading } = useExpenses()
-  const [deletingId, setDeletingId] = useState<string | null>(null)
+  const [deleteTarget, setDeleteTarget] = useState<Expense | null>(null)
+  const [isDeleting, setIsDeleting] = useState(false)
 
-  const handleDelete = async (id: string) => {
-    if (deletingId) return
-    setDeletingId(id)
+  const handleDelete = async () => {
+    if (!deleteTarget || isDeleting) return
+    setIsDeleting(true)
     try {
-      await expenseService.deleteExpense(id)
+      await expenseService.deleteExpense(deleteTarget.id)
       revalidateData('all')
       toast({ title: "Expense deleted", description: "The expense has been removed." })
+      setDeleteTarget(null)
     } catch (error) {
       toast({
         title: "Error",
@@ -54,7 +66,7 @@ export default function ExpensesPage() {
         variant: "destructive",
       })
     } finally {
-      setDeletingId(null)
+      setIsDeleting(false)
     }
   }
 
@@ -129,8 +141,7 @@ export default function ExpensesPage() {
                           variant="ghost"
                           size="sm"
                           className="h-8 w-8 p-0 text-rose-600 hover:text-rose-700"
-                          disabled={deletingId === expense.id}
-                          onClick={() => handleDelete(expense.id)}
+                          onClick={() => setDeleteTarget(expense)}
                         >
                           <Trash2 className="h-4 w-4" />
                         </Button>
@@ -148,6 +159,27 @@ export default function ExpensesPage() {
           )}
         </CardContent>
       </Card>
+
+      <AlertDialog open={!!deleteTarget} onOpenChange={(open) => { if (!open) setDeleteTarget(null) }}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Operational Expense?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete &quot;{deleteTarget?.title}&quot;? The expense amount ({Number(deleteTarget?.amount || 0).toLocaleString()} DA) will be restored to school net profit.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={isDeleting}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleDelete}
+              disabled={isDeleting}
+              className="bg-red-600 hover:bg-red-700"
+            >
+              {isDeleting ? "Deleting..." : "Delete"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   )
 }
