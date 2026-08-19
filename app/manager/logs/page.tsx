@@ -1,16 +1,15 @@
 "use client"
 
-import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react"
+import { Suspense, useCallback, useEffect, useRef, useState } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
-import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { useActivityLogs } from "@/hooks/useActivityLogs"
-import { useRevenue, useTeachersPayouts } from "@/hooks/usePayments"
-import { Search, TrendingUp, DollarSign, Wallet } from "lucide-react"
+import SummaryCards from "@/components/dashboard/SummaryCards"
+import { Search } from "lucide-react"
 
 const CATEGORIES = [
   { value: "all", label: "All Logs" },
@@ -77,9 +76,6 @@ function LogsDashboard() {
 
   const { logs, isLoading } = useActivityLogs(filterCategory, dateRange, searchQuery)
 
-  const { data: revenueData } = useRevenue()
-  const { payments: payoutsData } = useTeachersPayouts()
-
   // Keep a ref to the latest searchParams so the debounced search never uses stale values.
   const searchParamsRef = useRef(searchParams)
   searchParamsRef.current = searchParams
@@ -110,102 +106,47 @@ function LogsDashboard() {
     setSearchInput(searchQuery)
   }, [searchQuery])
 
-  const payouts = useMemo(() => {
-    if (payoutsData && 'data' in payoutsData) return payoutsData.data
-    return []
-  }, [payoutsData])
-
-  const totalPaymentsCollected = useMemo(
-    () => (revenueData || []).reduce((sum: number, p: any) => sum + (p.amount ? p.amount : 0), 0),
-    [revenueData]
-  )
-
-  const totalPayoutsIssued = useMemo(
-    () => payouts.reduce((sum: number, p: any) => sum + (p.status === 'paid' && p.amount ? p.amount : 0), 0),
-    [payouts]
-  )
-
-  const netCashflow = totalPaymentsCollected - totalPayoutsIssued
-  const showFinancialSummary = filterCategory === "all" || filterCategory === "payments"
-
   return (
     <div className="space-y-6">
-      {showFinancialSummary && (
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Total Payments Collected</CardTitle>
-              <TrendingUp className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{totalPaymentsCollected.toLocaleString()} DA</div>
-              <p className="text-xs text-muted-foreground">All time</p>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Total Payouts Issued</CardTitle>
-              <DollarSign className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{totalPayoutsIssued.toLocaleString()} DA</div>
-              <p className="text-xs text-muted-foreground">To teachers</p>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Net Cashflow</CardTitle>
-              <Wallet className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{netCashflow.toLocaleString()} DA</div>
-              <p className="text-xs text-muted-foreground">All time</p>
-            </CardContent>
-          </Card>
-        </div>
-      )}
+      <SummaryCards />
 
       <Card>
         <CardContent className="space-y-4 pt-6">
           <div className="flex flex-wrap items-center gap-3">
-            <div className="flex flex-wrap gap-1">
-              {CATEGORIES.map((c) => (
-                <Button
-                  key={c.value}
-                  variant={filterCategory === c.value ? "default" : "outline"}
-                  size="sm"
-                  onClick={() => updateParam("category", c.value)}
-                >
-                  {c.label}
-                </Button>
-              ))}
-            </div>
+            <Select value={filterCategory} onValueChange={(value) => updateParam("category", value)}>
+              <SelectTrigger className="w-[200px] h-9">
+                <SelectValue placeholder="Category" />
+              </SelectTrigger>
+              <SelectContent>
+                {CATEGORIES.map((c) => (
+                  <SelectItem key={c.value} value={c.value}>
+                    {c.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
 
-            <div className="ml-auto flex flex-wrap items-center gap-2">
-              <Select value={dateRange} onValueChange={(value) => updateParam("range", value)}>
-                <SelectTrigger className="w-[160px] h-9">
-                  <SelectValue placeholder="Date Range" />
-                </SelectTrigger>
-                <SelectContent>
-                  {DATE_RANGES.map((d) => (
-                    <SelectItem key={d.value} value={d.value}>
-                      {d.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+            <Select value={dateRange} onValueChange={(value) => updateParam("range", value)}>
+              <SelectTrigger className="w-[160px] h-9">
+                <SelectValue placeholder="Date Range" />
+              </SelectTrigger>
+              <SelectContent>
+                {DATE_RANGES.map((d) => (
+                  <SelectItem key={d.value} value={d.value}>
+                    {d.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
 
-              <div className="relative">
-                <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                <Input
-                  value={searchInput}
-                  onChange={(e) => setSearchInput(e.target.value)}
-                  placeholder="Search names or actions..."
-                  className="pl-8 h-9 w-[220px]"
-                />
-              </div>
+            <div className="relative">
+              <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input
+                value={searchInput}
+                onChange={(e) => setSearchInput(e.target.value)}
+                placeholder="Search names or actions..."
+                className="pl-8 h-9 w-[220px]"
+              />
             </div>
           </div>
 

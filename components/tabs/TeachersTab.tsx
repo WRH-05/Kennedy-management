@@ -1,6 +1,5 @@
 "use client"
 
-import { useMemo, useState } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { GraduationCap } from "lucide-react"
@@ -19,34 +18,21 @@ interface TeachersTabProps {
   showCourses?: boolean
   showStats?: boolean
   pendingArchiveIds?: Set<string>
+  subjectFilter: string
+  onSubjectFilterChange: (value: string) => void
+  subjectOptions: string[]
 }
 
 export default function TeachersTab({
   teachers = [],
   onTeachersUpdate,
   canAdd = false,
-  pendingArchiveIds = new Set()
+  pendingArchiveIds = new Set(),
+  subjectFilter,
+  onSubjectFilterChange,
+  subjectOptions,
 }: TeachersTabProps) {
   const { toast } = useToast()
-  const [subjectFilter, setSubjectFilter] = useState<string>(ALL)
-
-  const subjectOptions = useMemo(() => {
-    const names = new Set<string>()
-    for (const t of teachers) {
-      for (const tce of t.teachers_course_eligibility || []) {
-        const name = tce.course_eligibility?.courses?.name
-        if (name) names.add(name)
-      }
-    }
-    return Array.from(names).sort()
-  }, [teachers])
-
-  const filteredTeachers = useMemo(() => {
-    if (subjectFilter === ALL) return teachers
-    return teachers.filter((t) =>
-      (t.teachers_course_eligibility || []).some((tce) => tce.course_eligibility?.courses?.name === subjectFilter)
-    )
-  }, [teachers, subjectFilter])
 
   const handleArchiveTeacher = async (teacherId: string, teacherName: string) => {
     try {
@@ -68,31 +54,30 @@ export default function TeachersTab({
   return (
     <Card>
       <CardHeader>
-        <div className="flex justify-between items-center">
+        <div className="flex flex-wrap justify-between items-center gap-3">
           <CardTitle className="flex items-center">
             <GraduationCap className="h-5 w-5 mr-2" />
             Teacher List
           </CardTitle>
-          {canAdd && <AddTeacherDialog onTeacherAdded={onTeachersUpdate} />}
+          <div className="flex flex-wrap items-center gap-2">
+            <Select value={subjectFilter} onValueChange={onSubjectFilterChange}>
+              <SelectTrigger className="w-[240px] h-9">
+                <SelectValue placeholder="All Courses" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value={ALL}>All Courses</SelectItem>
+                {subjectOptions.map((name) => (
+                  <SelectItem key={name} value={name}>{name}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            {canAdd && <AddTeacherDialog onTeacherAdded={onTeachersUpdate} />}
+          </div>
         </div>
       </CardHeader>
       <CardContent>
-        <div className="flex gap-3 pb-3">
-          <Select value={subjectFilter} onValueChange={setSubjectFilter}>
-            <SelectTrigger className="w-[240px] h-9">
-              <SelectValue placeholder="All Courses / Subjects" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value={ALL}>All Courses / Subjects</SelectItem>
-              {subjectOptions.map((name) => (
-                <SelectItem key={name} value={name}>{name}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-
         <TeachersTable
-          teachers={filteredTeachers}
+          teachers={teachers}
           pendingArchiveIds={pendingArchiveIds}
           onArchive={handleArchiveTeacher}
           onTeacherUpdated={() => onTeachersUpdate([])}

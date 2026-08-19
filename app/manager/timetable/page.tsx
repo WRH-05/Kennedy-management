@@ -1,16 +1,16 @@
 "use client"
 
 import { useMemo, useState } from "react"
-import { Card, CardContent } from "@/components/ui/card"
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
-import { Check, ChevronsUpDown, CalendarDays, Loader2 } from "lucide-react"
+import { Check, ChevronsUpDown, ChevronLeft, ChevronRight, CalendarDays, Loader2 } from "lucide-react"
 import Link from "next/link"
 import { useTimetable } from "@/hooks/useTimetable"
 import { usePaginatedGradeLevels } from "@/hooks/useGradeLevels"
 import { usePaginatedCourses } from "@/hooks/useCourses"
-import { VALID_WEEK_DAYS } from "@/lib/schedule"
+import { VALID_WEEK_DAYS, startOfWeek, addDays } from "@/lib/schedule"
 import { getCourseDisplayName } from "@/lib/course-display"
 import { TimetableInstance } from "@/services/timetableService"
 
@@ -24,6 +24,18 @@ function formatSlot(start: string | undefined, end: string | undefined): string 
   const s = start?.slice(0, 5) || "?"
   const e = end?.slice(0, 5) || "?"
   return `${s} - ${e}`
+}
+
+function toISODate(d: Date): string {
+  const y = d.getFullYear()
+  const m = String(d.getMonth() + 1).padStart(2, "0")
+  const day = String(d.getDate()).padStart(2, "0")
+  return `${y}-${m}-${day}`
+}
+
+function formatWeekLabel(weekStart: Date, weekEnd: Date): string {
+  const fmt = (d: Date) => d.toLocaleDateString("en-GB", { day: "2-digit", month: "short" })
+  return `Week of ${fmt(weekStart)} - ${fmt(weekEnd)} ${weekEnd.getFullYear()}`
 }
 
 interface ComboboxOption {
@@ -78,6 +90,10 @@ export default function TimetablePage() {
 
   const [gradeFilter, setGradeFilter] = useState<string>(ALL)
   const [courseFilter, setCourseFilter] = useState<string>(ALL)
+  const [weekOffset, setWeekOffset] = useState<number>(0)
+
+  const weekStart = useMemo(() => addDays(startOfWeek(new Date()), weekOffset * 7), [weekOffset])
+  const weekEnd = useMemo(() => addDays(weekStart, 6), [weekStart])
 
   const gradeOptions: ComboboxOption[] = [
     { value: ALL, label: "All Grade Levels" },
@@ -89,6 +105,8 @@ export default function TimetablePage() {
   ]
 
   const filtered = useMemo(() => {
+    const weekStartISO = toISODate(weekStart)
+    const weekEndISO = toISODate(weekEnd)
     return (instances as TimetableInstance[]).filter((ci) => {
       if (gradeFilter !== ALL) {
         const inGrade = (ci.grade_level_ids || []).includes(gradeFilter)
@@ -98,22 +116,31 @@ export default function TimetablePage() {
       if (courseFilter !== ALL) {
         if (ci.course_eligibility?.courses?.id !== courseFilter) return false
       }
+      const periods = ci.billing_periods || []
+      if (periods.length > 0) {
+        const overlaps = periods.some(
+          (bp) => (bp.start_date || "") <= weekEndISO && (bp.end_date || "") >= weekStartISO
+        )
+        if (!overlaps) return false
+      }
       return true
     })
-  }, [instances, gradeFilter, courseFilter])
+  }, [instances, gradeFilter, courseFilter, weekStart, weekEnd])
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold">School Timetable & Schedule</h1>
-        <p className="text-sm text-muted-foreground">
-          Weekly timetable grid of all active class sessions.
-        </p>
-      </div>
-
-      <div className="flex flex-wrap items-center gap-3">
-        <Combobox options={gradeOptions} value={gradeFilter} onSelect={setGradeFilter} placeholder="All Grade Levels" />
-        <Combobox options={courseOptions} value={courseFilter} onSelect={setCourseFilter} placeholder="All Courses" />
+      <div className="flex flex-wrap items-center justify-center gap-3">
+        <Button variant="outline" size="sm" onClick={() => setWeekOffset((o) => o - 1)}>
+          <ChevronLeft className="mr-1 h-4 w-4" />
+          Prev Week
+        </Button>
+        <div className="min-w-[260px] text-center text-sm font-semibold text-slate-800">
+          {formatWeekLabel(weekStart, weekEnd)}
+        </div>
+        <Button variant="outline" size="sm" onClick={() => setWeekOffset((o) => o + 1)}>
+          Next Week
+          <ChevronRight className="ml-1 h-4 w-4" />
+        </Button>
       </div>
 
       {isLoading ? (
@@ -122,12 +149,32 @@ export default function TimetablePage() {
         </div>
       ) : (
         <Card>
+          <CardHeader>
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <div>
+                <CardTitle className="text-2xl font-bold">School Timetable & Schedule</CardTitle>
+                <p className="text-sm text-muted-foreground">
+                  Weekly timetable grid of all active class sessions.
+                </p>
+              </div>
+              <div className="flex flex-wrap items-center gap-2">
+                <Combobox options={gradeOptions} value={gradeFilter} onSelect={setGradeFilter} placeholder="All Grade Levels" />
+                <Combobox options={courseOptions} value={courseFilter} onSelect={setCourseFilter} placeholder="All Courses" />
+              </div>
+            </div>
+          </CardHeader>
           <CardContent className="p-0">
             <div className="grid grid-cols-7 divide-x divide-slate-200">
               {VALID_WEEK_DAYS.map((day) => {
                 const dayInstances = filtered
-                  .map((ci) => ({ ci, slots: (ci.course_schedule || []).filter((s) => s.day === day) }))
+                  .map((ci) => {
+                    const slots = (ci.course_schedule || [])
+                      .filter((s) => s.day === day)
+                      .sort((a, b) => (a.start_time || "").localeCompare(b.start_time || ""))
+                    return { ci, slots }
+                  })
                   .filter((x) => x.slots.length > 0)
+                  .sort((a, b) => (a.slots[0].start_time || "").localeCompare(b.slots[0].start_time || ""))
 
                 return (
                   <div key={day} className="flex flex-col min-h-[200px]">

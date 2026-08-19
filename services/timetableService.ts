@@ -23,13 +23,14 @@ export interface TimetableInstance {
     grade_levels?: { id: string; name: string } | null
   } | null
   course_schedule?: TimetableSchedule[]
+  billing_periods?: { id: string; start_date: string; end_date: string }[]
 }
 
 export const timetableService = {
   async getTimetable(): Promise<TimetableInstance[]> {
     const { data } = await supabase
       .from('course_instances')
-      .select('*, course_schedule(*), teachers(name), course_eligibility(id, grade_level_id, courses(id, name), grade_levels(id, name))')
+      .select('*, billing_periods(id, start_date, end_date), course_schedule(*), teachers(name), course_eligibility(id, grade_level_id, courses(id, name), grade_levels(id, name))')
       .eq('archived', false)
       .throwOnError()
 
