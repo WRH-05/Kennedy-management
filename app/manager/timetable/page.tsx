@@ -35,7 +35,7 @@ function toISODate(d: Date): string {
 
 function formatWeekLabel(weekStart: Date, weekEnd: Date): string {
   const fmt = (d: Date) => d.toLocaleDateString("en-GB", { day: "2-digit", month: "short" })
-  return `Week of ${fmt(weekStart)} - ${fmt(weekEnd)} ${weekEnd.getFullYear()}`
+  return `${fmt(weekStart)} - ${fmt(weekEnd)} ${weekEnd.getFullYear()}`
 }
 
 interface ComboboxOption {
@@ -117,7 +117,9 @@ export default function TimetablePage() {
         if (ci.course_eligibility?.courses?.id !== courseFilter) return false
       }
       const periods = ci.billing_periods || []
-      if (periods.length > 0) {
+      if (periods.length === 0) {
+        if (weekOffset !== 0) return false
+      } else {
         const overlaps = periods.some(
           (bp) => (bp.start_date || "") <= weekEndISO && (bp.end_date || "") >= weekStartISO
         )
@@ -125,24 +127,10 @@ export default function TimetablePage() {
       }
       return true
     })
-  }, [instances, gradeFilter, courseFilter, weekStart, weekEnd])
+  }, [instances, gradeFilter, courseFilter, weekStart, weekEnd, weekOffset])
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-wrap items-center justify-center gap-3">
-        <Button variant="outline" size="sm" onClick={() => setWeekOffset((o) => o - 1)}>
-          <ChevronLeft className="mr-1 h-4 w-4" />
-          Prev Week
-        </Button>
-        <div className="min-w-[260px] text-center text-sm font-semibold text-slate-800">
-          {formatWeekLabel(weekStart, weekEnd)}
-        </div>
-        <Button variant="outline" size="sm" onClick={() => setWeekOffset((o) => o + 1)}>
-          Next Week
-          <ChevronRight className="ml-1 h-4 w-4" />
-        </Button>
-      </div>
-
       {isLoading ? (
         <div className="flex justify-center py-24">
           <Loader2 className="h-10 w-10 animate-spin text-gray-500" />
@@ -150,13 +138,38 @@ export default function TimetablePage() {
       ) : (
         <Card>
           <CardHeader>
-            <div className="flex flex-wrap items-center justify-between gap-3">
+            <div className="flex flex-wrap items-center justify-between gap-4">
               <div>
                 <CardTitle className="text-2xl font-bold">School Timetable & Schedule</CardTitle>
                 <p className="text-sm text-muted-foreground">
                   Weekly timetable grid of all active class sessions.
                 </p>
               </div>
+
+              <div className="flex items-center gap-2">
+                <Button
+                  variant="outline"
+                  size="icon"
+                  aria-label="Previous Week"
+                  disabled={weekOffset <= -2}
+                  onClick={() => setWeekOffset((o) => Math.max(-2, o - 1))}
+                >
+                  <ChevronLeft className="h-4 w-4" />
+                </Button>
+                <div className="min-w-[200px] text-center text-sm font-semibold text-slate-800">
+                  {formatWeekLabel(weekStart, weekEnd)}
+                </div>
+                <Button
+                  variant="outline"
+                  size="icon"
+                  aria-label="Next Week"
+                  disabled={weekOffset >= 2}
+                  onClick={() => setWeekOffset((o) => Math.min(2, o + 1))}
+                >
+                  <ChevronRight className="h-4 w-4" />
+                </Button>
+              </div>
+
               <div className="flex flex-wrap items-center gap-2">
                 <Combobox options={gradeOptions} value={gradeFilter} onSelect={setGradeFilter} placeholder="All Grade Levels" />
                 <Combobox options={courseOptions} value={courseFilter} onSelect={setCourseFilter} placeholder="All Courses" />

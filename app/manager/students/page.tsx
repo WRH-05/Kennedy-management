@@ -101,7 +101,7 @@ function StudentsPageContent() {
               />
             </PaginationItem>
             <PaginationItem>
-              <span className="px-2 text-sm text-muted-foreground">
+              <span className="px-2 text-sm font-medium text-muted-foreground">
                 Page {currentPage} of {totalPages}
               </span>
             </PaginationItem>

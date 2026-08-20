@@ -1,6 +1,7 @@
 "use client"
 
-import { useState } from "react"
+import { Suspense } from "react"
+import { useRouter, useSearchParams } from "next/navigation"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
@@ -10,12 +11,12 @@ import { useUnpaid } from "@/hooks/useUnpaid"
 import { useSchoolSettings } from "@/hooks/useSchoolSettings"
 import { getCourseDisplayName } from "@/lib/course-display"
 
-type TabKey = "tuition" | "registration" | "payouts"
+type TabKey = "tuition" | "registration" | "unrequested_payouts"
 
 const TABS: { key: TabKey; label: string }[] = [
   { key: "tuition", label: "Unpaid Tuition" },
   { key: "registration", label: "Unpaid Registration Fees" },
-  { key: "payouts", label: "Unrequested Teacher Payouts" },
+  { key: "unrequested_payouts", label: "Unrequested Teacher Payouts" },
 ]
 
 function StatCard({ title, icon: Icon, value }: { title: string; icon: LucideIcon; value: number }) {
@@ -54,9 +55,21 @@ function billingCycle(start?: string | null, end?: string | null): string {
 }
 
 export default function UnpaidPage() {
+  return (
+    <Suspense fallback={<div className="p-8 text-center text-gray-500">Loading...</div>}>
+      <UnpaidPageContent />
+    </Suspense>
+  )
+}
+
+function UnpaidPageContent() {
+  const router = useRouter()
+  const searchParams = useSearchParams()
+  const rawTab = searchParams.get("tab") || "tuition"
+  const tab: TabKey = rawTab === "registration" || rawTab === "unrequested_payouts" ? rawTab : "tuition"
+
   const { data, isLoading } = useUnpaid()
   const { settings } = useSchoolSettings()
-  const [tab, setTab] = useState<TabKey>("tuition")
 
   const unpaidTuition = data?.unpaidTuition || []
   const unpaidRegistration = data?.unpaidRegistration || []
@@ -95,7 +108,7 @@ export default function UnpaidPage() {
                 key={t.key}
                 size="sm"
                 variant={tab === t.key ? "default" : "ghost"}
-                onClick={() => setTab(t.key)}
+                onClick={() => router.replace('/manager/unpaid?tab=' + t.key, { scroll: false })}
               >
                 {t.label}
               </Button>
@@ -195,7 +208,7 @@ export default function UnpaidPage() {
             </Card>
           )}
 
-          {tab === "payouts" && (
+          {tab === "unrequested_payouts" && (
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
