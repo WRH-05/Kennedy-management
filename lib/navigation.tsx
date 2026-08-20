@@ -8,6 +8,9 @@ import {
   ClipboardList,
   CalendarDays,
   BarChart3,
+  Receipt,
+  AlertCircle,
+  Calendar,
   type LucideIcon,
 } from "lucide-react"
 
@@ -101,6 +104,33 @@ export const ALL_NAVIGATION_CARDS: NavItem[] = [
     icon: <BarChart3 className="h-5 w-5 text-purple-600" />,
     iconComponent: BarChart3,
     iconClassName: "text-purple-600",
+    allowedRoles: ["owner", "manager"],
+  },
+  {
+    title: "Operational Expenses",
+    description: "Track supplies, rent, utilities and other operating costs",
+    href: "/manager/expenses",
+    icon: <Receipt className="h-5 w-5 text-orange-600" />,
+    iconComponent: Receipt,
+    iconClassName: "text-orange-600",
+    allowedRoles: ["owner", "manager"],
+  },
+  {
+    title: "Unpaid Debt & Leakage",
+    description: "Track unpaid tuition, registration fees and pending payouts",
+    href: "/manager/unpaid",
+    icon: <AlertCircle className="h-5 w-5 text-rose-600" />,
+    iconComponent: AlertCircle,
+    iconClassName: "text-rose-600",
+    allowedRoles: ["owner", "manager"],
+  },
+  {
+    title: "School Timetable",
+    description: "Weekly timetable grid of all active class sessions",
+    href: "/manager/timetable",
+    icon: <Calendar className="h-5 w-5 text-cyan-600" />,
+    iconComponent: Calendar,
+    iconClassName: "text-cyan-600",
     allowedRoles: ["owner", "manager"],
   },
 ]

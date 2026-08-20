@@ -1,47 +1,16 @@
 "use client"
 
-import { Suspense, useMemo } from "react"
+import { Suspense, useMemo, useState } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
+import { Pagination, PaginationContent, PaginationItem, PaginationPrevious, PaginationNext } from "@/components/ui/pagination"
 import { usePaginatedStudents } from "@/hooks/useStudents"
 import { usePendingArchives } from "@/hooks/usePayments"
 import StudentsTab from "@/components/tabs/StudentsTab"
-import { Pagination, PaginationContent, PaginationItem, PaginationLink, PaginationPrevious, PaginationNext, PaginationEllipsis } from "@/components/ui/pagination"
 import { revalidateData } from "@/hooks/swr-config"
 import { Tables } from "@/types/database.types"
 
-const PAGE_SIZE = 6
-
-function getPageItems(page: number, totalPages: number) {
-  const pages: Array<number | 'ellipsis'> = []
-
-  if (totalPages <= 7) {
-    for (let index = 1; index <= totalPages; index += 1) {
-      pages.push(index)
-    }
-    return pages
-  }
-
-  const left = Math.max(2, page - 1)
-  const right = Math.min(totalPages - 1, page + 1)
-
-  pages.push(1)
-
-  if (left > 2) {
-    pages.push('ellipsis')
-  }
-
-  for (let index = left; index <= right; index += 1) {
-    pages.push(index)
-  }
-
-  if (right < totalPages - 1) {
-    pages.push('ellipsis')
-  }
-
-  pages.push(totalPages)
-
-  return pages
-}
+const PAGE_SIZE = 10
+const ALL = "all"
 
 export default function StudentsPage() {
   return (
@@ -64,15 +33,43 @@ function StudentsPageContent() {
     router.replace(qs ? `/manager/students?${qs}` : "/manager/students", { scroll: false })
   }
 
-  const { students, total, isLoading: studentLoading, mutate } = usePaginatedStudents(page, PAGE_SIZE)
+  const { students, isLoading, mutate } = usePaginatedStudents(1, 0)
   const { data: pendingArchiveMap } = usePendingArchives()
+
+  const [gradeFilter, setGradeFilter] = useState<string>(ALL)
+  const [feeFilter, setFeeFilter] = useState<string>(ALL)
 
   const studentList = useMemo(
     () => (students || []).filter((student: Tables<"students">) => !student.archived),
     [students]
   )
 
-  if (studentLoading) {
+  const filtered = useMemo(() => {
+    return studentList.filter((student) => {
+      if (gradeFilter !== ALL) {
+        const inGrade = student.school_level === gradeFilter
+          || (student.extracurricular_grade_level_ids || []).includes(gradeFilter)
+        if (!inGrade) return false
+      }
+      if (feeFilter !== ALL) {
+        const wantPaid = feeFilter === "paid"
+        if (student.registration_fee_paid !== wantPaid) return false
+      }
+      return true
+    })
+  }, [studentList, gradeFilter, feeFilter])
+
+  const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE))
+  const currentPage = Math.min(page, totalPages)
+  const paginated = useMemo(
+    () => filtered.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE),
+    [filtered, currentPage]
+  )
+
+  const handleGradeFilter = (v: string) => { setGradeFilter(v); setPage(1) }
+  const handleFeeFilter = (v: string) => { setFeeFilter(v); setPage(1) }
+
+  if (isLoading) {
     return (
       <div className="p-8 text-center text-gray-500">
         Loading Student Records...
@@ -80,60 +77,43 @@ function StudentsPageContent() {
     )
   }
 
-  const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE))
-
   return (
     <div className="space-y-6">
       <StudentsTab
-        students={studentList}
+        students={paginated}
+        gradeFilter={gradeFilter}
+        onGradeFilterChange={handleGradeFilter}
+        feeFilter={feeFilter}
+        onFeeFilterChange={handleFeeFilter}
         onStudentsUpdate={() => { mutate(); revalidateData('students') }}
         canAdd={true}
         showPaymentStatus={true}
         pendingArchiveIds={pendingArchiveMap?.student || new Set()}
       />
 
-      <Pagination className="pt-4">
-        <PaginationContent>
-          <PaginationItem>
-            <PaginationPrevious
-              aria-disabled={page <= 1}
-              onClick={() => {
-                if (page > 1) {
-                  setPage(page - 1)
-                }
-              }}
-            />
-          </PaginationItem>
-
-          {getPageItems(page, totalPages).map((item, index) =>
-            item === 'ellipsis' ? (
-              <PaginationItem key={`ellipsis-${index}`}>
-                <PaginationEllipsis />
-              </PaginationItem>
-            ) : (
-              <PaginationItem key={item}>
-                <PaginationLink
-                  isActive={item === page}
-                  onClick={() => setPage(item)}
-                >
-                  {item}
-                </PaginationLink>
-              </PaginationItem>
-            )
-          )}
-
-          <PaginationItem>
-            <PaginationNext
-              aria-disabled={page >= totalPages}
-              onClick={() => {
-                if (page < totalPages) {
-                  setPage(page + 1)
-                }
-              }}
-            />
-          </PaginationItem>
-        </PaginationContent>
-      </Pagination>
+      {totalPages > 1 && (
+        <Pagination className="pt-4">
+          <PaginationContent>
+            <PaginationItem>
+              <PaginationPrevious
+                aria-disabled={currentPage <= 1}
+                onClick={() => { if (currentPage > 1) setPage(currentPage - 1) }}
+              />
+            </PaginationItem>
+            <PaginationItem>
+              <span className="px-2 text-sm font-medium text-muted-foreground">
+                Page {currentPage} of {totalPages}
+              </span>
+            </PaginationItem>
+            <PaginationItem>
+              <PaginationNext
+                aria-disabled={currentPage >= totalPages}
+                onClick={() => { if (currentPage < totalPages) setPage(currentPage + 1) }}
+              />
+            </PaginationItem>
+          </PaginationContent>
+        </Pagination>
+      )}
     </div>
   )
 }
