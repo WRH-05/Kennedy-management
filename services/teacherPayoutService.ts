@@ -194,6 +194,10 @@ export const teacherPayoutService = {
         return data
     },
 
+    /**
+     * Creates the payout request for a cycle. `amount` must already be the teacher's
+     * share of tuition collected in that cycle — see `computeTeacherEarnings` in lib/payout.ts.
+     */
     async recordTeacherPayout(amount: number, billingPeriodId: string, courseId: string) {
 
         const { data } = await supabase

@@ -208,6 +208,57 @@ export const courseInstancesService = {
         return true;
     },
 
+    /**
+     * Undo a mistaken enrollment completely — the student behaves as if never enrolled.
+     *
+     * Only removes outstanding (pending/unpaid/cancelled) payment rows; any recorded paid
+     * payment blocks the removal so money trails are never silently destroyed.
+     */
+    async removeStudentFromClass(courseId: string, studentId: string): Promise<{ studentName: string }> {
+        const { data: paidRows } = await supabase
+            .from('student_payments')
+            .select('id')
+            .eq('course_id', courseId)
+            .eq('student_id', studentId)
+            .eq('status', 'paid')
+            .throwOnError();
+
+        if ((paidRows || []).length > 0) {
+            throw new Error('Cannot remove student: paid payments are recorded. Unenroll or archive the student instead.');
+        }
+
+        const [{ data: student }, { data: course }] = await Promise.all([
+            supabase.from('students').select('name').eq('id', studentId).maybeSingle(),
+            supabase.from('course_instances').select('display_name').eq('id', courseId).maybeSingle(),
+        ]);
+
+        await supabase
+            .from('student_payments')
+            .delete()
+            .eq('course_id', courseId)
+            .eq('student_id', studentId)
+            .neq('status', 'paid')
+            .throwOnError();
+
+        await supabase
+            .from('course_enrollments')
+            .delete()
+            .eq('course_id', courseId)
+            .eq('student_id', studentId)
+            .throwOnError();
+
+        const studentName = student?.name ?? 'Unknown'
+
+        await activityLogService.logActivity({
+            action_type: 'permanent_delete',
+            title: `Student removed from class: ${studentName} - ${course?.display_name ?? 'Unknown class'}`,
+            entity_type: 'student',
+            entity_id: studentId,
+        })
+
+        return { studentName };
+    },
+
     async addCourseInstance(instanceData: TablesInsert<"course_instances">, scheduleSlots: TablesInsert<"course_schedule">[]) {
 
         const { data } = await supabase.rpc('add_course_instance_with_schedule', {

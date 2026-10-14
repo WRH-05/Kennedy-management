@@ -9,13 +9,16 @@ import { useToast } from "@/hooks/use-toast"
 import { useAuth } from "@/context/AuthContext"
 import { useSchoolSettings } from "@/hooks/useSchoolSettings"
 import { schoolSettingsService, SchoolSettings } from "@/services/schoolSettingsService"
-import { Settings, Upload } from "lucide-react"
+import { Settings, Upload, ShieldAlert } from "lucide-react"
+import Link from "next/link"
 
 export default function SettingsPage() {
   const { toast } = useToast()
-  const { profile } = useAuth()
+  const { profile, loading } = useAuth()
   const { settings, isLoading, mutate } = useSchoolSettings()
-  const canEdit = profile?.role === 'owner' || profile?.role === 'manager'
+  // School settings are writable by the owner only (matching the RLS policy).
+  const isOwner = profile?.role === 'owner'
+  const canEdit = isOwner
 
   const [schoolName, setSchoolName] = useState("")
   const [address, setAddress] = useState("")
@@ -92,6 +95,38 @@ export default function SettingsPage() {
       console.error("Failed to select previous logo:", error)
       toast({ title: "Error", description: "Failed to update logo.", variant: "destructive" })
     }
+  }
+
+  // Wait for the profile before deciding — otherwise the owner sees a flash of denial.
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center py-20">
+        <p className="text-gray-500">Loading...</p>
+      </div>
+    )
+  }
+
+  if (!isOwner) {
+    return (
+      <div className="flex items-center justify-center py-20">
+        <Card className="max-w-md w-full">
+          <CardHeader>
+            <CardTitle className="flex items-center">
+              <ShieldAlert className="h-5 w-5 mr-2 text-destructive" />
+              Access Denied
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <p className="text-sm text-muted-foreground">
+              Only the school owner can view school settings.
+            </p>
+            <Button asChild variant="outline">
+              <Link href="/manager">Back to Dashboard</Link>
+            </Button>
+          </CardContent>
+        </Card>
+      </div>
+    )
   }
 
   if (isLoading) {
@@ -224,7 +259,7 @@ export default function SettingsPage() {
             )}
 
             {!canEdit && (
-              <p className="text-sm text-muted-foreground">Only the school owner or manager can modify settings.</p>
+              <p className="text-sm text-muted-foreground">Only the school owner can modify settings.</p>
             )}
           </form>
         </CardContent>

@@ -50,7 +50,7 @@ export const ALL_NAVIGATION_CARDS: NavItem[] = [
     icon: <ClipboardList className="h-5 w-5 text-amber-500" />,
     iconComponent: ClipboardList,
     iconClassName: "text-amber-500",
-    allowedRoles: ["owner", "manager"],
+    allowedRoles: ["owner", "manager", "receptionist"],
   },
   {
     title: "Manage Class Instances",
@@ -113,7 +113,7 @@ export const ALL_NAVIGATION_CARDS: NavItem[] = [
     icon: <Receipt className="h-5 w-5 text-orange-600" />,
     iconComponent: Receipt,
     iconClassName: "text-orange-600",
-    allowedRoles: ["owner", "manager"],
+    allowedRoles: ["owner", "manager", "receptionist"],
   },
   {
     title: "Unpaid Debt & Leakage",
@@ -122,7 +122,7 @@ export const ALL_NAVIGATION_CARDS: NavItem[] = [
     icon: <AlertCircle className="h-5 w-5 text-rose-600" />,
     iconComponent: AlertCircle,
     iconClassName: "text-rose-600",
-    allowedRoles: ["owner", "manager"],
+    allowedRoles: ["owner", "manager", "receptionist"],
   },
   {
     title: "School Timetable",
@@ -131,7 +131,7 @@ export const ALL_NAVIGATION_CARDS: NavItem[] = [
     icon: <Calendar className="h-5 w-5 text-cyan-600" />,
     iconComponent: Calendar,
     iconClassName: "text-cyan-600",
-    allowedRoles: ["owner", "manager"],
+    allowedRoles: ["owner", "manager", "receptionist"],
   },
 ]
 

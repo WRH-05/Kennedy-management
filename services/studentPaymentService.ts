@@ -214,6 +214,26 @@ export const studentPaymentService = {
         return data || []
     },
 
+    /**
+     * Tuition actually collected per class instance, keyed by course_id.
+     * Registration fees are excluded (their course_id is null).
+     */
+    async getPaidTuitionTotals(): Promise<Record<string, number>> {
+        const { data } = await supabase
+            .from('student_payments')
+            .select('course_id, amount')
+            .eq('status', 'paid')
+            .not('course_id', 'is', null)
+            .throwOnError()
+
+        const totals: Record<string, number> = {}
+        for (const row of (data || []) as { course_id: string | null; amount: number | null }[]) {
+            if (!row.course_id) continue
+            totals[row.course_id] = (totals[row.course_id] || 0) + (Number(row.amount) || 0)
+        }
+        return totals
+    },
+
     async payRegistrationFee(studentId: string) {
         const { data: student } = await supabase
             .from('students')

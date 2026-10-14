@@ -9,6 +9,7 @@ import { Archive } from "lucide-react"
 import { Teacher, teacherService } from "@/services/teacherService"
 import { courseInstancesService, CourseInstanceWithEnrichment } from "@/services/courseInstancesService"
 import { teacherPayoutService } from "@/services/teacherPayoutService"
+import { studentPaymentService } from "@/services/studentPaymentService"
 import { UpdateTeacherDialog } from "@/components/tabs/TeacherTab/UpdateTeacherDialog"
 
 // Sub-components imports
@@ -24,6 +25,7 @@ function TeacherProfileContent() {
 
   const [teacher, setTeacher] = useState<Teacher | null>(null)
   const [courseInstances, setCourseInstances] = useState<CourseInstanceWithEnrichment[]>([])
+  const [paidTotals, setPaidTotals] = useState<Record<string, number>>({})
   const [totalPayouts, setTotalPayouts] = useState(0)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -44,8 +46,13 @@ function TeacherProfileContent() {
       const assignedCourseInstances = await courseInstancesService.getCourseInstancesByTeacherId(teacherId)
       setCourseInstances(assignedCourseInstances)
 
-      const totalPaid = await teacherPayoutService.getTotalPaidPayouts(teacherId)
+      // Earnings shown in the course table are a share of tuition actually collected.
+      const [totalPaid, collected] = await Promise.all([
+        teacherPayoutService.getTotalPaidPayouts(teacherId),
+        studentPaymentService.getPaidTuitionTotals(),
+      ])
       setTotalPayouts(totalPaid)
+      setPaidTotals(collected)
     } catch (err) {
       console.error("Error loading teacher data:", err)
       setError("Failed to load teacher data")
@@ -113,6 +120,7 @@ function TeacherProfileContent() {
             <CourseManagementCard
               activeCourses={activeCourses}
               completedCourses={completedCourses}
+              paidTotals={paidTotals}
             />
           </div>
         </div>

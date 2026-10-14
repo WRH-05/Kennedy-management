@@ -8,13 +8,14 @@ import { Input } from "@/components/ui/input"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Users, Plus, MoreHorizontal, Check, Printer } from "lucide-react"
+import { Users, Plus, MoreHorizontal, Check, Printer, Pencil, Trash2 } from "lucide-react"
 import { courseInstancesService } from "@/services/courseInstancesService"
 import { useStudentsData } from "@/hooks/usePayments"
 import { useStudents } from "@/hooks/useStudents"
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog"
 import { useCourseEnrollementStudentsByCourseId } from "@/hooks/useCourseEnrollement"
-import { studentPaymentService } from "@/services/studentPaymentService"
+import { studentPaymentService, EnrichedStudentPayments } from "@/services/studentPaymentService"
 import { toast } from "@/hooks/use-toast"
 import { Badge } from "@/components/ui/badge"
 import { Enums, Tables } from "@/types/database.types"
@@ -24,6 +25,7 @@ import { useAuth } from "@/context/AuthContext"
 import { printStudentReceipt } from "@/components/dashboard/StudentPaymentReceipt"
 import { useSchoolSettings } from "@/hooks/useSchoolSettings"
 import { getSessionDates, proRateTuition } from "@/lib/schedule"
+import { isPaymentOutstanding } from "@/lib/payout"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
 
 const PAYMENT_STATUSES = [
@@ -60,6 +62,19 @@ export function StudentsManagementCard({
   const [selectedStudent, setSelectedStudent] = useState("")
   const [showStudentResults, setShowStudentResults] = useState(false)
   const [feeOverride, setFeeOverride] = useState("")
+
+  // Edit Fee
+  const [editFeeTarget, setEditFeeTarget] = useState<EnrichedStudentPayments | null>(null)
+  const [editFeeValue, setEditFeeValue] = useState("")
+  const [isSavingFee, setIsSavingFee] = useState(false)
+
+  // Remove from Class (mis-input removal)
+  const [removeTarget, setRemoveTarget] = useState<EnrichedStudentPayments | null>(null)
+  const [isRemoving, setIsRemoving] = useState(false)
+
+  // Deleting student_payments requires the student_payments.delete permission,
+  // which only owner/manager hold.
+  const canHardRemove = profile?.role === 'owner' || profile?.role === 'manager'
 
   // SWR Hooks
   const { payments, isLoading, mutate } = useStudentsData(selectedPeriodId);
@@ -233,6 +248,92 @@ export function StudentsManagementCard({
     }
   }
 
+  const openEditFee = (p: EnrichedStudentPayments) => {
+    setEditFeeTarget(p)
+    setEditFeeValue(String(Number(p.amount || 0)))
+  }
+
+  const closeEditFee = () => {
+    setEditFeeTarget(null)
+    setEditFeeValue("")
+  }
+
+  const handleSaveFee = async (e: React.FormEvent) => {
+    e.preventDefault()
+    const studentId = editFeeTarget?.students?.id
+    if (!editFeeTarget || !studentId) return
+
+    const parsed = Number(editFeeValue)
+    if (editFeeValue.trim() === "" || isNaN(parsed) || parsed < 0) {
+      toast({
+        title: "Invalid fee",
+        description: "Enter a fee amount of 0 DA or more.",
+        variant: "destructive",
+      })
+      return
+    }
+
+    setIsSavingFee(true)
+    try {
+      await studentPaymentService.updateRecordStudentPayment(
+        courseInstance.id,
+        studentId,
+        // Key off the row's own cycle — updating a different cycle would match no row.
+        editFeeTarget.billing_period_id || selectedPeriodId,
+        { amount: parsed }
+      )
+
+      toast({ title: "Fee updated", description: `Fee set to ${parsed.toLocaleString()} DA.` })
+      await mutate()
+      revalidateData('course-instances')
+      revalidateData('unpaid')
+      onRefresh()
+      closeEditFee()
+    } catch (error) {
+      console.error(error)
+      toast({ title: "Error", description: "Failed to update the fee.", variant: "destructive" })
+    } finally {
+      setIsSavingFee(false)
+    }
+  }
+
+  // Radix can leave `pointer-events: none` on <body> when a dialog unmounts mid-interaction,
+  // which freezes the whole page. Clear it once the dialog has torn down.
+  const closeRemoveDialog = () => {
+    setRemoveTarget(null)
+    setTimeout(() => { document.body.style.pointerEvents = '' }, 100)
+  }
+
+  const handleRemoveFromClass = async () => {
+    const studentId = removeTarget?.students?.id
+    if (!removeTarget || !studentId) return
+
+    setIsRemoving(true)
+    try {
+      await courseInstancesService.removeStudentFromClass(courseInstance.id, studentId)
+
+      toast({
+        title: "Removed from class",
+        description: `${removeTarget.students?.name || "Student"} was removed from this class.`,
+      })
+      await Promise.all([mutate(), mutateEnrolled()])
+      revalidateData('students')
+      revalidateData('course-instances')
+      revalidateData('unpaid')
+      onRefresh()
+    } catch (error) {
+      console.error(error)
+      toast({
+        title: "Error",
+        description: error instanceof Error ? error.message : "Failed to remove the student.",
+        variant: "destructive",
+      })
+    } finally {
+      setIsRemoving(false)
+      closeRemoveDialog()
+    }
+  }
+
   return (
     <TooltipProvider>
     <Card>
@@ -379,7 +480,10 @@ export function StudentsManagementCard({
                 const currentEnrollmentStatus = (isEnrolled ? "enrolled" : "dropped");
 
                 const isPaid = p.status === "paid";
+                // Every fee that is neither paid nor cancelled counts as outstanding.
+                const isOutstanding = isPaymentOutstanding(p.status);
                 const isFinalizedEnrollment = currentEnrollmentStatus === "dropped";
+                const canRecordPayment = !isFinalizedEnrollment && p.status !== 'cancelled';
                 const isProRated = Number(p.amount || 0) < Number(courseInstance.price || 0) && isEnrollmentInPeriod(currentStudentId);
 
                 return (
@@ -459,18 +563,44 @@ export function StudentsManagementCard({
                                 <Printer className="mr-2 h-4 w-4" />
                                 Re-print Receipt
                               </DropdownMenuItem>
-                            ) : !isFinalizedEnrollment && p.status !== 'cancelled' ? (
-                              <DropdownMenuItem
-                                onClick={() => handlePayAndPrint(p)}
-                                className="text-emerald-600 focus:text-emerald-600 cursor-pointer"
-                              >
-                                <Check className="mr-2 h-4 w-4" />
-                                Record Payment
-                              </DropdownMenuItem>
                             ) : (
-                              <DropdownMenuItem disabled className="cursor-default">
-                                {isFinalizedEnrollment ? "Dropped" : "Cancelled"}
-                              </DropdownMenuItem>
+                              <>
+                                {canRecordPayment && (
+                                  <DropdownMenuItem
+                                    onClick={() => handlePayAndPrint(p)}
+                                    className="text-emerald-600 focus:text-emerald-600 cursor-pointer"
+                                  >
+                                    <Check className="mr-2 h-4 w-4" />
+                                    Record Payment
+                                  </DropdownMenuItem>
+                                )}
+
+                                {isOutstanding ? (
+                                  <>
+                                    {canRecordPayment && <DropdownMenuSeparator />}
+                                    <DropdownMenuItem
+                                      onClick={() => openEditFee(p)}
+                                      className="cursor-pointer"
+                                    >
+                                      <Pencil className="mr-2 h-4 w-4" />
+                                      Edit Fee
+                                    </DropdownMenuItem>
+                                    {canHardRemove && (
+                                      <DropdownMenuItem
+                                        onClick={() => setRemoveTarget(p)}
+                                        className="text-red-600 focus:text-red-600 cursor-pointer"
+                                      >
+                                        <Trash2 className="mr-2 h-4 w-4" />
+                                        Remove from Class
+                                      </DropdownMenuItem>
+                                    )}
+                                  </>
+                                ) : (
+                                  <DropdownMenuItem disabled className="cursor-default">
+                                    {isFinalizedEnrollment ? "Dropped" : "Cancelled"}
+                                  </DropdownMenuItem>
+                                )}
+                              </>
                             )}
                           </DropdownMenuContent>
                         </DropdownMenu>
@@ -483,6 +613,72 @@ export function StudentsManagementCard({
           </TableBody>
         </Table>
       </CardContent>
+
+      {/* Correct a fee that was entered wrong for an unpaid row */}
+      <Dialog open={!!editFeeTarget} onOpenChange={(open) => { if (!open) closeEditFee() }}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Edit Fee</DialogTitle>
+          </DialogHeader>
+          <form onSubmit={handleSaveFee} className="space-y-4">
+            <div className="space-y-2">
+              <Label>
+                {editFeeTarget?.students?.name || "Student"} — {courseInstance.display_name || "Course"}
+              </Label>
+              <p className="text-xs text-muted-foreground">
+                Correct the amount due for this billing cycle. Only unpaid fees can be edited.
+              </p>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="editFee">Fee Amount (DA)</Label>
+              <Input
+                id="editFee"
+                type="number"
+                min="0"
+                step="1"
+                value={editFeeValue}
+                onChange={(e) => setEditFeeValue(e.target.value)}
+                autoFocus
+              />
+            </div>
+            <div className="flex justify-end space-x-2 pt-2">
+              <Button type="button" variant="outline" onClick={closeEditFee} disabled={isSavingFee}>
+                Cancel
+              </Button>
+              <Button type="submit" disabled={isSavingFee}>
+                {isSavingFee ? "Saving..." : "Save Fee"}
+              </Button>
+            </div>
+          </form>
+        </DialogContent>
+      </Dialog>
+
+      {/* Undo a mistaken enrollment entirely */}
+      <AlertDialog
+        open={!!removeTarget}
+        onOpenChange={(open) => { if (!open) closeRemoveDialog() }}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Remove from Class</AlertDialogTitle>
+            <AlertDialogDescription>
+              Remove {removeTarget?.students?.name || "this student"} from{" "}
+              {courseInstance.display_name || "this class"} completely — their enrollment and
+              unpaid fees will be deleted as if they never enrolled. This cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={isRemoving}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={(e) => { e.preventDefault(); handleRemoveFromClass() }}
+              disabled={isRemoving}
+              className="bg-red-600 hover:bg-red-700"
+            >
+              {isRemoving ? "Removing..." : "Remove"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </Card>
     </TooltipProvider>
   )

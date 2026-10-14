@@ -10,6 +10,7 @@ import { CourseInstanceWithEnrichment } from "@/services/courseInstancesService"
 import { useStudentsData } from "@/hooks/usePayments"
 import { SchoolSettings } from "@/services/schoolSettingsService"
 import { Tables } from "@/types/database.types"
+import { sumCollectedPool } from "@/lib/payout"
 
 interface TeacherPayoutReportProps {
   open: boolean
@@ -42,6 +43,9 @@ export function TeacherPayoutReport({
   const enrolledStudents = payments || []
   const totalEnrolled = enrolledStudents.length
   const totalPaid = enrolledStudents.filter((s) => s.status === 'paid').length
+
+  // Tuition actually collected this cycle — percentage payouts are taken from this.
+  const collectedPool = sumCollectedPool(enrolledStudents)
 
   const compType = (courseInstance as any).compensation_type || 'percentage'
   const courseTitle = courseInstance.course_eligibility?.courses?.name || courseInstance.display_name || "Cours"
@@ -178,6 +182,10 @@ export function TeacherPayoutReport({
                   <td className="py-1.5 font-medium text-right">{totalPaid}</td>
                 </tr>
                 <tr className="border-b border-gray-200">
+                  <td className="py-1.5">Total Encaissé (Base de Calcul):</td>
+                  <td className="py-1.5 font-medium text-right">{collectedPool.toLocaleString()} DA</td>
+                </tr>
+                <tr className="border-b border-gray-200">
                   <td className="py-1.5">Modèle de Rémunération:</td>
                   <td className="py-1.5 font-medium text-right">{compLabel}</td>
                 </tr>
@@ -283,6 +291,10 @@ export function TeacherPayoutReport({
               <div className="flex justify-between py-1.5 border-b border-slate-200">
                 <span>Total Élèves Ayant Payé</span>
                 <span className="font-semibold">{totalPaid}</span>
+              </div>
+              <div className="flex justify-between py-1.5 border-b border-slate-200">
+                <span>Total Encaissé (Base de Calcul)</span>
+                <span className="font-semibold">{collectedPool.toLocaleString()} DA</span>
               </div>
             </div>
             <div className="bg-slate-100 border border-slate-300 p-3 rounded-md text-right">

@@ -21,6 +21,7 @@ import { studentPaymentService } from "@/services/studentPaymentService"
 import { Tables } from "@/types/database.types"
 import { TeacherPayoutReport } from "@/components/dashboard/TeacherPayoutReport"
 import { useSchoolSettings } from "@/hooks/useSchoolSettings"
+import { computeTeacherEarnings, sumCollectedPool } from "@/lib/payout"
 
 function CourseInstancesDetailContent() {
   const router = useRouter()
@@ -57,6 +58,12 @@ function CourseInstancesDetailContent() {
     setSelectedPeriodId(cycleId)
     router.replace(`/course-instance/${CourseInstancesId}?cycle=${cycleId}`, { scroll: false })
   }, [CourseInstancesId, router])
+
+  // Tuition actually collected in the selected cycle — the base for the teacher's cut.
+  const collectedPool = useMemo(
+    () => sumCollectedPool(studentPayments.filter((p) => p.billing_period_id === selectedPeriodId)),
+    [studentPayments, selectedPeriodId]
+  )
 
   // Compute status dots for each billing cycle
   const cycleStatuses = useMemo(() => {
@@ -159,15 +166,8 @@ function CourseInstancesDetailContent() {
     }
     if (!courseInstances?.teacher_id) return
 
-    // Calculate earnings based on compensation type
-    const compType = (courseInstances as any).compensation_type || 'percentage'
-    const studentCount = courseInstances.student_ids?.length || 0
-    let earnings: number
-    if (compType === 'fixed_salary') {
-      earnings = (courseInstances as any).fixed_salary_amount || 0
-    } else {
-      earnings = Math.round((courseInstances.price * studentCount * (courseInstances.percentage_cut || 0)) / 100)
-    }
+    // Percentage teachers are paid a share of what was actually collected this cycle.
+    const earnings = computeTeacherEarnings(courseInstances, collectedPool)
 
     setConfirmDialog({
       open: true,
@@ -196,11 +196,7 @@ function CourseInstancesDetailContent() {
   }
 
   const availableStudents = students.filter((student: Tables<"students">) => !courseInstances?.student_ids?.includes(student.id))
-  const compType = (courseInstances as any).compensation_type || 'percentage'
-  const studentCount = courseInstances.student_ids?.length || 0
-  const teacherEarnings = compType === 'fixed_salary'
-    ? ((courseInstances as any).fixed_salary_amount || 0)
-    : Math.round((courseInstances.price * studentCount * (courseInstances.percentage_cut || 0)) / 100)
+  const teacherEarnings = computeTeacherEarnings(courseInstances, collectedPool)
   const instanceGradeIds = (courseInstances?.grade_level_ids && courseInstances.grade_level_ids.length > 0)
     ? courseInstances.grade_level_ids
     : ((courseInstances?.course_eligibility as any)?.grade_levels?.id ? [(courseInstances?.course_eligibility as any).grade_levels.id] : [])
@@ -222,7 +218,7 @@ function CourseInstancesDetailContent() {
       )}
       <header className="bg-white shadow-sm border-b">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex items-center h-16">
-          <Button variant="ghost" size="sm" onClick={() => router.back()} className="mr-4">
+          <Button variant="ghost" size="sm" onClick={() => router.push('/manager/course-instances')} className="mr-4">
             <ArrowLeft className="h-4 w-4 mr-2" /> Back
           </Button>
           <h1 className="text-xl font-semibold text-gray-900">Class Details</h1>

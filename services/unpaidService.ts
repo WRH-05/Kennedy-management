@@ -1,6 +1,7 @@
 import { createClient } from "@/lib/supabase/client"
 import { studentPaymentService, EnrichedStudentPayments } from "@/services/studentPaymentService"
 import { getCourseDisplayName } from "@/lib/course-display"
+import { computeTeacherEarnings, isPaymentOutstanding, sumCollectedPool } from "@/lib/payout"
 
 const supabase = createClient()
 
@@ -31,7 +32,7 @@ export interface UnpaidOverview {
 
 export const unpaidService = {
   async getUnpaidOverview(): Promise<UnpaidOverview> {
-    const [tuitionRes, registrationRes, periodsRes, enrollmentsRes, payoutsRes] = await Promise.all([
+    const [tuitionRes, registrationRes, periodsRes, payoutsRes] = await Promise.all([
       studentPaymentService.getAllStudentsPayments(1, 0),
       supabase
         .from('students')
@@ -45,33 +46,36 @@ export const unpaidService = {
         .select('id, course_id, start_date, end_date, course_instances(*, teachers(name), course_eligibility(courses(name), grade_levels(name)))')
         .throwOnError(),
       supabase
-        .from('course_enrollments')
-        .select('course_id, student_id, status')
-        .eq('status', 'enrolled')
-        .throwOnError(),
-      supabase
         .from('teacher_payouts')
         .select('id, billing_period_id, status, amount')
         .throwOnError(),
     ])
 
-    const unpaidTuition = (tuitionRes.data || []).filter((p) => p.status === 'unpaid')
+    const allPayments = tuitionRes.data || []
+
+    // A fee is outstanding until it is paid or cancelled; `pending` and `unpaid`
+    // both count as unpaid tuition.
+    const unpaidTuition = allPayments.filter((p) => isPaymentOutstanding(p.status))
     const unpaidRegistration = (registrationRes.data || []) as UnpaidStudent[]
 
     const periods = (periodsRes.data || []) as any[]
-    const enrollments = (enrollmentsRes.data || []) as any[]
     const payouts = (payoutsRes.data || []) as any[]
+
+    // Tuition actually collected per billing cycle — the pool percentage teachers are paid from.
+    const collectedPoolByPeriod = new Map<string, number>()
+    for (const bp of periods) {
+      collectedPoolByPeriod.set(
+        bp.id,
+        sumCollectedPool(allPayments.filter((p) => p.billing_period_id === bp.id))
+      )
+    }
 
     const unrequestedPayouts: UnrequestedPayout[] = []
     for (const bp of periods) {
       const ci = bp.course_instances
       if (!ci || ci.archived) continue
 
-      const studentCount = enrollments.filter((e) => e.course_id === bp.course_id).length
-      const compType = ci.compensation_type || 'percentage'
-      const earnings = compType === 'fixed_salary'
-        ? (Number(ci.fixed_salary_amount) || 0)
-        : Math.round((Number(ci.price) || 0) * studentCount * (Number(ci.percentage_cut) || 0) / 100)
+      const earnings = computeTeacherEarnings(ci, collectedPoolByPeriod.get(bp.id) || 0)
 
       const payoutRow = payouts.find((p) => p.billing_period_id === bp.id)
       const isUnrequested = earnings > 0 && (!payoutRow || payoutRow.status === 'unpaid' || Number(payoutRow.amount) === 0)

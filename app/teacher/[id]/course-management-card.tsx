@@ -7,23 +7,21 @@ import Link from "next/link"
 import { CourseInstanceWithEnrichment } from "@/services/courseInstancesService"
 import { usePaginatedGradeLevels } from "@/hooks/useGradeLevels"
 import { formatScheduleString } from "@/lib/schedule"
-
-function teacherEarnings(course: CourseInstanceWithEnrichment): number {
-  const compType = (course as any).compensation_type || "percentage"
-  const studentCount = course.student_ids?.length || 0
-  if (compType === "fixed_salary") {
-    return (course as any).fixed_salary_amount || 0
-  }
-  return Math.round((course.price * studentCount * (course.percentage_cut || 0)) / 100)
-}
+import { computeTeacherEarnings } from "@/lib/payout"
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
 
 interface CourseManagementCardProps {
   activeCourses: CourseInstanceWithEnrichment[]
   completedCourses: CourseInstanceWithEnrichment[]
+  /** Tuition collected per class instance, keyed by course_id. */
+  paidTotals?: Record<string, number>
 }
 
-export function CourseManagementCard({ activeCourses, completedCourses }: CourseManagementCardProps) {
+export function CourseManagementCard({ activeCourses, completedCourses, paidTotals = {} }: CourseManagementCardProps) {
   const { gradeLevels } = usePaginatedGradeLevels(1, 0)
+
+  const teacherEarnings = (course: CourseInstanceWithEnrichment): number =>
+    computeTeacherEarnings(course, paidTotals[course.id] || 0)
 
   const gradeNamesFor = (course: CourseInstanceWithEnrichment) => {
     if (course.grade_level_ids?.length) {
@@ -55,7 +53,19 @@ export function CourseManagementCard({ activeCourses, completedCourses }: Course
                     <TableHead>Subject</TableHead>
                     <TableHead>Grade Levels</TableHead>
                     <TableHead>Schedule</TableHead>
-                    <TableHead>Earnings</TableHead>
+                    <TableHead>
+                      <TooltipProvider>
+                        <Tooltip>
+                          <TooltipTrigger className="cursor-help underline decoration-dotted underline-offset-4">
+                            Earnings
+                          </TooltipTrigger>
+                          <TooltipContent className="max-w-xs">
+                            Share of tuition actually collected for this class. Fixed-salary classes show the
+                            agreed salary instead.
+                          </TooltipContent>
+                        </Tooltip>
+                      </TooltipProvider>
+                    </TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>

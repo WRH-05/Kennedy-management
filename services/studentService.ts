@@ -110,7 +110,39 @@ export const studentService = {
     return data
   },
 
+  /**
+   * Permanently delete a student profile, for cleaning up accidental duplicates.
+   *
+   * Refuses when any payment was actually recorded, so money trails are never destroyed.
+   * Otherwise clears the student's outstanding payments and enrollments first, then the
+   * profile itself (enrollment/payment rows would cascade anyway, but deleting them
+   * explicitly keeps the operation readable and works regardless of FK rules).
+   */
   async deleteStudent(id: string): Promise<Tables<"students"> | null> {
+    const { data: paidRows } = await supabase
+      .from('student_payments')
+      .select('id')
+      .eq('student_id', id)
+      .eq('status', 'paid')
+      .throwOnError()
+
+    if ((paidRows || []).length > 0) {
+      throw new Error('Cannot delete student: Student has recorded paid payments. Archive the student instead.')
+    }
+
+    await supabase
+      .from('student_payments')
+      .delete()
+      .eq('student_id', id)
+      .neq('status', 'paid')
+      .throwOnError()
+
+    await supabase
+      .from('course_enrollments')
+      .delete()
+      .eq('student_id', id)
+      .throwOnError()
+
     const { data } = await supabase
       .from('students')
       .delete()
