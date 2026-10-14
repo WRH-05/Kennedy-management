@@ -1,47 +1,16 @@
 "use client"
-import { Suspense, useMemo } from "react"
+
+import { Suspense, useMemo, useState } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
+import { Pagination, PaginationContent, PaginationItem, PaginationPrevious, PaginationNext } from "@/components/ui/pagination"
 import { usePaginatedTeachers } from "@/hooks/useTeachers"
-import { useCourseInstances } from "@/hooks/useCourseInstances"
 import { usePendingArchives } from "@/hooks/usePayments"
 import TeachersTab from "@/components/tabs/TeachersTab"
-import { Pagination, PaginationContent, PaginationItem, PaginationLink, PaginationPrevious, PaginationNext, PaginationEllipsis } from "@/components/ui/pagination"
-import { Tables } from "@/types/database.types"
 import { revalidateData } from "@/hooks/swr-config"
+import { Tables } from "@/types/database.types"
 
-const PAGE_SIZE = 6
-
-function getPageItems(page: number, totalPages: number) {
-  const pages: Array<number | 'ellipsis'> = []
-
-  if (totalPages <= 7) {
-    for (let index = 1; index <= totalPages; index += 1) {
-      pages.push(index)
-    }
-    return pages
-  }
-
-  const left = Math.max(2, page - 1)
-  const right = Math.min(totalPages - 1, page + 1)
-
-  pages.push(1)
-
-  if (left > 2) {
-    pages.push('ellipsis')
-  }
-
-  for (let index = left; index <= right; index += 1) {
-    pages.push(index)
-  }
-
-  if (right < totalPages - 1) {
-    pages.push('ellipsis')
-  }
-
-  pages.push(totalPages)
-
-  return pages
-}
+const PAGE_SIZE = 10
+const ALL = "all"
 
 export default function TeachersPage() {
   return (
@@ -64,22 +33,58 @@ function TeachersPageContent() {
     router.replace(qs ? `/manager/teachers?${qs}` : "/manager/teachers", { scroll: false })
   }
 
-  const { teachers: allTeachers, total, isLoading: isTeacherLoading, mutate } = usePaginatedTeachers(page, PAGE_SIZE)
+  const { teachers: allTeachers, isLoading, mutate } = usePaginatedTeachers(1, 0)
   const { data: pendingArchiveMap } = usePendingArchives()
 
-  const teachers = useMemo(() =>
-    (allTeachers || []).filter((teacher: Tables<"teachers">) => !teacher.archived),
+  const [subjectFilter, setSubjectFilter] = useState<string>(ALL)
+
+  const teacherList = useMemo(
+    () => (allTeachers || []).filter((teacher: Tables<"teachers">) => !teacher.archived),
     [allTeachers]
   )
 
-  if (isTeacherLoading) return <div className="p-8 text-center text-gray-500">Loading Teachers Directory...</div>
+  const subjectOptions = useMemo(() => {
+    const names = new Set<string>()
+    for (const t of teacherList) {
+      for (const tce of t.teachers_course_eligibility || []) {
+        const name = tce.course_eligibility?.courses?.name
+        if (name) names.add(name)
+      }
+    }
+    return Array.from(names).sort()
+  }, [teacherList])
 
-  const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE))
+  const filtered = useMemo(() => {
+    if (subjectFilter === ALL) return teacherList
+    return teacherList.filter((t) =>
+      (t.teachers_course_eligibility || []).some((tce) => tce.course_eligibility?.courses?.name === subjectFilter)
+    )
+  }, [teacherList, subjectFilter])
+
+  const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE))
+  const currentPage = Math.min(page, totalPages)
+  const paginated = useMemo(
+    () => filtered.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE),
+    [filtered, currentPage]
+  )
+
+  const handleSubjectFilter = (v: string) => { setSubjectFilter(v); setPage(1) }
+
+  if (isLoading) {
+    return (
+      <div className="p-8 text-center text-gray-500">
+        Loading Teachers Directory...
+      </div>
+    )
+  }
 
   return (
     <div className="space-y-6">
       <TeachersTab
-        teachers={teachers}
+        teachers={paginated}
+        subjectFilter={subjectFilter}
+        onSubjectFilterChange={handleSubjectFilter}
+        subjectOptions={subjectOptions}
         onTeachersUpdate={() => { mutate(); revalidateData('teachers') }}
         canAdd={true}
         showCourses={true}
@@ -87,34 +92,29 @@ function TeachersPageContent() {
         pendingArchiveIds={pendingArchiveMap?.teacher || new Set()}
       />
 
-      <Pagination className="pt-4">
-        <PaginationContent>
-          <PaginationItem>
-            <PaginationPrevious aria-disabled={page <= 1} onClick={() => setPage(Math.max(1, page - 1))} />
-          </PaginationItem>
-
-          {getPageItems(page, totalPages).map((item, index) =>
-            item === 'ellipsis' ? (
-              <PaginationItem key={`ellipsis-${index}`}>
-                <PaginationEllipsis />
-              </PaginationItem>
-            ) : (
-              <PaginationItem key={item}>
-                <PaginationLink
-                  isActive={item === page}
-                  onClick={() => setPage(item)}
-                >
-                  {item}
-                </PaginationLink>
-              </PaginationItem>
-            )
-          )}
-
-          <PaginationItem>
-            <PaginationNext aria-disabled={page >= totalPages} onClick={() => setPage(Math.min(totalPages, page + 1))} />
-          </PaginationItem>
-        </PaginationContent>
-      </Pagination>
+      {totalPages > 1 && (
+        <Pagination className="pt-4">
+          <PaginationContent>
+            <PaginationItem>
+              <PaginationPrevious
+                aria-disabled={currentPage <= 1}
+                onClick={() => { if (currentPage > 1) setPage(currentPage - 1) }}
+              />
+            </PaginationItem>
+            <PaginationItem>
+              <span className="px-2 text-sm font-medium text-muted-foreground">
+                Page {currentPage} of {totalPages}
+              </span>
+            </PaginationItem>
+            <PaginationItem>
+              <PaginationNext
+                aria-disabled={currentPage >= totalPages}
+                onClick={() => { if (currentPage < totalPages) setPage(currentPage + 1) }}
+              />
+            </PaginationItem>
+          </PaginationContent>
+        </Pagination>
+      )}
     </div>
   )
 }

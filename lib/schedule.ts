@@ -126,3 +126,18 @@ export function proRateTuition(
   const raw = (fullPrice * remainingSessions) / totalSessions
   return Math.round(raw / 50) * 50
 }
+
+// Return the Monday of the week containing `date`, with time zeroed.
+export function startOfWeek(date: Date = new Date()): Date {
+  const d = new Date(date)
+  const day = (d.getDay() + 6) % 7 // Mon=0 ... Sun=6
+  d.setDate(d.getDate() - day)
+  d.setHours(0, 0, 0, 0)
+  return d
+}
+
+export function addDays(date: Date, days: number): Date {
+  const d = new Date(date)
+  d.setDate(d.getDate() + days)
+  return d
+}

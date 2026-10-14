@@ -6,6 +6,7 @@ import { BookOpen } from "lucide-react"
 import Link from "next/link"
 import { CourseInstanceWithEnrichment } from "@/services/courseInstancesService"
 import { usePaginatedGradeLevels } from "@/hooks/useGradeLevels"
+import { formatScheduleString } from "@/lib/schedule"
 
 function teacherEarnings(course: CourseInstanceWithEnrichment): number {
   const compType = (course as any).compensation_type || "percentage"
@@ -53,6 +54,7 @@ export function CourseManagementCard({ activeCourses, completedCourses }: Course
                   <TableRow>
                     <TableHead>Subject</TableHead>
                     <TableHead>Grade Levels</TableHead>
+                    <TableHead>Schedule</TableHead>
                     <TableHead>Earnings</TableHead>
                   </TableRow>
                 </TableHeader>
@@ -65,6 +67,7 @@ export function CourseManagementCard({ activeCourses, completedCourses }: Course
                         </Link>
                       </TableCell>
                       <TableCell>{gradeNamesFor(course)}</TableCell>
+                      <TableCell>{formatScheduleString((course as any).course_schedule)}</TableCell>
                       <TableCell>{teacherEarnings(course)} DA</TableCell>
                     </TableRow>
                   ))}

@@ -239,6 +239,13 @@ export default function StatsPage() {
               caption={`Payouts (${RANGE_LABEL[range]})`}
             />
             <KpiCard
+              title="Total Operational Expenses"
+              icon={Receipt}
+              value={stats.operationalExpenses}
+              currency
+              caption={`Operating costs (${RANGE_LABEL[range]})`}
+            />
+            <KpiCard
               title="Net Operating Profit"
               icon={Wallet}
               value={stats.netProfit}

@@ -15,7 +15,7 @@ export type StudentsResponse = Awaited<
 
 export type Student = StudentsResponse['data'][number]
 
-const studentQuery = '*, grade_levels(*), course_enrollments(*, course_instances(*, teachers(*), course_eligibility(id, courses(*), grade_levels(*)))), student_payments(*, course_instances(*))'
+const studentQuery = '*, grade_levels(*), course_enrollments(*, course_instances(*, teachers(*), course_eligibility(id, courses(*), grade_levels(*)), course_schedule(*))), student_payments(*, course_instances(*))'
 
 export const studentService = {
   async getAllStudents(

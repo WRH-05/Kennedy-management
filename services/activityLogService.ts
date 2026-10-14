@@ -61,6 +61,7 @@ export const activityLogService = {
       registrations: ['student_registration', 'teacher_registration'],
       archives: ['archive_request', 'archive_approved', 'archive_rejected', 'unarchive'],
       deletions: ['permanent_delete', 'course_delete', 'grade_level_delete'],
+      expenses: ['expense_added', 'expense_deleted'],
     }
 
     if (categoryActions[filterCategory]) {

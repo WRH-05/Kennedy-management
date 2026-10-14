@@ -1,22 +1,17 @@
 "use client"
 import { useMemo } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { TrendingUp, DollarSign, Users, Loader2 } from "lucide-react"
+import { TrendingUp, DollarSign, Receipt, Loader2 } from "lucide-react"
 import { useRevenue, useTeachersPayouts } from "@/hooks/usePayments"
-import { useStudents } from "@/hooks/useStudents"
+import { useExpenses } from "@/hooks/useExpenses"
 import { UnifiedPaymentActivity } from "@/services/paymentService"
 import { Tables } from "@/types/database.types"
 
 export default function SummaryCards() {
-  const { students: allStudents, isLoading: studentLoading } = useStudents()
   const { data: revenueData, isLoading: revenueLoading } = useRevenue()
   const { payments: payoutsData, isLoading: payoutLoading } = useTeachersPayouts()
+  const { expenses, isLoading: expensesLoading } = useExpenses()
   const revenue = revenueData || []
-
-  const students = useMemo(() =>
-    (allStudents && 'data' in allStudents ? allStudents.data : []),
-    [allStudents]
-  )
 
   const payouts = useMemo(() => {
     if (payoutsData && 'data' in payoutsData) {
@@ -38,7 +33,12 @@ export default function SummaryCards() {
     [payouts]
   )
 
-  const netProfit = totalRevenue - totalPayouts
+  const totalOperationalExpenses = useMemo(() =>
+    expenses.reduce((sum: number, e) => sum + (Number(e.amount) || 0), 0),
+    [expenses]
+  )
+
+  const netProfit = totalRevenue - (totalPayouts + totalOperationalExpenses)
 
   return (
     <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
@@ -48,7 +48,7 @@ export default function SummaryCards() {
           <TrendingUp className="h-4 w-4 text-muted-foreground" />
         </CardHeader>
         <CardContent>
-          {studentLoading || revenueLoading || payoutLoading ?
+          {revenueLoading || payoutLoading || expensesLoading ?
             (<Loader2 className="h-10 w-10 text-gray-500 mx-auto animate-spin" />)
             :
             (<div className="text-2xl font-bold">{totalRevenue.toLocaleString()} DA</div>)
@@ -63,12 +63,11 @@ export default function SummaryCards() {
           <DollarSign className="h-4 w-4 text-muted-foreground" />
         </CardHeader>
         <CardContent>
-          {studentLoading || revenueLoading || payoutLoading ?
+          {revenueLoading || payoutLoading || expensesLoading ?
             (<Loader2 className="h-10 w-10 text-gray-500 mx-auto animate-spin" />)
             :
             (<div className="text-2xl font-bold">{totalPayouts.toLocaleString()} DA</div>)
           }
-
           <p className="text-xs text-muted-foreground">To teachers</p>
         </CardContent>
       </Card>
@@ -79,28 +78,27 @@ export default function SummaryCards() {
           <TrendingUp className="h-4 w-4 text-muted-foreground" />
         </CardHeader>
         <CardContent>
-          {studentLoading || revenueLoading || payoutLoading ?
+          {revenueLoading || payoutLoading || expensesLoading ?
             (<Loader2 className="h-10 w-10 text-gray-500 mx-auto animate-spin" />)
             :
             (<div className="text-2xl font-bold">{netProfit.toLocaleString()} DA</div>)
           }
-
           <p className="text-xs text-muted-foreground">All time</p>
         </CardContent>
       </Card>
 
       <Card>
         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-          <CardTitle className="text-sm font-medium">Active Students</CardTitle>
-          <Users className="h-4 w-4 text-muted-foreground" />
+          <CardTitle className="text-sm font-medium">Operational Expenses</CardTitle>
+          <Receipt className="h-4 w-4 text-muted-foreground" />
         </CardHeader>
         <CardContent>
-          {studentLoading || revenueLoading || payoutLoading ?
+          {revenueLoading || payoutLoading || expensesLoading ?
             (<Loader2 className="h-10 w-10 text-gray-500 mx-auto animate-spin" />)
             :
-            (<div className="text-2xl font-bold">{students.length}</div>)
+            (<div className="text-2xl font-bold">{totalOperationalExpenses.toLocaleString()} DA</div>)
           }
-          <p className="text-xs text-muted-foreground">Enrolled</p>
+          <p className="text-xs text-muted-foreground">Non-teacher expenditures</p>
         </CardContent>
       </Card>
     </div>
