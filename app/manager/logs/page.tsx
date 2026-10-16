@@ -17,6 +17,7 @@ const CATEGORIES = [
   { value: "registrations", label: "Registrations" },
   { value: "archives", label: "Archives & Unarchives" },
   { value: "deletions", label: "Permanent Deletions" },
+  { value: "ownerOverrides", label: "Owner Overrides" },
   { value: "expenses", label: "Expenses" },
 ]
 
@@ -59,6 +60,8 @@ function getCategoryInfo(actionType: string): { label: string; className: string
     case "expense_added":
     case "expense_deleted":
       return { label: "Expense", className: "bg-orange-100 text-orange-800" }
+    case "owner_override":
+      return { label: "Owner Override", className: "bg-rose-100 text-rose-800" }
     default:
       return { label: actionType, className: "bg-gray-100 text-gray-800" }
   }

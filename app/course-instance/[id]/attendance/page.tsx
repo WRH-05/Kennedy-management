@@ -9,7 +9,7 @@ import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Drawer, DrawerContent, DrawerFooter, DrawerHeader, DrawerTitle } from "@/components/ui/drawer"
-import { ArrowLeft, Lock, CalendarDays, Pencil, Loader2 } from "lucide-react"
+import { ArrowLeft, Lock, Unlock, CalendarDays, Pencil, Loader2 } from "lucide-react"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
 import { CourseInstanceDetail, courseInstancesService } from "@/services/courseInstancesService"
 import { paymentService } from "@/services/paymentService"
@@ -22,6 +22,8 @@ import {
 } from "@/services/attendanceService"
 import { getCourseDisplayName } from "@/lib/course-display"
 import { toast } from "@/hooks/use-toast"
+import { useAuth } from "@/context/AuthContext"
+import { activityLogService } from "@/services/activityLogService"
 
 const STUDENT_STATUS_META: Record<AttendanceStatus, { label: string; className: string }> = {
   present: { label: "P", className: "bg-emerald-100 text-emerald-800 font-semibold" },
@@ -85,6 +87,13 @@ function AttendanceContent({ courseInstanceId }: { courseInstanceId: string }) {
   const [teacherStatus, setTeacherStatus] = useState<TeacherAttendanceStatus>("present")
   const [studentStatuses, setStudentStatuses] = useState<Record<string, AttendanceStatus>>({})
 
+  // A billing cycle that has ended is sealed. The owner may reopen one for correction;
+  // every save made through that override is written to the audit log.
+  const [ownerOverrideUnlocked, setOwnerOverrideUnlocked] = useState(false)
+
+  const { profile } = useAuth()
+  const isOwner = profile?.role === 'owner'
+
   const syncUrl = (cycleId: string, date: string | null) => {
     const qs = new URLSearchParams()
     if (cycleId) qs.set("cycle", cycleId)
@@ -96,6 +105,8 @@ function AttendanceContent({ courseInstanceId }: { courseInstanceId: string }) {
   const handleCycleChange = (cycleId: string) => {
     setSelectedPeriodId(cycleId)
     setDrawerDate(null)
+    // An unlock applies to the cycle it was granted for, so it never carries over.
+    setOwnerOverrideUnlocked(false)
     syncUrl(cycleId, null)
   }
 
@@ -153,7 +164,11 @@ function AttendanceContent({ courseInstanceId }: { courseInstanceId: string }) {
   }, [selectedPeriodId, loadMatrix])
 
   const selectedPeriod = billingPeriods.find((p) => p.id === selectedPeriodId)
-  const isLocked = selectedPeriod && selectedPeriod.end_date ? todayStr() > selectedPeriod.end_date : false
+  const isCycleEnded = selectedPeriod && selectedPeriod.end_date ? todayStr() > selectedPeriod.end_date : false
+  // The override only ever relaxes the lock, and only for an owner — for every other
+  // role isLocked stays exactly what it always was. The conjoined `isOwner` is what
+  // makes a manager or receptionist unable to reach the unlocked state by any means.
+  const isLocked = isCycleEnded && !(isOwner && ownerOverrideUnlocked)
 
   const isPreEnrollment = (student: AttendanceMatrix["students"][number], date: string) => {
     const enrolled = student.enrolled_at ? student.enrolled_at.slice(0, 10) : null
@@ -209,6 +224,17 @@ function AttendanceContent({ courseInstanceId }: { courseInstanceId: string }) {
         session_date: drawerDate,
         status: teacherStatus,
       })
+
+      // Writing into a sealed cycle is an owner override, so it is always recorded.
+      if (isOwner && ownerOverrideUnlocked && isCycleEnded) {
+        await activityLogService.logActivity({
+          action_type: 'owner_override',
+          title: `OWNER OVERRIDE: Attendance modified on closed cycle for ${getCourseDisplayName(course as any) || 'Unknown class'}`,
+          description: `Session Date: ${drawerDate} • Cycle: ${selectedPeriod?.start_date} - ${selectedPeriod?.end_date}`,
+          entity_type: 'course_instance',
+          entity_id: courseInstanceId,
+        })
+      }
 
       toast({ title: "Attendance saved" })
       setDrawerDate(null)
@@ -293,11 +319,40 @@ function AttendanceContent({ courseInstanceId }: { courseInstanceId: string }) {
               Take Today's Attendance
             </Button>
 
-            {isLocked && selectedPeriod && (
+            {isCycleEnded && selectedPeriod && (
               <Alert className="mb-4 border-amber-300 bg-amber-50">
                 <Lock className="h-4 w-4" />
                 <AlertDescription className="text-amber-800">
-                  Billing Cycle Ended ({selectedPeriod.start_date} - {selectedPeriod.end_date}) — Attendance records for this cycle are locked.
+                  <div className="flex flex-wrap items-center justify-between gap-3">
+                    <span>
+                      Billing Cycle Ended ({selectedPeriod.start_date} - {selectedPeriod.end_date}) —{" "}
+                      {isLocked
+                        ? "Attendance records for this cycle are locked."
+                        : "Unlocked by owner override. Every change made in this cycle is logged."}
+                    </span>
+                    {/* Only the owner can reopen a closed register, and only with a reason
+                        recorded on every save. */}
+                    {isOwner && (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="h-8 shrink-0"
+                        onClick={() => setOwnerOverrideUnlocked((v) => !v)}
+                      >
+                        {isLocked ? (
+                          <>
+                            <Unlock className="mr-2 h-4 w-4" />
+                            Unlock Attendance (Owner Override)
+                          </>
+                        ) : (
+                          <>
+                            <Lock className="mr-2 h-4 w-4" />
+                            Re-lock
+                          </>
+                        )}
+                      </Button>
+                    )}
+                  </div>
                 </AlertDescription>
               </Alert>
             )}
