@@ -123,30 +123,18 @@ export const attendanceService = {
   },
 
   async getStudentAttendanceStats(studentId: string): Promise<AttendanceStats> {
-    const [enrollmentsData, attendanceData] = await Promise.all([
-      supabase
-        .from("course_enrollments")
-        .select("course_id, enrolled_at")
-        .eq("student_id", studentId)
-        .throwOnError(),
-      (supabase as any)
-        .from("course_attendance")
-        .select("*")
-        .eq("student_id", studentId)
-        .throwOnError(),
-    ])
+    const { data: attendanceData } = await (supabase as any)
+      .from("course_attendance")
+      .select("*")
+      .eq("student_id", studentId)
+      .throwOnError()
 
-    const enrolledAtByCourse = new Map<string, string>()
-    for (const e of (((enrollmentsData as any)?.data || []) as any[])) {
-      enrolledAtByCourse.set(e.course_id, e.enrolled_at)
-    }
-
-    const rows = (((attendanceData as any)?.data || []) as CourseAttendanceRecord[])
-    const eligible = rows.filter((r) => {
-      const enrolledAt = enrolledAtByCourse.get(r.course_instance_id)
-      if (!enrolledAt) return true
-      return r.session_date >= enrolledAt.slice(0, 10)
-    })
+    // Every course_attendance row is an explicit record — a session only has a row because
+    // somebody marked it. The student's enrolled_at could therefore only ever exclude
+    // sessions that were never recorded (the N/A cells), so a row is always eligible.
+    // This is what makes an owner's back-filled pre-registration session count in both the
+    // numerator and the denominator, instead of being silently dropped from the percentage.
+    const eligible = (((attendanceData as any)?.data || []) as CourseAttendanceRecord[])
 
     const present = eligible.filter((r) => r.status === "present").length
     const absent = eligible.filter((r) => r.status === "absent").length

@@ -7,13 +7,15 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Alert, AlertDescription } from "@/components/ui/alert"
-import { ArrowLeft, Download, User, BookOpen, AlertTriangle, CheckCircle, CalendarDays } from "lucide-react"
+import { ArrowLeft, Download, User, BookOpen, AlertTriangle, CheckCircle, CalendarDays, Receipt } from "lucide-react"
 import { Student, studentService } from "@/services/studentService"
 import { studentPaymentService } from "@/services/studentPaymentService"
 import { UpdateStudentDialog } from "@/components/tabs/StudentsTab/UpdateStudentDialog"
+import { CollectStudentPaymentDialog } from "@/components/dashboard/CollectStudentPaymentDialog"
 import { revalidateData } from "@/hooks/swr-config"
 import { toast } from "@/hooks/use-toast"
 import { useSchoolSettings } from "@/hooks/useSchoolSettings"
+import { useStudentOutstandingPayments } from "@/hooks/usePayments"
 import { usePaginatedGradeLevels } from "@/hooks/useGradeLevels"
 import { getCourseDisplayName } from "@/lib/course-display"
 import { formatScheduleString } from "@/lib/schedule"
@@ -37,10 +39,12 @@ function StudentDashboardContent() {
   const [student, setStudent] = useState<Student>()
   const [loading, setLoading] = useState(true)
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false)
+  const [isCollectDialogOpen, setIsCollectDialogOpen] = useState(false)
   const [isPayingFee, setIsPayingFee] = useState(false)
   const [attendanceStats, setAttendanceStats] = useState<AttendanceStats | null>(null)
   const { settings } = useSchoolSettings()
   const { gradeLevels } = usePaginatedGradeLevels(1, 0)
+  const { payments: outstandingPayments } = useStudentOutstandingPayments(studentId)
   const registrationFee = settings?.default_registration_fee || 500
 
   const handlePayRegistrationFee = async () => {
@@ -153,7 +157,16 @@ function StudentDashboardContent() {
 
             <div className="flex items-center space-x-2">
               {!student.archived && (
-                <Button onClick={() => setIsEditDialogOpen(true)}>Edit Student</Button>
+                <>
+                  <Button
+                    onClick={() => setIsCollectDialogOpen(true)}
+                    disabled={outstandingPayments.length === 0 && Boolean(student.registration_fee_paid)}
+                  >
+                    <Receipt className="h-4 w-4 mr-2" />
+                    Collect Tuition
+                  </Button>
+                  <Button variant="outline" onClick={() => setIsEditDialogOpen(true)}>Edit Student</Button>
+                </>
               )}
             </div>
           </div>
@@ -469,6 +482,15 @@ function StudentDashboardContent() {
           setIsEditDialogOpen(false)
           loadStudentData()
         }}
+      />
+
+      {/* This page keeps payments in plain state, not SWR, so the dialog has to hand
+          back control to reload it after a collection. */}
+      <CollectStudentPaymentDialog
+        open={isCollectDialogOpen}
+        onOpenChange={setIsCollectDialogOpen}
+        student={student}
+        onCollected={loadStudentData}
       />
     </div>
   )

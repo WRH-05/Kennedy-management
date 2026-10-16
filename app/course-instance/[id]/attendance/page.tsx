@@ -175,6 +175,12 @@ function AttendanceContent({ courseInstanceId }: { courseInstanceId: string }) {
     return Boolean(enrolled && date < enrolled)
   }
 
+  // Pre-enrollment sessions stay locked for receptionists and managers. The conjoined
+  // `isOwner` here is what makes that airtight: a non-owner can never reach the unlocked
+  // state by any route, because this reduces to plain isPreEnrollment for them.
+  const naLockedFor = (student: AttendanceMatrix["students"][number], date: string) =>
+    isPreEnrollment(student, date) && !isOwner
+
   const getCellStatus = (studentId: string, date: string): AttendanceStatus | null => {
     const row = matrix?.studentRows.find((r) => r.student_id === studentId && r.session_date === date)
     return (row?.status as AttendanceStatus) || null
@@ -188,6 +194,11 @@ function AttendanceContent({ courseInstanceId }: { courseInstanceId: string }) {
     matrix.studentRows
       .filter((r) => r.session_date === date)
       .forEach((r) => {
+        // handleSave upserts every entry in this map, so a locked pre-enrollment row must
+        // never be seeded here — otherwise a receptionist's Save would silently overwrite a
+        // record only the owner is allowed to touch.
+        const s = matrix.students.find((st) => st.student_id === r.student_id)
+        if (s && naLockedFor(s, date)) return
         map[r.student_id] = r.status
       })
     setStudentStatuses(map)
@@ -197,11 +208,16 @@ function AttendanceContent({ courseInstanceId }: { courseInstanceId: string }) {
 
   const markAllPresent = () => {
     if (!drawerDate || !matrix) return
-    const map: Record<string, AttendanceStatus> = {}
-    matrix.students.forEach((s) => {
-      if (!isPreEnrollment(s, drawerDate)) map[s.student_id] = "present"
+    // Merges rather than replaces: pre-enrollment students stay out of the bulk action for
+    // every role, and an owner's already-set pre-enrollment entries survive the click
+    // instead of being dropped from the save.
+    setStudentStatuses((prev) => {
+      const next = { ...prev }
+      matrix.students.forEach((s) => {
+        if (!isPreEnrollment(s, drawerDate)) next[s.student_id] = "present"
+      })
+      return next
     })
-    setStudentStatuses(map)
   }
 
   const handleSave = async () => {
@@ -409,7 +425,7 @@ function AttendanceContent({ courseInstanceId }: { courseInstanceId: string }) {
                         <TableCell className="font-medium min-w-[180px]">{student.name}</TableCell>
                         {matrix.sessionDates.map((date) => {
                           const status = getCellStatus(student.student_id, date)
-                          if (isPreEnrollment(student, date)) {
+                          if (naLockedFor(student, date)) {
                             return (
                               <TableCell key={date} className="text-center">
                                 <span className="inline-flex items-center justify-center h-6 w-9 rounded bg-slate-100 text-slate-400 text-xs font-medium">N/A</span>
@@ -422,6 +438,24 @@ function AttendanceContent({ courseInstanceId }: { courseInstanceId: string }) {
                                 <span className={`inline-flex items-center justify-center h-6 w-6 rounded text-xs ${STUDENT_STATUS_META[status].className}`}>
                                   {STUDENT_STATUS_META[status].label}
                                 </span>
+                              </TableCell>
+                            )
+                          }
+                          // An owner looking at a still-unrecorded pre-enrollment session gets
+                          // a click target; everyone else sees the plain empty cell.
+                          if (isPreEnrollment(student, date)) {
+                            return (
+                              <TableCell key={date} className="text-center">
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  className="h-6 w-9 p-0 border border-dashed border-amber-400 text-xs text-amber-600 hover:bg-amber-50"
+                                  disabled={isLocked}
+                                  onClick={() => openDrawer(date)}
+                                  title="Before this student's registration date — owner override"
+                                >
+                                  —
+                                </Button>
                               </TableCell>
                             )
                           }
@@ -469,7 +503,7 @@ function AttendanceContent({ courseInstanceId }: { courseInstanceId: string }) {
 
             <div className="space-y-1">
               {matrix?.students
-                .filter((s) => (drawerDate ? !isPreEnrollment(s, drawerDate) : true))
+                .filter((s) => (drawerDate ? !naLockedFor(s, drawerDate) : true))
                 .map((student) => (
                   <div key={student.student_id} className="flex items-center justify-between py-1.5 border-b last:border-0">
                     <span className="text-sm font-medium">{student.name}</span>

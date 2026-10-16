@@ -234,7 +234,12 @@ function CourseInstancesDetailContent() {
       <div className="w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           <div className="lg:col-span-1">
-            <CourseInstancesInfoCard courseInstances={simpleCourseInstances} onRefresh={loadInitialData} readOnly={courseInstances.archived} />
+            <CourseInstancesInfoCard
+              courseInstances={simpleCourseInstances}
+              enrolledCount={courseInstances.student_ids?.length || 0}
+              onRefresh={loadInitialData}
+              readOnly={courseInstances.archived}
+            />
             <PaymentSummaryCard payout={payout} teacherEarnings={teacherEarnings} onToggleTeacherPayment={toggleTeacherPayment} readOnly={courseInstances.archived} />
           </div>
 

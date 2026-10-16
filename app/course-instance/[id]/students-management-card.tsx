@@ -208,9 +208,11 @@ export function StudentsManagementCard({
       receiptId: p.id,
       studentName: p.students?.name || "Unknown Student",
       parentPhone: p.students?.parent_phone ?? null,
-      amount: Number(p.amount) || courseInstance.price,
-      sourceLabel: "Frais de Cours",
-      className: courseInstance.display_name || "Course",
+      items: [{
+        label: "Frais de Cours",
+        className: courseInstance.display_name || "Course",
+        amount: Number(p.amount) || courseInstance.price,
+      }],
       recordedByName: profile?.full_name || "-",
       paymentDate: new Date().toISOString(),
     }, settings)
@@ -221,9 +223,11 @@ export function StudentsManagementCard({
       receiptId: p.id,
       studentName: p.students?.name || "Unknown Student",
       parentPhone: p.students?.parent_phone ?? null,
-      amount: Number(p.amount) || courseInstance.price,
-      sourceLabel: "Frais de Cours",
-      className: courseInstance.display_name || "Course",
+      items: [{
+        label: "Frais de Cours",
+        className: courseInstance.display_name || "Course",
+        amount: Number(p.amount) || courseInstance.price,
+      }],
       recordedByName: profile?.full_name || "-",
       paymentDate: p.payment_date || p.created_at || new Date().toISOString(),
     }, settings)

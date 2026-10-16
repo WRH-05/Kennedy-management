@@ -11,6 +11,7 @@ import { useStudentsData } from "@/hooks/usePayments"
 import { SchoolSettings } from "@/services/schoolSettingsService"
 import { Tables } from "@/types/database.types"
 import { sumCollectedPool } from "@/lib/payout"
+import { EnrichedStudentPayments } from "@/services/studentPaymentService"
 
 interface TeacherPayoutReportProps {
   open: boolean
@@ -46,6 +47,20 @@ export function TeacherPayoutReport({
 
   // Tuition actually collected this cycle — percentage payouts are taken from this.
   const collectedPool = sumCollectedPool(enrolledStudents)
+
+  // What each student actually paid into that pool. The teacher sees the same number the
+  // payout percentage was applied to, so the slip is auditable. Parent contact details are
+  // deliberately absent from this report: a teacher with the roster's phone numbers is a
+  // poaching risk for the academy.
+  const paidCell = (p: EnrichedStudentPayments) => {
+    if (p.status !== 'paid') {
+      return { text: "Impayé (0 DA)", className: "text-slate-400" }
+    }
+    const amount = Number(p.amount) || 0
+    const price = Number(courseInstance.price) || 0
+    const proRata = price > 0 && amount < price ? " (Au prorata)" : ""
+    return { text: `${amount.toLocaleString()} DA${proRata}`, className: "text-green-700 font-medium" }
+  }
 
   const compType = (courseInstance as any).compensation_type || 'percentage'
   const courseTitle = courseInstance.course_eligibility?.courses?.name || courseInstance.display_name || "Cours"
@@ -136,7 +151,7 @@ export function TeacherPayoutReport({
               <thead>
                 <tr className="border-b-2 border-gray-300">
                   <th className="text-left py-1.5 pr-2">Nom de l'Élève</th>
-                  <th className="text-left py-1.5 pr-2">Téléphone Parent</th>
+                  <th className="text-right py-1.5 pr-2">Montant Payé</th>
                   <th className="text-left py-1.5">Statut de Paiement</th>
                 </tr>
               </thead>
@@ -146,10 +161,12 @@ export function TeacherPayoutReport({
                     <td colSpan={3} className="py-4 text-center text-gray-500">Aucun élève inscrit pour cette période.</td>
                   </tr>
                 ) : (
-                  enrolledStudents.map((p, idx) => (
+                  enrolledStudents.map((p, idx) => {
+                    const paid = paidCell(p)
+                    return (
                     <tr key={idx} className="border-b border-gray-200">
                       <td className="py-1.5 pr-2">{p.students?.name || "Inconnu"}</td>
-                      <td className="py-1.5 pr-2">{p.students?.parent_phone || p.students?.phone || "N/A"}</td>
+                      <td className={`py-1.5 pr-2 text-right ${paid.className}`}>{paid.text}</td>
                       <td className="py-1.5">
                         <span className={
                           p.status === 'paid' ? 'text-green-600 font-medium' :
@@ -162,7 +179,8 @@ export function TeacherPayoutReport({
                         </span>
                       </td>
                     </tr>
-                  ))
+                    )
+                  })
                 )}
               </tbody>
             </table>
@@ -250,7 +268,7 @@ export function TeacherPayoutReport({
               <tr className="bg-slate-100 border-b border-slate-300">
                 <th className="text-left py-1.5 px-2 font-semibold">#</th>
                 <th className="text-left py-1.5 px-2 font-semibold">Nom de l'Élève</th>
-                <th className="text-left py-1.5 px-2 font-semibold">Téléphone Parent</th>
+                <th className="text-right py-1.5 px-2 font-semibold">Montant Payé</th>
                 <th className="text-left py-1.5 px-2 font-semibold">Statut de Paiement</th>
               </tr>
             </thead>
@@ -260,11 +278,13 @@ export function TeacherPayoutReport({
                   <td colSpan={4} className="py-1.5 px-2 text-center text-slate-500">Aucun élève inscrit pour cette période.</td>
                 </tr>
               ) : (
-                enrolledStudents.map((p, idx) => (
+                enrolledStudents.map((p, idx) => {
+                  const paid = paidCell(p)
+                  return (
                   <tr key={idx} className="border-b border-slate-200">
                     <td className="py-1.5 px-2">{idx + 1}</td>
                     <td className="py-1.5 px-2">{p.students?.name || "Inconnu"}</td>
-                    <td className="py-1.5 px-2">{p.students?.parent_phone || p.students?.phone || "N/A"}</td>
+                    <td className={`py-1.5 px-2 text-right ${paid.className}`}>{paid.text}</td>
                     <td className="py-1.5 px-2">
                       {p.status === 'paid' ? (
                         <span className="text-green-600 font-medium">Payé</span>
@@ -275,7 +295,8 @@ export function TeacherPayoutReport({
                       )}
                     </td>
                   </tr>
-                ))
+                  )
+                })
               )}
             </tbody>
           </table>

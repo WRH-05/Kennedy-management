@@ -12,10 +12,14 @@ import { usePaginatedGradeLevels } from "@/hooks/useGradeLevels"
 
 export function CourseInstancesInfoCard({
   courseInstances,
+  enrolledCount = 0,
   onRefresh,
   readOnly = false,
 }: {
   courseInstances: CourseInstanceDetail
+  /** Active (status = 'enrolled') roster size. Passed in because this card receives the
+   *  plain CourseInstanceDetail, which carries no student_ids. */
+  enrolledCount?: number
   onRefresh: () => void
   readOnly?: boolean
 }) {
@@ -32,6 +36,12 @@ export function CourseInstancesInfoCard({
   const subtitle = gradeNames.length > 0
     ? gradeNames.join(", ")
     : (courseInstances.course_eligibility?.grade_levels?.name ?? "—")
+
+  // Individual classes are hard-capped at 2 (both course dialogs force max_students: 2),
+  // so the `?? 2` only covers a legacy row saved before that rule.
+  const cap = courseInstances.is_individual
+    ? (courseInstances.max_students ?? 2)
+    : courseInstances.max_students
 
   return (
     <>
@@ -74,6 +84,12 @@ export function CourseInstancesInfoCard({
             <p>
               <span className="font-medium">Schedule:</span>{" "}
               {formatScheduleString(courseInstances.course_schedule)}
+            </p>
+            <p>
+              <span className="font-medium">Enrolled Students:</span>{" "}
+              {enrolledCount}
+              {cap ? ` / ${cap}` : ""}
+              {cap && enrolledCount >= cap ? " (Full)" : ""}
             </p>
           </div>
         </CardContent>

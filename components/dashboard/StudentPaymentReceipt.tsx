@@ -1,12 +1,22 @@
 "use client"
 
+export interface StudentReceiptItem {
+  /** French line label, e.g. "Frais de Cours" or "Frais d'Inscription". */
+  label: string
+  /** Class name, appended to the label for tuition lines. */
+  className?: string | null
+  amount: number
+}
+
 export interface StudentReceiptData {
   receiptId: string
   studentName: string
   parentPhone?: string | null
-  amount: number
-  sourceLabel: string
-  className?: string | null
+  /**
+   * One entry per fee collected. A single-class counter payment passes one item; the
+   * multi-class collection dialog passes one per class plus the registration fee.
+   */
+  items: StudentReceiptItem[]
   recordedByName: string
   paymentDate: string
 }
@@ -40,6 +50,21 @@ export function printStudentReceipt(data: StudentReceiptData, settings: ReceiptS
     return isNaN(d.getTime()) ? data.paymentDate : d.toLocaleString()
   })()
 
+  const items = data.items || []
+  const total = items.reduce((sum, item) => sum + (Number(item.amount) || 0), 0)
+
+  // `app/globals.css` forces `#printable-thermal-receipt *` to display:block at print
+  // time, so every line has to be its own block: a label block followed by a
+  // right-aligned amount block. Flex rows, inline spans and dot-leaders all collapse
+  // under that override.
+  const itemsHtml = items
+    .map(
+      (item) => `
+    <div>${escapeHtml(item.label)}${item.className ? `: ${escapeHtml(item.className)}` : ""}</div>
+    <div style="text-align:right">${(Number(item.amount) || 0).toLocaleString()} DA</div>`
+    )
+    .join("")
+
   const html = `
     <img src="${escapeHtml(settings?.logo_url || "/home.png")}" alt="Logo" class="receipt-logo" />
     <div style="text-align:center">
@@ -54,9 +79,9 @@ export function printStudentReceipt(data: StudentReceiptData, settings: ReceiptS
     <div>Élève: ${escapeHtml(data.studentName)}</div>
     ${data.parentPhone ? `<div>Tél Parent: ${escapeHtml(data.parentPhone)}</div>` : ""}
     <div>${DIVIDER}</div>
-    <div>Type de Paiement: ${escapeHtml(data.sourceLabel)}</div>
-    ${data.className ? `<div>Classe / Cours: ${escapeHtml(data.className)}</div>` : ""}
-    <div>Montant Payé: ${data.amount.toLocaleString()} DA</div>
+    ${itemsHtml}
+    <div>${DIVIDER}</div>
+    <div style="font-weight:bold">Total Payé: ${total.toLocaleString()} DA</div>
     <div>${DIVIDER}</div>
     <div style="text-align:center">
       <div>Merci de votre confiance !</div>

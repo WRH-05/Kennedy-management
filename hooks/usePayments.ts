@@ -60,6 +60,26 @@ export function useStudentsData(billing_period_id: string) {
   }
 }
 
+/**
+ * Everything a student still owes — one row per unpaid tuition fee, with its class and
+ * billing cycle attached. Drives the multi-class collection dialog on /student/[id].
+ */
+export function useStudentOutstandingPayments(studentId?: string) {
+  const { data, error, isLoading, isValidating, mutate } = useSWR(
+    studentId ? ['student-outstanding-payments', studentId] : null,
+    ([_, id]) => studentPaymentService.getStudentOutstandingPayments(id),
+    swrConfig
+  )
+
+  return {
+    payments: data || [],
+    isLoading,
+    isValidating,
+    error,
+    mutate: () => mutate(),
+  }
+}
+
 export function useRevenue() {
   const { payments } = usePayments()
 
