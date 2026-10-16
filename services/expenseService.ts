@@ -1,5 +1,6 @@
 import { createClient } from "@/lib/supabase/client"
 import { activityLogService } from "@/services/activityLogService"
+import { compressImage } from "@/lib/image-compression"
 
 const supabase = createClient()
 
@@ -32,12 +33,16 @@ export interface AddExpenseInput {
 }
 
 async function uploadReceiptProof(file: File): Promise<string> {
-  const fileExt = file.name.split('.').pop()
+  // Shrink phone photos before they leave the browser; non-images (PDF receipts) and
+  // SVG/GIF pass through untouched. Returns the original file if compression fails.
+  const upload = await compressImage(file, { maxWidth: 1200, quality: 0.75 })
+
+  const fileExt = upload.name.split('.').pop()
   const fileName = `receipt-${Date.now()}.${fileExt}`
 
   const { error: uploadError } = await supabase.storage
     .from('expense_receipts')
-    .upload(fileName, file, {
+    .upload(fileName, upload, {
       cacheControl: '3600',
       upsert: true,
     })

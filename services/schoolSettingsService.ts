@@ -1,4 +1,5 @@
 import { createClient } from "@/lib/supabase/client"
+import { compressImage } from "@/lib/image-compression"
 
 const supabase = createClient();
 
@@ -93,12 +94,16 @@ export const schoolSettingsService = {
   },
 
   async uploadLogo(file: File): Promise<SchoolSettings> {
-    const fileExt = file.name.split('.').pop()
+    // Logos display at ~64px, so a tighter cap and higher quality than receipt photos.
+    // SVG passes through untouched to keep the logo vector.
+    const upload = await compressImage(file, { maxWidth: 600, quality: 0.85 })
+
+    const fileExt = upload.name.split('.').pop()
     const fileName = `logo-${Date.now()}.${fileExt}`
 
     const { error: uploadError } = await supabase.storage
       .from('logos')
-      .upload(fileName, file, {
+      .upload(fileName, upload, {
         cacheControl: '3600',
         upsert: true,
       })

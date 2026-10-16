@@ -86,6 +86,9 @@ function AttendanceContent({ courseInstanceId }: { courseInstanceId: string }) {
   const [saving, setSaving] = useState(false)
   const [teacherStatus, setTeacherStatus] = useState<TeacherAttendanceStatus>("present")
   const [studentStatuses, setStudentStatuses] = useState<Record<string, AttendanceStatus>>({})
+  // The date the drawer's state was last built for, so a deep link seeds exactly once and a
+  // later matrix refresh cannot clobber edits in progress.
+  const seededDrawerDate = useRef<string | null>(null)
 
   // A billing cycle that has ended is sealed. The owner may reopen one for correction;
   // every save made through that override is written to the audit log.
@@ -163,6 +166,23 @@ function AttendanceContent({ courseInstanceId }: { courseInstanceId: string }) {
     if (selectedPeriodId) loadMatrix(selectedPeriodId)
   }, [selectedPeriodId, loadMatrix])
 
+  // A ?date= deep link sets drawerDate straight from the URL, but the matrix is fetched by
+  // the effect above, so the drawer's state has to be built once that data lands. Keyed by
+  // date so it seeds exactly once per opening.
+  useEffect(() => {
+    if (!drawerDate || !matrix) return
+    if (seededDrawerDate.current === drawerDate) return
+    // An unvalidated ?date= that is not a session in this cycle would open an empty drawer,
+    // and could even satisfy isPreClassDate and show a misleading locked state.
+    if (matrix.sessionDates.length > 0 && !matrix.sessionDates.includes(drawerDate)) {
+      setDrawerDate(null)
+      syncUrl(selectedPeriodId, null)
+      return
+    }
+    seededDrawerDate.current = drawerDate
+    applyDrawerState(drawerDate)
+  }, [drawerDate, matrix])
+
   const selectedPeriod = billingPeriods.find((p) => p.id === selectedPeriodId)
   const isCycleEnded = selectedPeriod && selectedPeriod.end_date ? todayStr() > selectedPeriod.end_date : false
   // The override only ever relaxes the lock, and only for an owner — for every other
@@ -181,27 +201,42 @@ function AttendanceContent({ courseInstanceId }: { courseInstanceId: string }) {
   const naLockedFor = (student: AttendanceMatrix["students"][number], date: string) =>
     isPreEnrollment(student, date) && !isOwner
 
+  // A session before the class had any of its currently-enrolled students — i.e. before the
+  // class activated. `[].every()` is true, so the length guard is load-bearing: without it a
+  // class with nobody enrolled would read as pre-class on every date and blanket-lock the
+  // teacher toggles.
+  const isPreClassDate = !!drawerDate
+    && (matrix?.students.length ?? 0) > 0
+    && (matrix?.students ?? []).every((s) => isPreEnrollment(s, drawerDate))
+
   const getCellStatus = (studentId: string, date: string): AttendanceStatus | null => {
     const row = matrix?.studentRows.find((r) => r.student_id === studentId && r.session_date === date)
     return (row?.status as AttendanceStatus) || null
   }
 
-  const openDrawer = (date: string) => {
+  // Build the drawer's local state for a date from the loaded matrix. Called both when the
+  // drawer is opened by hand and, via the effect below, when a ?date= deep link opens it
+  // before the matrix has arrived.
+  const applyDrawerState = (date: string) => {
     if (!matrix) return
     const teacherRow = matrix.teacherRows.find((r) => r.session_date === date)
     setTeacherStatus((teacherRow?.status as TeacherAttendanceStatus) || "present")
+    // Every saved record is seeded, including a pre-enrollment one, so a non-owner can see
+    // an owner's back-filled mark selected in the drawer. What keeps that read-only for them
+    // is handleSave, which filters those students out of the write.
     const map: Record<string, AttendanceStatus> = {}
     matrix.studentRows
       .filter((r) => r.session_date === date)
       .forEach((r) => {
-        // handleSave upserts every entry in this map, so a locked pre-enrollment row must
-        // never be seeded here — otherwise a receptionist's Save would silently overwrite a
-        // record only the owner is allowed to touch.
-        const s = matrix.students.find((st) => st.student_id === r.student_id)
-        if (s && naLockedFor(s, date)) return
         map[r.student_id] = r.status
       })
     setStudentStatuses(map)
+  }
+
+  const openDrawer = (date: string) => {
+    if (!matrix) return
+    applyDrawerState(date)
+    seededDrawerDate.current = date
     setDrawerDate(date)
     syncUrl(selectedPeriodId, date)
   }
@@ -224,22 +259,35 @@ function AttendanceContent({ courseInstanceId }: { courseInstanceId: string }) {
     if (!drawerDate || !selectedPeriodId || !course) return
     setSaving(true)
     try {
-      const records: CourseAttendanceRecord[] = Object.entries(studentStatuses).map(([studentId, status]) => ({
-        course_instance_id: courseInstanceId,
-        student_id: studentId,
-        billing_period_id: selectedPeriodId,
-        session_date: drawerDate,
-        status,
-      }))
+      const records: CourseAttendanceRecord[] = Object.entries(studentStatuses)
+        .filter(([studentId]) => {
+          // A pre-enrollment record is display-only for a non-owner: the drawer seeds it so
+          // they can see it, but this filter is what stops their Save writing it back. For
+          // an owner naLockedFor is always false, so back-filling still writes normally.
+          const s = matrix?.students.find((st) => st.student_id === studentId)
+          return !(s && naLockedFor(s, drawerDate))
+        })
+        .map(([studentId, status]) => ({
+          course_instance_id: courseInstanceId,
+          student_id: studentId,
+          billing_period_id: selectedPeriodId,
+          session_date: drawerDate,
+          status,
+        }))
       await attendanceService.upsertStudentAttendance(records)
 
-      await attendanceService.upsertTeacherAttendance({
-        course_instance_id: courseInstanceId,
-        teacher_id: course.teacher_id,
-        billing_period_id: selectedPeriodId,
-        session_date: drawerDate,
-        status: teacherStatus,
-      })
+      // Skipped on a pre-class date for non-owners. Disabling the toggles alone would only be
+      // cosmetic: teacherStatus is seeded to "present" when no row exists, so Save would
+      // otherwise fabricate a Present teacher row for a date before the class activated.
+      if (!(isPreClassDate && !isOwner)) {
+        await attendanceService.upsertTeacherAttendance({
+          course_instance_id: courseInstanceId,
+          teacher_id: course.teacher_id,
+          billing_period_id: selectedPeriodId,
+          session_date: drawerDate,
+          status: teacherStatus,
+        })
+      }
 
       // Writing into a sealed cycle is an owner override, so it is always recorded.
       if (isOwner && ownerOverrideUnlocked && isCycleEnded) {
@@ -425,19 +473,23 @@ function AttendanceContent({ courseInstanceId }: { courseInstanceId: string }) {
                         <TableCell className="font-medium min-w-[180px]">{student.name}</TableCell>
                         {matrix.sessionDates.map((date) => {
                           const status = getCellStatus(student.student_id, date)
-                          if (naLockedFor(student, date)) {
-                            return (
-                              <TableCell key={date} className="text-center">
-                                <span className="inline-flex items-center justify-center h-6 w-9 rounded bg-slate-100 text-slate-400 text-xs font-medium">N/A</span>
-                              </TableCell>
-                            )
-                          }
+                          // A saved record wins over N/A for every role. N/A means "no record
+                          // and before this student registered" — once an owner back-fills a
+                          // session, the mark is real data and hiding it behind N/A would
+                          // contradict the attendance stats, which count every saved row.
                           if (status) {
                             return (
                               <TableCell key={date} className="text-center">
                                 <span className={`inline-flex items-center justify-center h-6 w-6 rounded text-xs ${STUDENT_STATUS_META[status].className}`}>
                                   {STUDENT_STATUS_META[status].label}
                                 </span>
+                              </TableCell>
+                            )
+                          }
+                          if (naLockedFor(student, date)) {
+                            return (
+                              <TableCell key={date} className="text-center">
+                                <span className="inline-flex items-center justify-center h-6 w-9 rounded bg-slate-100 text-slate-400 text-xs font-medium">N/A</span>
                               </TableCell>
                             )
                           }
@@ -489,12 +541,18 @@ function AttendanceContent({ courseInstanceId }: { courseInstanceId: string }) {
                     type="button"
                     variant={teacherStatus === opt.value ? "default" : "outline"}
                     size="sm"
+                    disabled={saving || isLocked || (isPreClassDate && !isOwner)}
                     onClick={() => setTeacherStatus(opt.value)}
                   >
                     {opt.label}
                   </Button>
                 ))}
               </div>
+              {isPreClassDate && !isOwner && (
+                <p className="text-xs text-muted-foreground">
+                  Teacher attendance cannot be marked on sessions prior to class activation.
+                </p>
+              )}
             </div>
 
             <Button type="button" variant="outline" size="sm" onClick={markAllPresent}>
@@ -503,26 +561,36 @@ function AttendanceContent({ courseInstanceId }: { courseInstanceId: string }) {
 
             <div className="space-y-1">
               {matrix?.students
-                .filter((s) => (drawerDate ? !naLockedFor(s, drawerDate) : true))
-                .map((student) => (
-                  <div key={student.student_id} className="flex items-center justify-between py-1.5 border-b last:border-0">
-                    <span className="text-sm font-medium">{student.name}</span>
-                    <div className="flex gap-1">
-                      {STUDENT_STATUS_OPTIONS.map((opt) => (
-                        <Button
-                          key={opt.value}
-                          type="button"
-                          variant={studentStatuses[student.student_id] === opt.value ? "default" : "outline"}
-                          size="sm"
-                          className="h-8 px-2 text-xs"
-                          onClick={() => setStudentStatuses((prev) => ({ ...prev, [student.student_id]: opt.value }))}
-                        >
-                          {opt.label}
-                        </Button>
-                      ))}
+                .filter((s) => {
+                  if (!drawerDate) return true
+                  if (!naLockedFor(s, drawerDate)) return true
+                  // A non-owner can still see a pre-enrollment student who already has a
+                  // record; their buttons render read-only below.
+                  return Boolean(getCellStatus(s.student_id, drawerDate))
+                })
+                .map((student) => {
+                  const readOnly = drawerDate ? naLockedFor(student, drawerDate) : false
+                  return (
+                    <div key={student.student_id} className="flex items-center justify-between py-1.5 border-b last:border-0">
+                      <span className="text-sm font-medium">{student.name}</span>
+                      <div className="flex gap-1">
+                        {STUDENT_STATUS_OPTIONS.map((opt) => (
+                          <Button
+                            key={opt.value}
+                            type="button"
+                            variant={studentStatuses[student.student_id] === opt.value ? "default" : "outline"}
+                            size="sm"
+                            className="h-8 px-2 text-xs"
+                            disabled={saving || readOnly}
+                            onClick={() => setStudentStatuses((prev) => ({ ...prev, [student.student_id]: opt.value }))}
+                          >
+                            {opt.label}
+                          </Button>
+                        ))}
+                      </div>
                     </div>
-                  </div>
-                ))}
+                  )
+                })}
             </div>
           </div>
 
