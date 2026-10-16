@@ -9,7 +9,7 @@ import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Drawer, DrawerContent, DrawerFooter, DrawerHeader, DrawerTitle } from "@/components/ui/drawer"
-import { ArrowLeft, Lock, CalendarDays, Pencil, Loader2 } from "lucide-react"
+import { ArrowLeft, Lock, Unlock, CalendarDays, Pencil, Loader2 } from "lucide-react"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
 import { CourseInstanceDetail, courseInstancesService } from "@/services/courseInstancesService"
 import { paymentService } from "@/services/paymentService"
@@ -22,6 +22,8 @@ import {
 } from "@/services/attendanceService"
 import { getCourseDisplayName } from "@/lib/course-display"
 import { toast } from "@/hooks/use-toast"
+import { useAuth } from "@/context/AuthContext"
+import { activityLogService } from "@/services/activityLogService"
 
 const STUDENT_STATUS_META: Record<AttendanceStatus, { label: string; className: string }> = {
   present: { label: "P", className: "bg-emerald-100 text-emerald-800 font-semibold" },
@@ -85,6 +87,13 @@ function AttendanceContent({ courseInstanceId }: { courseInstanceId: string }) {
   const [teacherStatus, setTeacherStatus] = useState<TeacherAttendanceStatus>("present")
   const [studentStatuses, setStudentStatuses] = useState<Record<string, AttendanceStatus>>({})
 
+  // A billing cycle that has ended is sealed. The owner may reopen one for correction;
+  // every save made through that override is written to the audit log.
+  const [ownerOverrideUnlocked, setOwnerOverrideUnlocked] = useState(false)
+
+  const { profile } = useAuth()
+  const isOwner = profile?.role === 'owner'
+
   const syncUrl = (cycleId: string, date: string | null) => {
     const qs = new URLSearchParams()
     if (cycleId) qs.set("cycle", cycleId)
@@ -96,6 +105,8 @@ function AttendanceContent({ courseInstanceId }: { courseInstanceId: string }) {
   const handleCycleChange = (cycleId: string) => {
     setSelectedPeriodId(cycleId)
     setDrawerDate(null)
+    // An unlock applies to the cycle it was granted for, so it never carries over.
+    setOwnerOverrideUnlocked(false)
     syncUrl(cycleId, null)
   }
 
@@ -153,12 +164,22 @@ function AttendanceContent({ courseInstanceId }: { courseInstanceId: string }) {
   }, [selectedPeriodId, loadMatrix])
 
   const selectedPeriod = billingPeriods.find((p) => p.id === selectedPeriodId)
-  const isLocked = selectedPeriod && selectedPeriod.end_date ? todayStr() > selectedPeriod.end_date : false
+  const isCycleEnded = selectedPeriod && selectedPeriod.end_date ? todayStr() > selectedPeriod.end_date : false
+  // The override only ever relaxes the lock, and only for an owner — for every other
+  // role isLocked stays exactly what it always was. The conjoined `isOwner` is what
+  // makes a manager or receptionist unable to reach the unlocked state by any means.
+  const isLocked = isCycleEnded && !(isOwner && ownerOverrideUnlocked)
 
   const isPreEnrollment = (student: AttendanceMatrix["students"][number], date: string) => {
     const enrolled = student.enrolled_at ? student.enrolled_at.slice(0, 10) : null
     return Boolean(enrolled && date < enrolled)
   }
+
+  // Pre-enrollment sessions stay locked for receptionists and managers. The conjoined
+  // `isOwner` here is what makes that airtight: a non-owner can never reach the unlocked
+  // state by any route, because this reduces to plain isPreEnrollment for them.
+  const naLockedFor = (student: AttendanceMatrix["students"][number], date: string) =>
+    isPreEnrollment(student, date) && !isOwner
 
   const getCellStatus = (studentId: string, date: string): AttendanceStatus | null => {
     const row = matrix?.studentRows.find((r) => r.student_id === studentId && r.session_date === date)
@@ -173,6 +194,11 @@ function AttendanceContent({ courseInstanceId }: { courseInstanceId: string }) {
     matrix.studentRows
       .filter((r) => r.session_date === date)
       .forEach((r) => {
+        // handleSave upserts every entry in this map, so a locked pre-enrollment row must
+        // never be seeded here — otherwise a receptionist's Save would silently overwrite a
+        // record only the owner is allowed to touch.
+        const s = matrix.students.find((st) => st.student_id === r.student_id)
+        if (s && naLockedFor(s, date)) return
         map[r.student_id] = r.status
       })
     setStudentStatuses(map)
@@ -182,11 +208,16 @@ function AttendanceContent({ courseInstanceId }: { courseInstanceId: string }) {
 
   const markAllPresent = () => {
     if (!drawerDate || !matrix) return
-    const map: Record<string, AttendanceStatus> = {}
-    matrix.students.forEach((s) => {
-      if (!isPreEnrollment(s, drawerDate)) map[s.student_id] = "present"
+    // Merges rather than replaces: pre-enrollment students stay out of the bulk action for
+    // every role, and an owner's already-set pre-enrollment entries survive the click
+    // instead of being dropped from the save.
+    setStudentStatuses((prev) => {
+      const next = { ...prev }
+      matrix.students.forEach((s) => {
+        if (!isPreEnrollment(s, drawerDate)) next[s.student_id] = "present"
+      })
+      return next
     })
-    setStudentStatuses(map)
   }
 
   const handleSave = async () => {
@@ -209,6 +240,17 @@ function AttendanceContent({ courseInstanceId }: { courseInstanceId: string }) {
         session_date: drawerDate,
         status: teacherStatus,
       })
+
+      // Writing into a sealed cycle is an owner override, so it is always recorded.
+      if (isOwner && ownerOverrideUnlocked && isCycleEnded) {
+        await activityLogService.logActivity({
+          action_type: 'owner_override',
+          title: `OWNER OVERRIDE: Attendance modified on closed cycle for ${getCourseDisplayName(course as any) || 'Unknown class'}`,
+          description: `Session Date: ${drawerDate} • Cycle: ${selectedPeriod?.start_date} - ${selectedPeriod?.end_date}`,
+          entity_type: 'course_instance',
+          entity_id: courseInstanceId,
+        })
+      }
 
       toast({ title: "Attendance saved" })
       setDrawerDate(null)
@@ -293,11 +335,40 @@ function AttendanceContent({ courseInstanceId }: { courseInstanceId: string }) {
               Take Today's Attendance
             </Button>
 
-            {isLocked && selectedPeriod && (
+            {isCycleEnded && selectedPeriod && (
               <Alert className="mb-4 border-amber-300 bg-amber-50">
                 <Lock className="h-4 w-4" />
                 <AlertDescription className="text-amber-800">
-                  Billing Cycle Ended ({selectedPeriod.start_date} - {selectedPeriod.end_date}) — Attendance records for this cycle are locked.
+                  <div className="flex flex-wrap items-center justify-between gap-3">
+                    <span>
+                      Billing Cycle Ended ({selectedPeriod.start_date} - {selectedPeriod.end_date}) —{" "}
+                      {isLocked
+                        ? "Attendance records for this cycle are locked."
+                        : "Unlocked by owner override. Every change made in this cycle is logged."}
+                    </span>
+                    {/* Only the owner can reopen a closed register, and only with a reason
+                        recorded on every save. */}
+                    {isOwner && (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="h-8 shrink-0"
+                        onClick={() => setOwnerOverrideUnlocked((v) => !v)}
+                      >
+                        {isLocked ? (
+                          <>
+                            <Unlock className="mr-2 h-4 w-4" />
+                            Unlock Attendance (Owner Override)
+                          </>
+                        ) : (
+                          <>
+                            <Lock className="mr-2 h-4 w-4" />
+                            Re-lock
+                          </>
+                        )}
+                      </Button>
+                    )}
+                  </div>
                 </AlertDescription>
               </Alert>
             )}
@@ -354,7 +425,7 @@ function AttendanceContent({ courseInstanceId }: { courseInstanceId: string }) {
                         <TableCell className="font-medium min-w-[180px]">{student.name}</TableCell>
                         {matrix.sessionDates.map((date) => {
                           const status = getCellStatus(student.student_id, date)
-                          if (isPreEnrollment(student, date)) {
+                          if (naLockedFor(student, date)) {
                             return (
                               <TableCell key={date} className="text-center">
                                 <span className="inline-flex items-center justify-center h-6 w-9 rounded bg-slate-100 text-slate-400 text-xs font-medium">N/A</span>
@@ -367,6 +438,24 @@ function AttendanceContent({ courseInstanceId }: { courseInstanceId: string }) {
                                 <span className={`inline-flex items-center justify-center h-6 w-6 rounded text-xs ${STUDENT_STATUS_META[status].className}`}>
                                   {STUDENT_STATUS_META[status].label}
                                 </span>
+                              </TableCell>
+                            )
+                          }
+                          // An owner looking at a still-unrecorded pre-enrollment session gets
+                          // a click target; everyone else sees the plain empty cell.
+                          if (isPreEnrollment(student, date)) {
+                            return (
+                              <TableCell key={date} className="text-center">
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  className="h-6 w-9 p-0 border border-dashed border-amber-400 text-xs text-amber-600 hover:bg-amber-50"
+                                  disabled={isLocked}
+                                  onClick={() => openDrawer(date)}
+                                  title="Before this student's registration date — owner override"
+                                >
+                                  —
+                                </Button>
                               </TableCell>
                             )
                           }
@@ -414,7 +503,7 @@ function AttendanceContent({ courseInstanceId }: { courseInstanceId: string }) {
 
             <div className="space-y-1">
               {matrix?.students
-                .filter((s) => (drawerDate ? !isPreEnrollment(s, drawerDate) : true))
+                .filter((s) => (drawerDate ? !naLockedFor(s, drawerDate) : true))
                 .map((student) => (
                   <div key={student.student_id} className="flex items-center justify-between py-1.5 border-b last:border-0">
                     <span className="text-sm font-medium">{student.name}</span>

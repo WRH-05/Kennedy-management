@@ -5,10 +5,12 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Label } from "@/components/ui/label"
 import { Input } from "@/components/ui/input"
+import { Textarea } from "@/components/ui/textarea"
+import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Users, Plus, MoreHorizontal, Check, Printer, Pencil, Trash2 } from "lucide-react"
+import { Users, Plus, MoreHorizontal, Check, Printer, Pencil, Trash2, AlertTriangle } from "lucide-react"
 import { courseInstancesService } from "@/services/courseInstancesService"
 import { useStudentsData } from "@/hooks/usePayments"
 import { useStudents } from "@/hooks/useStudents"
@@ -16,6 +18,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSepara
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog"
 import { useCourseEnrollementStudentsByCourseId } from "@/hooks/useCourseEnrollement"
 import { studentPaymentService, EnrichedStudentPayments } from "@/services/studentPaymentService"
+import { activityLogService } from "@/services/activityLogService"
 import { toast } from "@/hooks/use-toast"
 import { Badge } from "@/components/ui/badge"
 import { Enums, Tables } from "@/types/database.types"
@@ -66,6 +69,7 @@ export function StudentsManagementCard({
   // Edit Fee
   const [editFeeTarget, setEditFeeTarget] = useState<EnrichedStudentPayments | null>(null)
   const [editFeeValue, setEditFeeValue] = useState("")
+  const [editFeeReason, setEditFeeReason] = useState("")
   const [isSavingFee, setIsSavingFee] = useState(false)
 
   // Remove from Class (mis-input removal)
@@ -75,6 +79,13 @@ export function StudentsManagementCard({
   // Deleting student_payments requires the student_payments.delete permission,
   // which only owner/manager hold.
   const canHardRemove = profile?.role === 'owner' || profile?.role === 'manager'
+
+  // The owner may correct a fee on a payment that has already been settled, which
+  // rewrites a historical financial record. Everyone else is limited to unpaid rows.
+  const isOwner = profile?.role === 'owner'
+
+  // A paid row is the case that needs a written reason and leaves an audit trail.
+  const isPaidOverride = editFeeTarget?.status === 'paid'
 
   // SWR Hooks
   const { payments, isLoading, mutate } = useStudentsData(selectedPeriodId);
@@ -197,9 +208,11 @@ export function StudentsManagementCard({
       receiptId: p.id,
       studentName: p.students?.name || "Unknown Student",
       parentPhone: p.students?.parent_phone ?? null,
-      amount: Number(p.amount) || courseInstance.price,
-      sourceLabel: "Frais de Cours",
-      className: courseInstance.display_name || "Course",
+      items: [{
+        label: "Frais de Cours",
+        className: courseInstance.display_name || "Course",
+        amount: Number(p.amount) || courseInstance.price,
+      }],
       recordedByName: profile?.full_name || "-",
       paymentDate: new Date().toISOString(),
     }, settings)
@@ -210,9 +223,11 @@ export function StudentsManagementCard({
       receiptId: p.id,
       studentName: p.students?.name || "Unknown Student",
       parentPhone: p.students?.parent_phone ?? null,
-      amount: Number(p.amount) || courseInstance.price,
-      sourceLabel: "Frais de Cours",
-      className: courseInstance.display_name || "Course",
+      items: [{
+        label: "Frais de Cours",
+        className: courseInstance.display_name || "Course",
+        amount: Number(p.amount) || courseInstance.price,
+      }],
       recordedByName: profile?.full_name || "-",
       paymentDate: p.payment_date || p.created_at || new Date().toISOString(),
     }, settings)
@@ -251,11 +266,14 @@ export function StudentsManagementCard({
   const openEditFee = (p: EnrichedStudentPayments) => {
     setEditFeeTarget(p)
     setEditFeeValue(String(Number(p.amount || 0)))
+    // Never open with a reason left over from a previous row.
+    setEditFeeReason("")
   }
 
   const closeEditFee = () => {
     setEditFeeTarget(null)
     setEditFeeValue("")
+    setEditFeeReason("")
   }
 
   const handleSaveFee = async (e: React.FormEvent) => {
@@ -273,6 +291,17 @@ export function StudentsManagementCard({
       return
     }
 
+    // Overriding a settled payment rewrites history, so the reason is the audit entry.
+    if (isPaidOverride && !editFeeReason.trim()) {
+      toast({
+        title: "Reason is required when overriding a paid payment.",
+        variant: "destructive",
+      })
+      return
+    }
+
+    const oldAmount = Number(editFeeTarget.amount || 0)
+
     setIsSavingFee(true)
     try {
       await studentPaymentService.updateRecordStudentPayment(
@@ -282,6 +311,19 @@ export function StudentsManagementCard({
         editFeeTarget.billing_period_id || selectedPeriodId,
         { amount: parsed }
       )
+
+      if (isPaidOverride) {
+        // The service writes its own generic payment entry for a paid row; this one
+        // records that an owner overrode it, and why.
+        await activityLogService.logActivity({
+          action_type: 'payment',
+          title: `OWNER OVERRIDE: Payment fee changed for ${editFeeTarget?.students?.name || 'Unknown'} (${oldAmount} DA -> ${parsed} DA)`,
+          description: `Reason: ${editFeeReason.trim()} • Class: ${courseInstance.display_name || 'Unknown class'}`,
+          amount: parsed,
+          entity_type: 'student',
+          entity_id: studentId,
+        })
+      }
 
       toast({ title: "Fee updated", description: `Fee set to ${parsed.toLocaleString()} DA.` })
       await mutate()
@@ -556,13 +598,29 @@ export function StudentsManagementCard({
                           </DropdownMenuTrigger>
                           <DropdownMenuContent align="end">
                             {isPaid ? (
-                              <DropdownMenuItem
-                                onClick={() => handleReprint(p)}
-                                className="cursor-pointer"
-                              >
-                                <Printer className="mr-2 h-4 w-4" />
-                                Re-print Receipt
-                              </DropdownMenuItem>
+                              <>
+                                <DropdownMenuItem
+                                  onClick={() => handleReprint(p)}
+                                  className="cursor-pointer"
+                                >
+                                  <Printer className="mr-2 h-4 w-4" />
+                                  Re-print Receipt
+                                </DropdownMenuItem>
+                                {/* A settled payment is normally final. Only the owner may
+                                    correct it, and only with a written reason. */}
+                                {isOwner && (
+                                  <>
+                                    <DropdownMenuSeparator />
+                                    <DropdownMenuItem
+                                      onClick={() => openEditFee(p)}
+                                      className="cursor-pointer"
+                                    >
+                                      <Pencil className="mr-2 h-4 w-4" />
+                                      Edit Fee
+                                    </DropdownMenuItem>
+                                  </>
+                                )}
+                              </>
                             ) : (
                               <>
                                 {canRecordPayment && (
@@ -614,7 +672,8 @@ export function StudentsManagementCard({
         </Table>
       </CardContent>
 
-      {/* Correct a fee that was entered wrong for an unpaid row */}
+      {/* Correct a fee that was entered wrong. The owner may also correct a settled
+          payment, which rewrites a historical record and so requires a reason. */}
       <Dialog open={!!editFeeTarget} onOpenChange={(open) => { if (!open) closeEditFee() }}>
         <DialogContent>
           <DialogHeader>
@@ -625,9 +684,18 @@ export function StudentsManagementCard({
               <Label>
                 {editFeeTarget?.students?.name || "Student"} — {courseInstance.display_name || "Course"}
               </Label>
-              <p className="text-xs text-muted-foreground">
-                Correct the amount due for this billing cycle. Only unpaid fees can be edited.
-              </p>
+              {isPaidOverride ? (
+                <Alert variant="destructive">
+                  <AlertTriangle className="h-4 w-4" />
+                  <AlertDescription>
+                    Warning: Modifying a completed payment alters historical financial records. A reason is required.
+                  </AlertDescription>
+                </Alert>
+              ) : (
+                <p className="text-xs text-muted-foreground">
+                  Correct the amount due for this billing cycle. Only unpaid fees can be edited.
+                </p>
+              )}
             </div>
             <div className="space-y-2">
               <Label htmlFor="editFee">Fee Amount (DA)</Label>
@@ -638,9 +706,24 @@ export function StudentsManagementCard({
                 step="1"
                 value={editFeeValue}
                 onChange={(e) => setEditFeeValue(e.target.value)}
-                autoFocus
+                autoFocus={!isPaidOverride}
               />
             </div>
+            {isPaidOverride && (
+              <div className="space-y-2">
+                <Label htmlFor="editFeeReason">
+                  Reason for Override <span className="text-destructive">*</span>
+                </Label>
+                <Textarea
+                  id="editFeeReason"
+                  rows={3}
+                  value={editFeeReason}
+                  onChange={(e) => setEditFeeReason(e.target.value)}
+                  placeholder="Why is this completed payment being corrected?"
+                  autoFocus
+                />
+              </div>
+            )}
             <div className="flex justify-end space-x-2 pt-2">
               <Button type="button" variant="outline" onClick={closeEditFee} disabled={isSavingFee}>
                 Cancel

@@ -1,13 +1,22 @@
 import { createClient } from "@/lib/supabase/client"
 import { Tables, TablesInsert, TablesUpdate } from "@/types/database.types";
 import { activityLogService } from "@/services/activityLogService";
+import { isPaymentOutstanding } from "@/lib/payout";
 
 const supabase = createClient();
 
 export type EnrichedStudentPayments = Tables<"student_payments"> & {
     students: Tables<"students">,
     profiles?: Tables<"profiles">,
-    course_instances?: Tables<"course_instances"> | null,
+    // course_eligibility rides along so callers can build a class display name
+    // via getCourseDisplayName() without a second query.
+    course_instances?: (Tables<"course_instances"> & {
+        course_eligibility?: {
+            id: string
+            courses: { name: string } | null
+            grade_levels: { name: string } | null
+        } | null
+    }) | null,
     billing_periods?: Tables<"billing_periods"> | null
 }
 
@@ -36,6 +45,33 @@ export const studentPaymentService = {
             .throwOnError()
 
         return data || []
+    },
+
+    /**
+     * Every tuition row this student still owes, with the class and billing cycle
+     * attached so the collection dialog can label each line without more round trips.
+     *
+     * No enrollment-status filter on purpose: unenrollStudent already cancels a dropped
+     * student's unpaid rows, so dropped classes cannot surface here — while filtering by
+     * `course_enrollments.status = 'enrolled'` would hide money genuinely owed on an
+     * archived class. Rows with a null course_id are registration fees, which are born
+     * `paid` and therefore never outstanding.
+     */
+    async getStudentOutstandingPayments(studentId: string): Promise<EnrichedStudentPayments[]> {
+        if (!studentId) return []
+
+        const { data } = await supabase
+            .from('student_payments')
+            .select(`
+                *,
+                course_instances (*, course_eligibility (id, courses (name), grade_levels (name))),
+                billing_periods (*)
+            `)
+            .eq('student_id', studentId)
+            .throwOnError()
+
+        return ((data || []) as unknown as EnrichedStudentPayments[])
+            .filter((p) => p.course_id && isPaymentOutstanding(p.status))
     },
 
     async updatePaymentStatus(paymentId: string, status: string) {
@@ -142,6 +178,11 @@ export const studentPaymentService = {
             .from('student_payments')
             .update({
                 status: 'paid',
+                // Stamp the collection moment. Without this the row keeps the date it was
+                // created, which misdates the printed receipt and keeps the payment out of
+                // the student page's "Paid This Month" figure. Mirrors the paid transition
+                // in updateRecordStudentPayment.
+                payment_date: new Date().toISOString(),
             })
             .eq('id', paymentId)
             .select()
